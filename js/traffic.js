@@ -48,6 +48,9 @@ const NUM_PEDS = 340;
 const CAR_DRIVER = { a: 2.0, b: 3.0, T: 1.2, s0: 2.0, aLat: 3.5 };
 const BUS_DRIVER = { a: 1.1, b: 2.5, T: 1.5, s0: 2.5, aLat: 2.0 };
 const LOOKAHEAD = 70; // metres a driver looks ahead for vehicles, stop lines and signals
+// A link shorter than this between two junctions holds one car: a driver only pulls onto it with a way off it too
+// (otherwise cars waiting on a ring of such links, as where Columbus Ave cuts the grid, can gridlock)
+const SHORT_LINK = 15;
 
 // Vehicles further than VEHICLE_RADIUS from the camera and out of its view move to a free lane 100-300 m away,
 // also out of view; pedestrians likewise beyond PED_RADIUS, to 60-260 m away. After a teleport, everything
@@ -144,7 +147,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
     return {
       bus, half, halfWidth, axle, driver, v0,
       edge: null, lane: 0, s: 0, speed: 0, acc: 0, gap: Infinity, leaderSpeed: 0,
-      move: null, out: 0, conn: null, cs: 0, trail: null, commit: null, claimed: false, yielding: false, yieldAt: 0,
+      move: null, next: null, out: 0, conn: null, cs: 0, trail: null, commit: null, claimed: false, yielding: false, yieldAt: 0,
       wait: 0, laneTimer: Math.random() * 0.5,
       dl: 0, dlv: 0, blink: 0, blinkPhase: Math.random() * 0.8,
       x: 0, z: 0, prevX: 0, prevZ: 0, tx: 0, tz: 1, nose: 0, yaw: 0, yawRate: 0, steer: 0,
@@ -676,6 +679,20 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
     return pick || e.moves[0] || null;
   }
 
+  // The move v will make at the end of f, entering it in lane j: chosen now, kept from lane j (one car's length leaves
+  // no room to change lanes), or null when lane j leads nowhere
+  function moveOn(v, f, j) {
+    const { edge, lane, s } = v;
+    v.edge = f;
+    v.lane = j;
+    v.s = 0;
+    const m = chooseMove(v, true);
+    v.edge = edge;
+    v.lane = lane;
+    v.s = s;
+    return m && m.out[j] >= 0 ? m : null;
+  }
+
   // Could the vehicle of lane entry o, approaching the end of edge a, still stop easily before its line? Vehicles
   // already standing can; drivers who have been waiting a while accept any gap it can still stop for comfortably.
   function canStop(o, a, impatient) {
@@ -759,16 +776,30 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
   const precedence = (u, s) => s + u.half;
 
   // Would there be room for v in lane j of edge f if everyone headed there queued bumper to bumper behind its far
-  // stop line? (An empty lane always has room, however short.) Vehicles take turns for it: whoever has waited longer
-  // to go there from another side, or goes first from v's own road, counts as already in.
+  // stop line? (An empty lane always has room, however short.) Vehicles take turns for it: whoever goes first from v's
+  // own road, or comes from a road that has waited longer to go there, counts as already in. Roads, not vehicles,
+  // compare their waits: by vehicle, a car going first on its road but waiting less than one on another road could each
+  // wait for the next in a circle where f holds one car. A road held by its light doesn't wait to go there: a car that
+  // can't go mustn't keep one on the green from going.
+  function roadWait(a, f, j) {
+    if (a.to.signal && phaseOf(a) !== 'green') return 0;
+    let w = 0;
+    for (const list of a.occ) {
+      const o = leadOf(list);
+      if (o && !o.v.claimed && o.v.move && o.v.move.to === f && o.v.move.out[o.v.lane] === j) w = Math.max(w, o.v.wait);
+    }
+    return w;
+  }
   function room(f, j, v) {
     let free = f.len - 1;
     for (const o of f.occ[j]) if (o.v !== v && o.s - o.v.half < f.len) free -= 2 * o.v.half + o.v.driver.s0;
+    const ownWait = Math.max(v.wait, roadWait(v.edge, f, j));
     for (const a of f.from.in) {
+      const first = a !== v.edge && roadWait(a, f, j) > ownWait;
       for (const list of a.occ) {
         const o = leadOf(list);
         if (!o || o.v.claimed || !o.v.move || o.v.move.to !== f || o.v.move.out[o.v.lane] !== j) continue;
-        if (a === v.edge ? precedence(o.v, o.s) > precedence(v, v.s) : o.v.wait > v.wait) free -= 2 * o.v.half + o.v.driver.s0;
+        if (a === v.edge ? precedence(o.v, o.s) > precedence(v, v.s) : first) free -= 2 * o.v.half + o.v.driver.s0;
       }
     }
     return free >= Math.min(2 * v.half + 0.5, f.len - 1);
@@ -893,6 +924,10 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
     if (wait < 0 && pedestrianOn(n, f.outSide, laneCoord(f, j), timeTo(v, d + c.len - 3), timeTo(v, d + c.len + 2 * v.half))) return false;
     const vs = v.s - e.len - c.len; // where on f it would be now
     if (!room(f, j, v) || alongside(f, j, v, vs, m.turn !== 'S') || mergingAhead(v, f, j)) return false;
+    if (f.len < SHORT_LINK) {
+      if (!v.next || !f.moves.includes(v.next) || v.next.out[j] < 0) v.next = moveOn(v, f, j);
+      if (v.next && !room(v.next.to, v.next.out[j], v)) return false;
+    }
     v.out = j;
     v.yielding = wait >= 0;
     v.yieldAt = wait;
@@ -1061,7 +1096,8 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
     v.trail = v.conn; // the rear axle is still on it
     v.conn = null;
     v.commit = null;
-    v.move = chooseMove(v, false);
+    v.move = v.next && v.edge.moves.includes(v.next) ? v.next : chooseMove(v, false);
+    v.next = null;
   }
 
   function drive(v, dt) {
@@ -1403,6 +1439,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
     v.conn = null;
     v.trail = null;
     v.commit = null;
+    v.next = null;
     v.yielding = false;
     v.wait = 0;
     v.speed = v.v0 * 0.5;
