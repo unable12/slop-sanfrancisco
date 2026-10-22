@@ -32,6 +32,7 @@ async function loadCityData(onProgress) {
     }
   };
   window.NYC.DATA = DATA;
+  window.NYC.Terrain.load(DATA.terrain.header, DATA.terrain.q);
   return DATA;
 }
 

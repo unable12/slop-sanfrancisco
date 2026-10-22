@@ -6,6 +6,8 @@
 //                                                                    every named shot (query string per name) -> <out>/<name>.png
 //   node tools/dev/probe.mjs --bench street|car|heli|hill [--base URL] [--query extra=1]
 //                                                                    runs ?bench=<name> and prints the [bench] result
+//   node tools/dev/probe.mjs <url> <out.png> [waitSeconds] --eval '<js expression>'
+//                                                                    also prints the expression's value once ready
 import { spawn } from 'node:child_process';
 import { mkdtempSync, writeFileSync, readFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -116,8 +118,9 @@ if (argv.includes('--shots')) {
   const [url, out] = argv;
   const r = await load(url);
   const s = await sample();
-  if (out) await screenshot(out);
-  console.log(JSON.stringify({ ...r, ...s, consoleErrors: errors.length, firstErrors: errors.slice(0, 3), init: logs }, null, 1));
+  if (out && out !== '-') await screenshot(out);
+  const evaluated = opt('eval') ? await evalJs(opt('eval')) : undefined;
+  console.log(JSON.stringify({ ...r, ...s, consoleErrors: errors.length, firstErrors: errors.slice(0, 3), init: logs, evaluated }, null, 1));
   if (!r.ready || errors.length) failed = true;
 }
 ws.close();

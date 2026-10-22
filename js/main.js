@@ -597,7 +597,8 @@ async function initApp() {
         geometries: renderer.info.memory.geometries,
         textures: renderer.info.memory.textures
       }),
-      heightAt: (x, z) => controllerManager.getGroundHeight(x, z, 'car'),
+      heightAt: (x, z) => window.NYC.Terrain.heightAt(x, z),
+      groundAt: (x, z) => window.NYC.Terrain.groundAt(x, z),
       teleport: (x, z, headingDeg = 180) => teleportTo(x, z, (headingDeg * Math.PI) / 180),
       setTime: selectTime,
       freeze: (on) => { debugState.freeze = !!on; },
