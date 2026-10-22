@@ -153,7 +153,7 @@ function createTrafficSystem(scene, sidewalks, obstacles) {
   const suvMat = createLoftedCarMaterial(BODY_SPECS.suv);
   const carWheelMat = createLoftedCarMaterial(BODY_SPECS.sedan, 0xffbe14);
 
-  const taxiYellow = new THREE.Color(0xffbe14);
+  const taxiYellow = new THREE.Color(0xf1f3f5); // the 'taxi' class is San Francisco's white robotaxi (actor-models.js)
   const nypdWhite = new THREE.Color(0xf6f9fc);
   const sedanPalette = [
     new THREE.Color(0x1c2026), // Black Town Car / Uber
@@ -1993,7 +1993,7 @@ function createHighwayTraffic(scene, lanes) {
   scene.add(group);
   const KINDS = ['taxi', 'sedan', 'suv'];
   const PALETTES = {
-    taxi: [0xffbe14],
+    taxi: [0xf1f3f5],
     sedan: [0x1c2026, 0xcfd6de, 0x1d3b6c, 0x52575e, 0x6e1f24, 0x8a8f96, 0xe9ecef],
     suv: [0x16191e, 0xf0f3f7, 0x3a434d, 0x28382e, 0xbec6cf, 0x5b2a2a]
   };

@@ -210,7 +210,8 @@ const CAR_PARTS = {
   MIRROR: 5,
   SIGN: 6,
   FRONT: 7,
-  REAR: 8
+  REAR: 8,
+  SENSOR: 9
 };
 
 // Design tables. Curves are [z, value] control points (z = +front); nose / tail entries are [length, tip value,
@@ -307,7 +308,10 @@ const BODY_SPECS = {
     rails: true
   }
 };
-BODY_SPECS.taxi = Object.assign({}, BODY_SPECS.sedan, { name: 'taxi', sign: true });
+// San Francisco's robotaxi (a Waymo-style white crossover with a roof lidar dome and perimeter sensor pods) takes the
+// place of New York's yellow cab: the player's car and the 'taxi' class of the traffic
+BODY_SPECS.robotaxi = Object.assign({}, BODY_SPECS.sedan, { name: 'robotaxi', sign: false, sensors: true, chrome: false });
+BODY_SPECS.taxi = BODY_SPECS.robotaxi;
 for (const spec of Object.values(BODY_SPECS)) {
   // Kept for code that places lamp flares: lamp heights (front, rear) and centres across the car
   spec.lamps = [spec.headlight[1], spec.taillight[1]];
@@ -813,6 +817,34 @@ function buildTaxiSign(spec) {
   return [part(sign, CAR_PARTS.SIGN), part(mount, CAR_PARTS.TRIM)];
 }
 
+// Robotaxi sensor suite: the spinning-lidar dome on a body-colour pedestal over the roof, a black collar under it and a
+// body-colour cap on top, plus small lidar pods on the front fenders (by the windshield) and the rear quarters
+function sensorDomePlacement(spec) {
+  const L = carLayout(spec);
+  const cab = spec.cabin;
+  const z = lerp(cab.roofFront, cab.roofRear, 0.4);
+  const c = L.cabin(z);
+  return { z, y: c.railY + c.h };
+}
+
+function buildSensorSuite(spec) {
+  const L = carLayout(spec);
+  const { z, y } = sensorDomePlacement(spec);
+  const pedestal = roundedBox(0.3, 0.035, 0.84, 0.03, 0.012).translate(0, y + 0.03, z);
+  const collar = new THREE.CylinderGeometry(0.2, 0.235, 0.06, 28).translate(0, y + 0.095, z);
+  const dome = new THREE.CylinderGeometry(0.2, 0.205, 0.27, 28).translate(0, y + 0.26, z);
+  const cap = new THREE.CylinderGeometry(0.155, 0.2, 0.05, 28).translate(0, y + 0.42, z);
+  const parts = [part(pedestal, CAR_PARTS.BODY), part(collar, CAR_PARTS.TRIM), part(dome, CAR_PARTS.SENSOR), part(cap, CAR_PARTS.BODY)];
+  const bc = L.belt.cowl;
+  const bd = L.belt.deck;
+  for (const side of [-1, 1]) {
+    const front = new THREE.CylinderGeometry(0.06, 0.066, 0.13, 16).translate(side * (bc.x - 0.06), bc.y + 0.065, spec.cabin.cowl + 0.14);
+    const rear = new THREE.CylinderGeometry(0.055, 0.06, 0.11, 16).translate(side * (bd.x - 0.05), bd.y + 0.055, spec.cabin.deck - 0.08);
+    parts.push(part(front, CAR_PARTS.SENSOR), part(rear, CAR_PARTS.SENSOR));
+  }
+  return parts;
+}
+
 function buildCarGeometry(spec, includeWheels = true) {
   const parts = [buildCarBody(spec, 1), buildCarCabin(spec, 1), ...buildMirrors(spec)];
   for (const side of [-1, 1]) {
@@ -823,6 +855,7 @@ function buildCarGeometry(spec, includeWheels = true) {
   }
   if (spec.rails) parts.push(...buildRoofRails(spec));
   if (spec.sign) parts.push(...buildTaxiSign(spec));
+  if (spec.sensors) parts.push(...buildSensorSuite(spec));
   return mergeGeometries(parts);
 }
 
@@ -840,6 +873,10 @@ function buildCarProxyGeometry(spec) {
   if (spec.sign) {
     const { z, y } = taxiSignPlacement(spec);
     parts.push(part(new THREE.BoxGeometry(0.58, 0.16, 0.16).translate(0, y + 0.1, z), CAR_PARTS.SIGN));
+  }
+  if (spec.sensors) {
+    const { z, y } = sensorDomePlacement(spec);
+    parts.push(part(new THREE.BoxGeometry(0.42, 0.36, 0.42).translate(0, y + 0.22, z), CAR_PARTS.SENSOR));
   }
   return mergeGeometries(parts);
 }
@@ -1003,6 +1040,7 @@ function createLoftedCarMaterial(spec, fixedColorHex = null) {
   const isTrim = isPart(CAR_PARTS.TRIM);
   const isMirror = isPart(CAR_PARTS.MIRROR);
   const isSign = isPart(CAR_PARTS.SIGN);
+  const isSensor = isPart(CAR_PARTS.SENSOR);
   const ax = abs(p.x);
   const isSide = smoothstep(0.45, 0.7, abs(n.x));
   const front = smoothstep(0.12, 0.38, n.z).mul(step(frontZone, p.z)).mul(isBody);
@@ -1160,6 +1198,8 @@ function createLoftedCarMaterial(spec, fixedColorHex = null) {
   // Mirror caps (paint, glass facing back), taxi roof light, trims, alloys & tyres
   const mirrorCol = mix(paint, color(0x7c8a94), mirrorGlass);
   const signCol = mix(color(0xf3efe2), mix(color(0xfff1b8), color(0x15181b), signGlyph), signFace);
+  // Lidar windows: dark smoked glass, a touch lighter where it faces the sky
+  const sensorCol = mix(color(0x0c0f13), color(0x2a333d), smoothstep(0.3, 0.95, n.y));
   const alloyCol = mix(color(0x0b0e12), color(0xd8e0e8), alloyMetal);
   const treadZone = smoothstep(wheelR.mul(0.74), wheelR.mul(0.83), wheelDist);
   const tyreBase = smoothstep(wheelR.mul(0.85), wheelR.mul(0.94), wheelDist).mul(0.22).add(0.78);
@@ -1168,13 +1208,14 @@ function createLoftedCarMaterial(spec, fixedColorHex = null) {
   let col = mix(body, windowCol, isWindow);
   col = mix(col, mirrorCol, isMirror);
   col = mix(col, signCol, isSign);
+  col = mix(col, sensorCol, isSensor);
   col = mix(col, color(0x1b1e21), isTrim);
   col = mix(col, alloyCol, isAlloy);
   col = mix(col, tyreCol, isTyre);
 
   // ---- Roughness & metalness ---------------------------------------------------------------------------------------
   const alloySpokes = max(spokes, rimRing).mul(isAlloy);
-  const glossy = max(max(max(glass, chromeBelt), mirrorGlass), lamp);
+  const glossy = max(max(max(max(glass, chromeBelt), mirrorGlass), lamp), isSensor);
   let rough = mix(float(0.26), float(0.15), glossy);
   rough = mix(rough, float(0.4), plates);
   rough = mix(rough, float(0.35), isSign);

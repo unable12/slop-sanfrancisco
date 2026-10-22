@@ -19,7 +19,6 @@ const {
 const {
   BODY_SPECS,
   buildCarGeometry,
-  buildCarSidePatch,
   buildSteerableWheelGeo,
   createLoftedCarMaterial,
   buildHelicopterBodyGeometry,
@@ -31,37 +30,6 @@ const { PersonCrowd, PersonRig } = window.NYC;
 const { HEADLIGHTS, createVehicleHeadlight, placeVehicleHeadlight } = window.NYC;
 // Walking surface for the player's pedestrian (its rig samples it around its feet)
 const personGround = (controllers, x, z) => controllers.getGroundHeight(x, z, 'person');
-
-function createTaxiDoorDecalTexture() {
-  const c = document.createElement('canvas');
-  c.width = 256;
-  c.height = 128;
-  const ctx = c.getContext('2d');
-  ctx.fillStyle = '#ffbe14';
-  ctx.fillRect(0, 0, 256, 128);
-  // Black T&LC circle emblem
-  ctx.fillStyle = '#111317';
-  ctx.beginPath();
-  ctx.arc(58, 64, 42, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = '#ffbe14';
-  ctx.font = '900 32px Inter, Arial, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText('T', 58, 66);
-  // NYC TAXI typography & Fare Rate
-  ctx.fillStyle = '#111317';
-  ctx.textAlign = 'left';
-  ctx.font = '900 26px Inter, Arial, sans-serif';
-  ctx.fillText('NYC TAXI', 112, 42);
-  ctx.font = '700 15px JetBrains Mono, monospace';
-  ctx.fillText('7Y48 · MEDALLION', 112, 68);
-  ctx.font = '600 13px Inter, Arial, sans-serif';
-  ctx.fillText('$3.00 INITIAL FARE', 112, 90);
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  return tex;
-}
 
 function createNYLicensePlateTexture() {
   const c = document.createElement('canvas');
@@ -341,7 +309,7 @@ class ThirdPersonControllerManager {
   }
 
   // =========================================================================
-  // 2. CAR (3D LOFTED SCULPTED NYC MEDALLION YELLOW TAXI SEDAN)
+  // 2. CAR (3D LOFTED WAYMO-STYLE ROBOTAXI: WHITE BODY, ROOF LIDAR DOME & PERIMETER SENSOR PODS)
   // =========================================================================
   createCarEntity() {
     const root = new THREE.Group();
@@ -351,30 +319,14 @@ class ThirdPersonControllerManager {
     root.add(chassisPivot);
 
     const spec = BODY_SPECS.taxi;
-    const taxiLoftMat = createLoftedCarMaterial(spec, 0xffbe14);
+    const taxiLoftMat = createLoftedCarMaterial(spec, 0xf1f3f5);
 
-    // 1. 3D Lofted Taxi Body + Curved Windscreens + Crowned Roof + Side Mirrors + Roof Sign
+    // 1. 3D Lofted Robotaxi Body + Curved Windscreens + Crowned Roof + Side Mirrors + Lidar Dome & Sensor Pods
     const carBodyGeo = buildCarGeometry(spec, false);
     const carBodyMesh = new THREE.Mesh(carBodyGeo, taxiLoftMat);
     carBodyMesh.castShadow = true;
     carBodyMesh.receiveShadow = true;
     chassisPivot.add(carBodyMesh);
-
-    // 2. Authentic NYC Taxi Side Door T&LC Medallion & Fare Tariff Emblem Decals, hugging the curved front doors
-    const doorDecalTex = createTaxiDoorDecalTexture();
-    const doorDecalMat = new THREE.MeshStandardNodeMaterial({
-      map: doorDecalTex,
-      roughness: 0.24,
-      metalness: 0.34,
-      polygonOffset: true,
-      polygonOffsetFactor: -2,
-      polygonOffsetUnits: -2
-    });
-    const doorMid = (spec.doors[0] + spec.doors[1]) / 2;
-    for (const side of [-1, 1]) {
-      const decal = new THREE.Mesh(buildCarSidePatch(spec, side, doorMid - 0.36, doorMid + 0.36, 0.53, 0.81, 0.003), doorDecalMat);
-      chassisPivot.add(decal);
-    }
 
     // 3. High-Detail NY Empire Gold License Plates on the bumpers
     const nyPlateTex = createNYLicensePlateTexture();
@@ -432,7 +384,7 @@ class ThirdPersonControllerManager {
 
     return {
       type: 'car',
-      label: 'NYC Yellow Taxi',
+      label: 'Waymo Robotaxi',
       mesh: root,
       chassisPivot,
       carState,
