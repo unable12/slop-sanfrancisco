@@ -1890,15 +1890,17 @@ function createTerrainMaterial(maskTexture, mask) {
   const w10 = f.x.mul(float(1.0).sub(f.y));
   const w01 = float(1.0).sub(f.x).mul(f.y);
   const w11 = f.x.mul(f.y);
-  const paved = (c) => float(1.0).sub(step(0.5, c)); // 1 for asphalt
+  // 1 for asphalt; the sidewalk class too: it lies under the curb islands' slabs, and the cells straddling a curb line
+  // show as roadway
+  const paved = (c) => float(1.0).sub(step(1.5, c));
   const asphaltShare = paved(c00).mul(w00).add(paved(c10).mul(w10)).add(paved(c01).mul(w01)).add(paved(c11).mul(w11));
   const aa = max(fwidth(asphaltShare), 0.0001);
   const asphalt = smoothstep(float(0.5).sub(aa), float(0.5).add(aa), asphaltShare);
   // the other classes, weighted among themselves
-  const ow00 = w00.mul(step(0.5, c00));
-  const ow10 = w10.mul(step(0.5, c10));
-  const ow01 = w01.mul(step(0.5, c01));
-  const ow11 = w11.mul(step(0.5, c11));
+  const ow00 = w00.mul(step(1.5, c00));
+  const ow10 = w10.mul(step(1.5, c10));
+  const ow01 = w01.mul(step(1.5, c01));
+  const ow11 = w11.mul(step(1.5, c11));
   const otherColor = classColor(c00).mul(ow00).add(classColor(c10).mul(ow10)).add(classColor(c01).mul(ow01)).add(classColor(c11).mul(ow11))
     .div(max(ow00.add(ow10).add(ow01).add(ow11), 0.0001));
   const tone = noise2D(positionWorld.xz.mul(0.35)).mul(0.2).add(noise2D(positionWorld.xz.mul(2.1)).mul(0.08)).add(0.86);

@@ -48,8 +48,8 @@ Live (ground `sf-flat`). Everything here is built flat; the P2.2 terrain mesh re
 
 | ☐ | line | class | code | note / fix | owner |
 |---|---|---|---|---|---|
-| ☐ | 47 | A | `water.position.y = ISLAND_BOUNDS.waterLevel;` | Bay plane at the placeholder ISLAND_BOUNDS.waterLevel (-2.2 at this commit); use Terrain.waterLevel | P2.2.5 |
-| ☐ | 63 | A | `if (b.park > 0.5 && !b.median) lawns.push(flat(b.poly, H + 0` | Park lawn laid flat on the constant curb height H; drape on groundAt + CURB_H (+ lawn offset) | P2.4 |
+| ☑ | 47 | A | `water.position.y = ISLAND_BOUNDS.waterLevel;` | Bay plane at the placeholder ISLAND_BOUNDS.waterLevel (-2.2 at this commit); use Terrain.waterLevel | P2.2.5 |
+| ☑ | 63 | A | `if (b.park > 0.5 && !b.median) lawns.push(flat(b.poly, H + 0` | Park lawn laid flat on the constant curb height H; drape on groundAt + CURB_H (+ lawn offset) | P2.4 |
 
 ## `sf-buildings.js`
 

@@ -1,14 +1,18 @@
 (function () {
 // js/sf-ground.js
 // San Francisco's ground: the bay at the terrain's water level, the terrain surface itself (js/terrain-mesh.js: roadway,
-// seawall & all), every real curb island (DataSF curbs, js/city-config.js BLOCKS) as a raised sidewalk slab with parkland
-// lawns on top, and the piers. Replaces city-grid.js's Manhattan ground; returns the same shape (sidewalks, footprints,
+// seawall & all), every real curb island (DataSF curbs, js/city-config.js BLOCKS) as a sidewalk draped CURB_H above the
+// terrain behind granite curb faces (js/drape.js), with parkland lawns on top, and the piers. Replaces city-grid.js's Manhattan ground; returns the same shape (sidewalks, footprints,
 // colliders, highwayLanes) for main.js, plus the terrain.
 
 const { THREE } = window.NYC;
 const { mergeGeometries } = window.NYC.Addons;
-const { BLOCKS, LAND_RINGS, ISLAND_BOUNDS, WATERFRONT_PIERS, GEO } = window.NYC;
-const { createSidewalkMaterial, createWaterMaterial, createParkLawnMaterial, buildTerrainMesh, Terrain } = window.NYC;
+const { BLOCKS, WATERFRONT_PIERS, GEO } = window.NYC;
+const { createSidewalkMaterial, createCurbMaterial, createWaterMaterial, createParkLawnMaterial, buildTerrainMesh, Terrain, Drape, CURB_H } = window.NYC;
+
+const CELL = 512; // curb islands are merged per CELL x CELL m square (one draw per material per cell, frustum culled)
+const OUTLINE_STEP = 2; // metres between outline points: curbs follow the grade at the height field's spacing
+const CURB_BURY = 0.3; // curb faces reach this far below the road surface (coarser terrain levels sag between samples)
 
 const shapeOf = (pts) => {
   const s = new THREE.Shape();
@@ -23,12 +27,6 @@ function prism(pts, y0, y1) {
   g.translate(0, y0, 0);
   return g;
 }
-function flat(pts, y) {
-  const g = new THREE.ShapeGeometry(shapeOf(pts), 1);
-  g.rotateX(-Math.PI / 2);
-  g.translate(0, y, 0);
-  return g;
-}
 const merged = (geos, mat, name, { cast = false } = {}) => {
   const mesh = new THREE.Mesh(mergeGeometries(geos.map((g) => (g.index ? g.toNonIndexed() : g)), false), mat);
   mesh.name = name;
@@ -37,10 +35,23 @@ const merged = (geos, mat, name, { cast = false } = {}) => {
   return mesh;
 };
 
+// Arrays from js/drape.js as a mesh
+function drapedMesh(out, mat, name) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(out.pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(out.nrm, 3));
+  g.setIndex(out.pos.length / 3 > 65535 ? new THREE.Uint32BufferAttribute(out.idx, 1) : new THREE.Uint16BufferAttribute(out.idx, 1));
+  g.computeBoundingSphere();
+  const mesh = new THREE.Mesh(g, mat);
+  mesh.name = name;
+  mesh.receiveShadow = true;
+  mesh.castShadow = false;
+  return mesh;
+}
+
 function buildSFGround(scene) {
   const group = new THREE.Group();
   group.name = 'SFGround';
-  const H = ISLAND_BOUNDS.sidewalkHeight;
 
   // 1. The bay
   const water = new THREE.Mesh(new THREE.PlaneGeometry(60000, 60000, 1, 1).rotateX(-Math.PI / 2), createWaterMaterial());
@@ -51,18 +62,37 @@ function buildSFGround(scene) {
   // 2. Land: the terrain surface (its own group, outside the static culling: its tiles rebuild as the camera moves)
   const terrain = buildTerrainMesh(scene);
 
-  // 3. Curb islands: raised sidewalk slabs (medians & traffic islands too), lawns on the park blocks
-  const slabs = [];
-  const lawns = [];
+  // 3. Curb islands (blocks, medians & traffic islands): sidewalk tops draped CURB_H above the terrain, granite curb
+  //    faces down to the roadway, lawns on the park blocks; merged per CELL square
+  const ground = (x, z) => Terrain.groundAt(x, z);
+  const normal = (x, z, o) => Terrain.normalAt(x, z, o);
+  const cells = new Map();
+  const cellOf = (b) => {
+    const key = Math.floor((b.minX + b.maxX) / 2 / CELL) + ',' + Math.floor((b.minZ + b.maxZ) / 2 / CELL);
+    let c = cells.get(key);
+    if (!c) cells.set(key, (c = { top: { pos: [], nrm: [], idx: [] }, curb: { pos: [], nrm: [], idx: [] }, lawn: { pos: [], nrm: [], idx: [] } }));
+    return c;
+  };
   const sidewalks = [];
   for (const b of BLOCKS) {
     if (b.poly.length < 3) continue;
-    slabs.push(prism(b.poly, -0.05, H));
-    if (b.park > 0.5 && !b.median) lawns.push(flat(b.poly, H + 0.012));
+    const ring = Drape.densify(b.poly, OUTLINE_STEP);
+    const c = cellOf(b);
+    Drape.polygon(ring, ground, normal, CURB_H, c.top);
+    Drape.wall(ring, ground, -CURB_BURY, CURB_H, c.curb);
+    if (b.park > 0.5 && !b.median) Drape.polygon(ring, ground, normal, CURB_H + 0.012, c.lawn);
     sidewalks.push({ minX: b.minX, maxX: b.maxX, minZ: b.minZ, maxZ: b.maxZ, block: b });
   }
-  group.add(merged(slabs, createSidewalkMaterial(), 'SFCurbIslands'));
-  if (lawns.length) group.add(merged(lawns, createParkLawnMaterial(false), 'SFParkLawns'));
+  const sidewalkMat = createSidewalkMaterial();
+  const curbMat = createCurbMaterial();
+  const lawnMat = createParkLawnMaterial(false);
+  let islandTris = 0;
+  for (const c of cells.values()) {
+    if (c.top.idx.length) group.add(drapedMesh(c.top, sidewalkMat, 'SFCurbIslands'));
+    if (c.curb.idx.length) group.add(drapedMesh(c.curb, curbMat, 'SFCurbs'));
+    if (c.lawn.idx.length) group.add(drapedMesh(c.lawn, lawnMat, 'SFParkLawns'));
+    islandTris += (c.top.idx.length + c.curb.idx.length + c.lawn.idx.length) / 3;
+  }
 
   // 4. Piers (OSM outlines): concrete decks on the bay, level with the shore they leave from (the highest ground under
   //    their outline)
@@ -72,7 +102,7 @@ function buildSFGround(scene) {
   if (piers.length) group.add(merged(piers, deck, 'SFPiers', { cast: true }));
 
   scene.add(group);
-  console.info(`[ground] ${BLOCKS.length} curb islands, ${LAND_RINGS.length} land polygons, ${piers.length} piers (box ${GEO.box.name})`);
+  console.info(`[ground] ${BLOCKS.length} curb islands (${cells.size} cells, ${islandTris} triangles), ${piers.length} piers (box ${GEO.box.name})`);
   return { group, terrain, sidewalks, footprints: [], colliders: [], highwayLanes: [] };
 }
 
