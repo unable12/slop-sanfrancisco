@@ -265,6 +265,10 @@ Everything else: decide, log the decision (section 10), continue. Visual reviews
 | P1-6 | 2026-10-22 | Terrain is cross-checked against the footprints' own lidar ground: bias −0.04 m, median |error| 0.19 m, 91.6% within 1 m | Guards CRS/datum mistakes. A +1 m x shift improves it marginally (NAD83 vs WGS84 ~1 m); not applied |
 | P1-7 | 2026-10-22 | OSM `lanes` and width-derived lanes clamped to [1, 8] | OSM counts both directions |
 | P1-8 | 2026-10-22 | DataSF spatial filter: `intersects(geom, POLYGON)` instead of `within_box`; trees filtered by latitude/longitude (their point column is text) | `within_box` dropped long route lines |
+| P2-1 | 2026-10-22 | Terrain: 64 m LOD chunks are drawn per 512 m tile (one mesh per tile, rebuilt when a chunk in it changes level) | Accept criterion ≤ 40 terrain draws: 1,000 chunk meshes would be ~1,000 draws; the slice is 18 tiles |
+| P2-2 | 2026-10-22 | Seawall = the terrain itself: vertices on the bay drop 4 m below the water, the land's edge becomes a steep face painted as stone by the ground mask (class 5). No separate OSM-coastline extrusion | The DEM's land/water edge is the coastline (P1 traced `land` from it); one surface, no seams |
+| P2-3 | 2026-10-22 | Hills cast shadows through a static 8 m stand-in drawn back faces only (`shadowSide = BackSide`) on the shadow proxy layer | No self-shadow acne on sunlit slopes; lee slopes still shade what lies behind them |
+| P2-4 | 2026-10-22 | D5 settled: no road conforming. Second difference along all 837 slice links (1 m samples, 5 m windows): p50 0.0005, p95 0.0072, max 0.17 m⁻¹ (threshold p95 > 0.04). Worst: Broadway (tunnel portal), Ecker, Reed, Joice | `docs/reports/road-smoothness-slice.md` |
 
 ---------------------------------------------------------------------------------------------------------------------
 
