@@ -2682,6 +2682,8 @@ function createWaterMaterial() {
   };
   const CPB = N.CENTRAL_PARK_BOUNDS;
   const zSt = (n) => N.streetZ(n);
+  // smoothstep over a band of numbered streets; none in San Francisco (streetZ is flat 0), where WGSL rejects low == high
+  const band = (a, b, v) => (a === b ? float(0.0) : smoothstep(a, b, v));
   mat.emissiveNode = Fn(() => {
     const night = smoothstep(0.55, 1.35, cityUniforms.uInteriorGlow);
     const P = positionWorld.xz;
@@ -2719,11 +2721,11 @@ function createWaterMaterial() {
     const u = hit.x.add(hit.y); // runs along whichever face was hit
 
     // Skyline heights: Midtown (60th to 28th St) & the Financial District (south of Chambers St) stand tallest
-    const midtown = smoothstep(zSt(80), zSt(60), hit.y).mul(float(1.0).sub(smoothstep(zSt(28), zSt(14), hit.y)));
+    const midtown = band(zSt(80), zSt(60), hit.y).mul(float(1.0).sub(band(zSt(28), zSt(14), hit.y)));
     const manhattanS = mix(float(70.0), float(215.0), max(midtown, smoothstep(4400.0, 4950.0, hit.y)));
     // Across the rivers: the Jersey City towers (Newport to Exchange Place) & Long Island City (opposite 60th-26th St)
     const jerseyCity = smoothstep(3300.0, 3900.0, hit.y).mul(float(1.0).sub(smoothstep(6100.0, 6500.0, hit.y))).mul(step(hit.x, 0.0));
-    const lic = smoothstep(zSt(62), zSt(57), hit.y).mul(float(1.0).sub(smoothstep(zSt(30), zSt(25), hit.y))).mul(step(0.0, hit.x));
+    const lic = band(zSt(62), zSt(57), hit.y).mul(float(1.0).sub(band(zSt(30), zSt(25), hit.y))).mul(step(0.0, hit.x));
     const S = mix(mix(mix(float(30.0), float(120.0), max(jerseyCity, lic)), manhattanS, onIsland), float(120.0), lake);
     const brightness = mix(mix(float(0.6), float(1.0), onIsland), float(0.8), lake);
 

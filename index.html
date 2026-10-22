@@ -10,10 +10,11 @@
   <script>
     // Download the city scripts while Three.js loads; execute them only after its imports are ready below.
     const nycAppScripts = (() => {
-      const assetVersion = '20261022-teleports';
+      const assetVersion = '20261022-sf-p1';
       return [
-        './js/nyc-geodata.js',
+        './js/sf-geodata.js',
         './js/city-config.js',
+        './js/data-loader.js',
         './js/tsl-materials.js',
         './js/trees.js',
         './js/actor-models.js',
@@ -21,8 +22,9 @@
         './js/pedestrians.js',
         './js/lighting.js',
         './js/city-grid.js',
-        './js/boroughs.js',
+        './js/sf-ground.js',
         './js/buildings.js',
+        './js/sf-buildings.js',
         './js/landmarks.js',
         './js/street-details.js',
         './js/road-network.js',
@@ -152,14 +154,12 @@
   <!-- Teleport Destinations (native popover: light-dismiss & Esc) -->
   <div id="teleport-popover" class="popover" popover data-side="below" data-anchor="hud-toolbar" aria-label="Teleport the active player">
     <div class="pop-title">Teleport to</div>
-    <button id="tp-empire" class="pop-item tp-btn" data-teleport="empire" type="button"><span class="pop-name">Empire State Building</span><span class="pop-sub">5th Ave · Midtown</span></button>
-    <button id="tp-timessq" class="pop-item tp-btn" data-teleport="timessq" type="button"><span class="pop-name">Times Square</span><span class="pop-sub">7th Ave · Theater District</span></button>
-    <button id="tp-chrysler" class="pop-item tp-btn" data-teleport="chrysler" type="button"><span class="pop-name">Chrysler Building</span><span class="pop-sub">Lexington Ave · Midtown East</span></button>
-    <button id="tp-grandcentral" class="pop-item tp-btn" data-teleport="grandcentral" type="button"><span class="pop-name">Grand Central Terminal</span><span class="pop-sub">Park Ave · Midtown East</span></button>
-    <button id="tp-bryant" class="pop-item tp-btn" data-teleport="bryant" type="button"><span class="pop-name">Bryant Park</span><span class="pop-sub">6th Ave · Midtown</span></button>
-    <button id="tp-flatiron" class="pop-item tp-btn" data-teleport="flatiron" type="button"><span class="pop-name">Flatiron Building</span><span class="pop-sub">5th Ave · Flatiron District</span></button>
-    <button id="tp-centralpark" class="pop-item tp-btn" data-teleport="centralpark" type="button"><span class="pop-name">Central Park</span><span class="pop-sub">6th Ave · Central Park South</span></button>
-    <button id="tp-owtc" class="pop-item tp-btn" data-teleport="owtc" type="button"><span class="pop-name">One World Trade Center</span><span class="pop-sub">Vesey St · Financial District</span></button>
+    <button id="tp-ferry" class="pop-item tp-btn" data-teleport="ferry" type="button"><span class="pop-name">Ferry Building</span><span class="pop-sub">The Embarcadero · Embarcadero</span></button>
+    <button id="tp-market" class="pop-item tp-btn" data-teleport="market" type="button"><span class="pop-name">Market &amp; Montgomery</span><span class="pop-sub">Market St · Financial District</span></button>
+    <button id="tp-transamerica" class="pop-item tp-btn" data-teleport="transamerica" type="button"><span class="pop-name">Transamerica Pyramid</span><span class="pop-sub">Montgomery St · Financial District</span></button>
+    <button id="tp-chinatown" class="pop-item tp-btn" data-teleport="chinatown" type="button"><span class="pop-name">Chinatown</span><span class="pop-sub">Grant Ave · Chinatown</span></button>
+    <button id="tp-powell" class="pop-item tp-btn" data-teleport="powell" type="button"><span class="pop-name">California &amp; Powell</span><span class="pop-sub">California St · Nob Hill</span></button>
+    <button id="tp-nobhill" class="pop-item tp-btn" data-teleport="nobhill" type="button"><span class="pop-name">Nob Hill</span><span class="pop-sub">California St · Nob Hill</span></button>
   </div>
 
   <!-- Bottom-Left: Street-Name Signs & Live GPS Radar Minimap -->

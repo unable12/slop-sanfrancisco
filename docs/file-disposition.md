@@ -16,11 +16,11 @@ The internal namespace `window.NYC` / `__NYC_APP` stays (D2).
 | File | Lines | Disposition | What changes | Phase |
 |---|---|---|---|---|
 | `actor-models.js` | 1952 | Keep → small additions | SF fleet models (bus livery, sensor-pod cars, SFPD), cable car, tram | 4 |
-| `boroughs.js` | 3394 | Drop after porting | `buildBuildingChunks`, window-grid shader, mask-driven ground shader → `region.js` | 6 |
+| `boroughs.js` | 3394 | Not loaded since P1 (decision P1-2); drop after porting | `buildBuildingChunks`, window-grid shader, mask-driven ground shader → `region.js` | 6 |
 | `buildings.js` | 2636 | Modify heavily | New v1 path: footprint masses → `commit()` → facade boxes; `minY` colliders; quadtree over data bounds; NYC recipes, avenue/district tables and landmark reserves removed once v1 passes | 2, 4 |
 | `cameras.js` | 352 | Modify lightly | y ≥ ground + 0.55; terrain-aware boom | 2 |
 | `city-config.js` | 809 | Rewrite internals, keep exports | Generic functions kept; NYC tables replaced by SF data or emptied; `ISLAND_BOUNDS` / `getIslandBoundsAtZ` become land-polygon based (same names) | 1 |
-| `city-grid.js` | 3515 | Modify heavily | Flat road slab → terrain; curb islands draped; Manhattan seawall/Central Park/stone bridges/shore belt removed; piers builder kept for the Embarcadero | 2 |
+| `city-grid.js` | 3515 | Superseded by `sf-ground.js` (decision P1-1); keep for its helpers until P2 has moved what it needs | Flat road slab → terrain; curb islands draped; Manhattan seawall/Central Park/stone bridges/shore belt removed; piers builder kept for the Embarcadero | 2 |
 | `controllers.js` | 1175 | Modify | `getGroundHeight` → terrain; real `yHeight`; `minY`; car/cyclist pitch and roll; grade physics; heli clearance | 2 |
 | `landmarks.js` | 1076 | Rewrite content | SF landmarks; keep `fitToSite` | 5 |
 | `lighting.js` | 308 | Modify | Shadow far relative to ground (P2); marine layer extends the existing `fogNode` (P6). No sun lat/lon work (presets) | 2, 6 |
@@ -38,7 +38,7 @@ The internal namespace `window.NYC` / `__NYC_APP` stays (D2).
 | `trees.js` | 992 | Modify | Ground y; inventory placement; species classes | 2, 4 |
 | `tsl-materials.js` | 3156 | Modify + add | `boxBase` / `plinth` attributes for facade shaders (P2); ground-mask terrain material (P2); SF palettes and stucco (P4) | 2, 4 |
 | `vehicle-lights.js` | 39 | Keep | Already follows slope (tested) | n/a |
-| new `data-loader.js`, `terrain.js`, `terrain-mesh.js`, `sf-buildings.js`, `sf-style.js`, `region.js` | | Create | | 1, 2, 4, 6 |
+| new `data-loader.js`, `sf-ground.js`, `sf-buildings.js` (exist since P1); `terrain.js`, `terrain-mesh.js`, `sf-style.js`, `region.js` | | Create | | 1, 2, 4, 6 |
 
 ## Page and styles
 

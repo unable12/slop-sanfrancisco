@@ -40,13 +40,13 @@ test('preloaded URLs match ordered scripts and execution waits for Three.js impo
   const context = vm.createContext({ window, document, THREE, TSL: {}, ...imports });
   vm.runInContext(preloadScript[1], context);
   assert.equal(scripts.length, 0);
-  assert.equal(links.length, 23);
+  assert.equal(links.length, 25);
   assert.equal(new Set(links).size, links.length, 'each script is preloaded once');
 
   // Imports are supplied above; evaluate the unchanged module body in the same global lexical environment.
   vm.runInContext(moduleScript[1].replace(/^\s*import .+;$/gm, ''), context);
   assert.deepEqual(scripts, links);
-  assert.match(scripts[0], /\/nyc-geodata\.js\?v=/);
+  assert.match(scripts[0], /\/sf-geodata\.js\?v=/);
   assert.match(scripts.at(-1), /\/main\.js\?v=/);
   assert.equal(new Set(scripts.map((src) => src.split('?v=')[1])).size, 1);
 });

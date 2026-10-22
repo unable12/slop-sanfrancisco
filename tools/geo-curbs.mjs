@@ -17,6 +17,21 @@ const ALLEY_HALF = 2.6; // metres: half width of the corridor carved for an alle
 const MIN_AREA = 4; // m^2
 const FAR_CLOSE_MAX = 60; // metres: a chain may close on itself this far if nothing lies across the gap
 
+// Raster stairs -> lines: short edges (stair steps) become their midpoints, corners between two long edges stay
+// (NYC geo-blocks.mjs destair)
+function destair(out, short) {
+  const n = out.length;
+  const len = (i) => { const a = out[i], b = out[(i + 1) % n]; return Math.abs(b[0] - a[0]) + Math.abs(b[1] - a[1]); };
+  const res = [];
+  for (let i = 0; i < n; i++) {
+    const prevLong = len((i + n - 1) % n) > short;
+    const nextLong = len(i) > short;
+    if (prevLong && nextLong) res.push(out[i]);
+    if (!nextLong) { const a = out[i], b = out[(i + 1) % n]; res.push([(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]); }
+  }
+  return res;
+}
+
 const segX = (a, b, c, d) => {
   const o = (p, q, r) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]));
   return o(a, b, c) * o(a, b, d) < 0 && o(c, d, a) * o(c, d, b) < 0;
@@ -261,7 +276,13 @@ export function buildCurbIslands(box = BOX) {
       else if (!right) dir = (dir + 1) % 4;
       if (++guard > 4e6) break;
     } while (`${cx},${cz},${dir}` !== start);
-    return rdpRing(pts, RES * 0.6);
+    // drop collinear raster corners, turn the stair steps into lines, then simplify (as NYC geo-blocks.mjs)
+    const corners = [];
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[(i + pts.length - 1) % pts.length], c = pts[i], n = pts[(i + 1) % pts.length];
+      if ((c[0] - p[0]) * (n[1] - c[1]) - (c[1] - p[1]) * (n[0] - c[0]) !== 0) corners.push(c);
+    }
+    return rdpRing(destair(corners, RES * 1.5), 0.35);
   };
 
   // --- 6. polygons, frames, parks ------------------------------------------------------------------------------------------
@@ -279,7 +300,7 @@ export function buildCurbIslands(box = BOX) {
     if (c.n * RES * RES < MIN_AREA) continue;
     let ring = trace(c);
     if (ring.length < 3) continue;
-    if (ringArea(ring) < 0) ring = ring.reverse();
+    if (ringArea(ring) > 0) ring = ring.reverse(); // NYC convention: every ring has negative ringArea()
     // dominant edge directions (length-weighted, folded to [0, 90) degrees), up to two frames
     const hist = new Float64Array(90);
     for (let i = 0; i < ring.length; i++) {

@@ -27,3 +27,16 @@ All binary outputs of the pipeline use one container, written by `writeBin` and 
 **Payload.** Uint16, `w * h` values, row-major. Row `j` is world z = `originZ + j * cell`, column `i` is world x = `originX + i * cell`.
 
 Samples are point values at those positions; interpolate bilinearly. Water cells hold exactly `waterLevel` (within quantisation).
+
+## `data/buildings-<box>.bin`: building footprints (`format: "sf-buildings"`, version 1)
+
+**Header fields:** `count`, `fields` (`base, roof, peak, ringStart, ringCount`), `tableFloats`, `vertexFloats`.
+
+**Payload.** Float32:
+- first `tableFloats` values: `count` records of 5 floats each;
+  - `base`: lowest bare-earth ground under the footprint, m NAVD88;
+  - `roof`: median first-return elevation, the main roof, m NAVD88;
+  - `peak`: highest first return, m NAVD88;
+  - `ringStart`: index of the first vertex in the pool;
+  - `ringCount`: number of vertices;
+- then the vertex pool of `vertexFloats` values, as `x, z` pairs in world metres. Rings have negative `ringArea()` (NYC convention).

@@ -257,6 +257,14 @@ Everything else: decide, log the decision (section 10), continue. Visual reviews
 | R2-7 | 2026-10-22 | Fog is an extension of the existing `fogNode`, not new | It already exists in `lighting.js` |
 | R2-8 | 2026-10-22 | Sun lat/lon task removed | Time presets are hand-set, not computed |
 | R2-9 | 2026-10-22 | Horizontal phases → vertical slice first | Integration risk |
+| P1-1 | 2026-10-22 | `city-grid.js` is replaced by a new `js/sf-ground.js` (same return shape) instead of being modified in place; `buildings.js` NYC path likewise sits behind `FEATURES.buildings` while `js/sf-buildings.js` grows | The NYC ground and building builders are Manhattan through and through; a new module is smaller than gutting 3.5k and 2.6k lines. NYC helpers and materials are still reused |
+| P1-2 | 2026-10-22 | `boroughs.js` removed from the script list now (not in P6) | It computes the five boroughs at load and crashes on empty tables; `region.js` replaces it in P6 |
+| P1-3 | 2026-10-22 | Curb gaps: closed up to 9 m across any street that is not class 1–3 (many SF alleys are named "ST"); a chain may close on itself up to 60 m if only an alley lies across; park polygons without curbs become blocks; union fill | Measured on the slice: 98.6% of footprints inside blocks, 2.2% of curb length dropped |
+| P1-4 | 2026-10-22 | DataSF `oneway` F = travel along the segment's drawing direction, T = against | 442 of 447 one-way links agree with OSM |
+| P1-5 | 2026-10-22 | Water level = −1.07 m NAVD88 (mode of the hydro-flattened bay in the DEM) | Measured, not assumed (D3) |
+| P1-6 | 2026-10-22 | Terrain is cross-checked against the footprints' own lidar ground: bias −0.04 m, median |error| 0.19 m, 91.6% within 1 m | Guards CRS/datum mistakes. A +1 m x shift improves it marginally (NAD83 vs WGS84 ~1 m); not applied |
+| P1-7 | 2026-10-22 | OSM `lanes` and width-derived lanes clamped to [1, 8] | OSM counts both directions |
+| P1-8 | 2026-10-22 | DataSF spatial filter: `intersects(geom, POLYGON)` instead of `within_box`; trees filtered by latitude/longitude (their point column is text) | `within_box` dropped long route lines |
 
 ---------------------------------------------------------------------------------------------------------------------
 
@@ -265,5 +273,6 @@ Everything else: decide, log the decision (section 10), continue. Visual reviews
 | Date | Tasks | Summary | Tests | Perf (probe) | Tokens | Notes |
 |---|---|---|---|---|---|---|
 | 2026-10-22 | plan r2 | Research done, plan revised, nothing built | NYC baseline 97/97 | NYC 92–98 fps | n/a | Ready for P1 |
+| 2026-10-22 | P1.1–P1.13 | Phase 1 done in one session. NYC engine imported and pinned; harness (URL params, benches, batch shots); fetcher; frame; terrain baker; curb islands; road graph; land/piers/parks/landmarks; buildings binary; engine boots on the flat SF slice | 107/107 | street 417, car 370, heli 500, hill 385 fps; heap ≤ 120 MB; ready 2.5 s; 0 errors | Plan 5-hour window 6%, weekly 4% (planning + P1 together); context 64% of 1M | P1 estimate was 2 sessions, took ~1 |
 
-- [ ] P1 · [ ] P2 · [ ] P3 · [ ] P4 · [ ] P5 · [ ] P6 · [ ] P7
+- [x] P1 · [ ] P2 · [ ] P3 · [ ] P4 · [ ] P5 · [ ] P6 · [ ] P7

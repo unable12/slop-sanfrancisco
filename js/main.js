@@ -32,15 +32,30 @@ const { CameraSystem, CAMERA_PRESETS } = window.NYC;
 const { LightingSystem } = window.NYC;
 const { NYCMapSystem } = window.NYC;
 const { setupSceneCulling, updateSceneCulling } = window.NYC;
+const { loadCityData, buildSFGround, buildSFBuildingsV0 } = window.NYC;
+
+// Subsystems on / off while San Francisco replaces the New York city builders phase by phase (PLAN.md, docs/phases):
+// the NYC builders still exist but expect Manhattan's tables, which are empty here (city-config.js)
+const FEATURES = {
+  ground: 'sf-flat', // 'sf-flat' (sf-ground.js) | 'nyc' (city-grid.js)
+  buildings: 'v0', // 'v0' (sf-buildings.js extrusions) | 'nyc' (buildings.js)
+  boroughs: false,
+  landmarks: false,
+  details: false,
+  traffic: false,
+  highway: false
+};
 
 // Scripted camera paths for ?bench=name: keyframes [x, y, z, yawDeg, pitchDeg] spread evenly over BENCH_SECONDS
 // (yaw 0 looks north, -z). Coordinates are in the current city's world frame.
 const BENCH_SECONDS = 20;
+// San Francisco slice (flat until phase 2): street = up Grant Ave through Chinatown, car = along California St from Nob
+// Hill to the Financial District, heli = a loop around the slice, hill = a turn on the spot at Nob Hill
 const BENCH_PATHS = {
-  street: [[0, 1.7, 0, 0, 0], [0, 1.7, -400, 0, 0]],
-  car: [[3, 1.4, 600, 0, -2], [3, 1.4, -600, 0, -2]],
-  heli: [[0, 220, 800, 0, -20], [600, 260, 0, 90, -20], [0, 300, -800, 180, -20], [-600, 260, 0, 270, -20], [0, 220, 800, 360, -20]],
-  hill: [[0, 60, 0, 0, -8], [0, 60, 0, 360, -8]]
+  street: [[-391, 1.7, -727, 9, 0], [-446, 1.7, -1073, 9, 0]],
+  car: [[-902, 1.4, -325, -99, -2], [-612, 1.4, -371, -99, -2], [400, 1.4, -531, -99, -2]],
+  heli: [[-300, 300, 400, 0, -25], [500, 320, -400, 90, -25], [-300, 340, -1200, 180, -25], [-1100, 320, -400, 270, -25], [-300, 300, 400, 360, -25]],
+  hill: [[-950, 8, -330, 0, -4], [-950, 8, -330, 360, -4]]
 };
 function samplePath(keys, u) {
   const f = u * (keys.length - 1);
@@ -100,32 +115,39 @@ async function initApp() {
   markInit('lighting');
 
   if (loadingStatus) {
-    loadingStatus.textContent = 'Constructing Manhattan Grid, Landmarks & Streetscape...';
+    loadingStatus.textContent = 'Loading San Francisco terrain & buildings...';
+  }
+  await loadCityData(setLoadingProgress);
+  markInit('data');
+  if (loadingStatus) {
+    loadingStatus.textContent = 'Building San Francisco streets & buildings...';
   }
 
-  // 3. Build Manhattan Geography, Iconic Landmarks, Blocks, Street Details & Traffic
-  const cityGrid = buildCityGrid(scene);
+  // 3. Build the city: ground & curb islands, buildings, street details & traffic (FEATURES above)
+  const cityGrid = FEATURES.ground === 'nyc' ? buildCityGrid(scene) : buildSFGround(scene);
   markInit('cityGrid');
-  const boroughs = buildBoroughs(scene, { sidewalks: cityGrid.sidewalks });
+  const boroughs = FEATURES.boroughs ? buildBoroughs(scene, { sidewalks: cityGrid.sidewalks }) : { colliders: [] };
   markInit('boroughs');
-  const { colliders: landmarkColliders } = buildLandmarks(scene);
+  const { colliders: landmarkColliders } = FEATURES.landmarks ? buildLandmarks(scene) : { colliders: [] };
   markInit('landmarks');
-  const cityBlocks = buildCityBlocks(scene);
+  const cityBlocks = FEATURES.buildings === 'nyc' ? buildCityBlocks(scene) : buildSFBuildingsV0(scene);
   markInit('blocks');
   const allColliders = [...landmarkColliders, ...cityBlocks.colliders, ...boroughs.colliders, ...(cityGrid.colliders || [])];
 
-  const streetDetails = buildStreetDetails(scene);
+  const streetDetails = FEATURES.details ? buildStreetDetails(scene) : { footprints: [], signalClock: { value: 0 } };
   markInit('streetDetails');
   // Buildings turned along non-grid streets have oriented colliders whose world bounds reach past their lots: they stay
   // inside the property line anyway, so the road network (lanes & sidewalks) doesn't need them
-  const trafficSystem = createTrafficSystem(scene, cityGrid.sidewalks, [
-    ...cityGrid.footprints,
-    ...streetDetails.footprints,
-    ...allColliders.filter((c) => !c.obb)
-  ]);
+  const trafficSystem = FEATURES.traffic
+    ? createTrafficSystem(scene, cityGrid.sidewalks, [
+      ...cityGrid.footprints,
+      ...streetDetails.footprints,
+      ...allColliders.filter((c) => !c.obb)
+    ])
+    : { update() {}, network: null, cars: [] };
   markInit('traffic');
-  const highwayTraffic = createHighwayTraffic(scene, cityGrid.highwayLanes);
-  buildRoadPaint(scene, trafficSystem.network);
+  const highwayTraffic = FEATURES.highway ? createHighwayTraffic(scene, cityGrid.highwayLanes) : { update() {} };
+  if (trafficSystem.network) buildRoadPaint(scene, trafficSystem.network);
   markInit('roadPaint');
 
   // 4. Initialize Third-Person Controllers (Person, Car, Cyclist, Helicopter) & Multi-Camera System
@@ -136,7 +158,7 @@ async function initApp() {
 
   // Island-wide static geometry: chunk & distance-cull the small props, shadow stand-ins for the big casters
   // (scene-culling.js)
-  const cullingRoots = ['ManhattanCityGrid', 'ManhattanCityBlocks', 'ManhattanStreetDetails', 'ManhattanLandmarks', 'Boroughs']
+  const cullingRoots = ['ManhattanCityGrid', 'ManhattanCityBlocks', 'ManhattanStreetDetails', 'ManhattanLandmarks', 'Boroughs', 'SFGround', 'SFBuildings']
     .map((name) => scene.getObjectByName(name))
     .filter(Boolean);
   const cullingStats = setupSceneCulling(scene, cullingRoots, lightingSystem.sunLight.shadow);
@@ -515,8 +537,11 @@ async function initApp() {
   selectCamera('chase', true);
   selectTime(['golden', 'midday', 'twilight', 'midnight'].includes(urlParams.get('time')) ? urlParams.get('time') : 'golden');
   if (urlParams.has('teleport')) {
+    // a named destination (TELEPORT_LOCATIONS) or x,z,headingDeg
+    const named = window.NYC.TELEPORT_LOCATIONS[urlParams.get('teleport')];
     const [tx, tz, th = 180] = urlParams.get('teleport').split(',').map(Number);
-    if (Number.isFinite(tx) && Number.isFinite(tz)) teleportTo(tx, tz, (th * Math.PI) / 180);
+    if (named) teleportTo(named.x, named.z, named.heading);
+    else if (Number.isFinite(tx) && Number.isFinite(tz)) teleportTo(tx, tz, (th * Math.PI) / 180);
   }
   if (urlParams.get('hud') === '0') document.body.classList.add('hud-minimized');
   // the web fonts change the buttons' widths once they arrive

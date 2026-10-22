@@ -9,6 +9,7 @@
 //   nodes: [x, z, ...]   names: [...]   links: [a, b, nameIdx, width, lanes, dir, inner [x, z, ...], flags, swLeft, swRight]
 //   control: per node 0 none, 1 signal, 2 all-way stop, 3 stop on some approaches;  stopMask: per node, bit i set when
 //   the node's i-th incident link (in links order) has a stop sign facing traffic arriving on it
+//   nhoods: neighbourhood names (DataSF analysis_neighborhood);  linkNhood: per link, index into nhoods
 import fs from 'node:fs';
 import path from 'node:path';
 import { datasf, osm, worldLines, rdp, log, ROOT, BOX, toWorld, boxWorld } from './geo-base.mjs';
@@ -86,6 +87,9 @@ export function buildRoadGraph(box = BOX, curbs = buildCurbIslands(box)) {
   const names = [];
   const nameIdx = new Map();
   const nameOf = (n) => { if (!nameIdx.has(n)) { nameIdx.set(n, names.length); names.push(n); } return nameIdx.get(n); };
+  const nhoods = [];
+  const nhoodIdx = new Map();
+  const nhoodOf = (n) => { n = n || ''; if (!nhoodIdx.has(n)) { nhoodIdx.set(n, nhoods.length); nhoods.push(n); } return nhoodIdx.get(n); };
   const links = [];
   const stats = { links: 0, skipped: 0, widthFallback: 0, lanesOsm: 0, oneWayChecked: 0, oneWayAgree: 0, oneWayDisagree: [] };
   for (const f of datasf('streets', box)) {
@@ -139,9 +143,10 @@ export function buildRoadGraph(box = BOX, curbs = buildCurbIslands(box)) {
     // lanes: OSM tag on the matching way at the midpoint, else from the width (parking on both sides of locals)
     const mid = at(total / 2);
     const om = mid ? nearestOsm(name, [mid.x, mid.z]) : null;
-    let lanes = om && Number(om.tags.lanes) > 0 ? Number(om.tags.lanes) : 0;
+    // OSM `lanes` counts both directions (and turn pockets on some ways): clamp to what one carriageway can hold
+    let lanes = om && Number(om.tags.lanes) > 0 ? Math.min(8, Number(om.tags.lanes)) : 0;
     if (lanes) stats.lanesOsm++;
-    else lanes = Math.max(1, Math.floor((w - (['4', '5'].includes(cls) ? 4.8 : 0)) / 3.2));
+    else lanes = Math.max(1, Math.min(8, Math.floor((w - (['4', '5'].includes(cls) ? 4.8 : 0)) / 3.2)));
     // one-way check against OSM (oneway=yes follows the way's drawing direction, -1 against it)
     if (dir && om && /^(yes|-1)$/.test(om.tags.oneway || '')) {
       stats.oneWayChecked++;
@@ -153,7 +158,7 @@ export function buildRoadGraph(box = BOX, curbs = buildCurbIslands(box)) {
     const sw = sidewalkByCnn.get(String(p.cnn)) || {};
     const swBoth = sw.Both || 0;
     const inner = rdp(pts, 0.4).slice(1, -1);
-    links.push({ a, b, ni: nameOf(name), w, lanes, dir, inner, flags, swL: sw.W || sw.N || sw.NW || swBoth || 0, swR: sw.E || sw.S || sw.SE || swBoth || 0, cls });
+    links.push({ a, b, ni: nameOf(name), nh: nhoodOf(p.analysis_neighborhood), w, lanes, dir, inner, flags, swL: sw.W || sw.N || sw.NW || swBoth || 0, swR: sw.E || sw.S || sw.SE || swBoth || 0, cls });
     stats.links++;
   }
   const nodes = nodeSum.map((s) => [s.x / s.n, s.z / s.n]);
@@ -196,7 +201,9 @@ export function buildRoadGraph(box = BOX, curbs = buildCurbIslands(box)) {
     names,
     links: links.map((l) => [l.a, l.b, l.ni, q1(l.w), l.lanes, l.dir, l.inner.flatMap(([x, z]) => [q1(x), q1(z)]), l.flags, q1(l.swL), q1(l.swR)]),
     control,
-    stopMask
+    stopMask,
+    nhoods,
+    linkNhood: links.map((l) => l.nh)
   };
 
   // --- report -----------------------------------------------------------------------------------------------------------
