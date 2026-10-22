@@ -8,7 +8,7 @@
 // 4. Helicopter (Manhattan Sightseeing Twin-Turbine Chopper)
 
 const { THREE } = window.NYC;
-const { ISLAND_BOUNDS, CENTRAL_PARK_BOUNDS, LANDMARK_SITES, getIslandBoundsAtZ, isTypingInField, blockAt, streetZ } = window.NYC;
+const { ISLAND_BOUNDS, LANDMARK_SITES, getIslandBoundsAtZ, isTypingInField, blockAt, streetZ } = window.NYC;
 // Spawn on 5th Ave at 37th St, facing south down the avenue toward the Empire State Building (34th St)
 const SPAWN_Z = streetZ(37);
 const {
@@ -30,6 +30,34 @@ const { PersonCrowd, PersonRig } = window.NYC;
 const { HEADLIGHTS, createVehicleHeadlight, placeVehicleHeadlight } = window.NYC;
 // Walking surface for the player's pedestrian (its rig samples it around its feet)
 const personGround = (controllers, x, z) => controllers.getGroundHeight(x, z, 'person');
+// The ground (js/terrain.js, metres NAVD88) once the terrain is loaded, else the flat y = 0 world; the bay
+const terrainY = (x, z) => {
+  const T = window.NYC.Terrain;
+  return T && T.loaded ? T.groundAt(x, z) : 0;
+};
+const inBay = (x, z) => {
+  const T = window.NYC.Terrain;
+  return !!(T && T.loaded) && T.heightAt(x, z) <= T.waterLevel + 0.05;
+};
+// Terrain pose of the car & the bike: critically damped towards the ground's pitch & roll (time constant TERRAIN_TAU)
+const TERRAIN_TAU = 0.1;
+const CAR_AXLES = { wheelbase: 2.8, track: 1.6 };
+const BIKE_WHEELBASE = 1.05;
+const GRAVITY = 9.81;
+const CAR_GRADE = 0.6; // share of gravity along the slope the car feels (P2.6)
+const BIKE_GRADE_UP = 0.9; // ... and the bike going uphill
+const HELI_CEILING = 380;
+const STEP_DOWN = 0.4;
+// Colliders are ignored more than this far below the building's lowest ground (minY): tunnels run under buildings, but a
+// road a little below a building's terrace must still bump into it (PLAN.md P2-8)
+const BELOW_COLLIDER = 3;
+function dampTowards(state, key, target, dt) {
+  const w = 1 / TERRAIN_TAU;
+  const v = key + 'Vel';
+  const vel = state[v] || 0;
+  state[v] = vel + (w * w * (target - state[key]) - 2 * w * vel) * dt;
+  state[key] += state[v] * dt;
+}
 
 function createNYLicensePlateTexture() {
   const c = document.createElement('canvas');
@@ -159,15 +187,18 @@ class ThirdPersonControllerManager {
   teleportActiveTo(x, z, heading = Math.PI) {
     const ent = this.getActiveEntity();
     this.resetInput();
-    if (!Number.isFinite(heading)) heading = ent.heading;
+    // No heading given: face along the nearest street
+    if (!Number.isFinite(heading)) heading = this.roadHeading(x, z, ent.heading);
     const heli = this.activeMode === 'helicopter';
-    const altitude = heli ? Math.max(92, Math.min(380, ent.position.y)) : 0;
-    const destination = this.findTeleportPosition(x, z, heading, altitude);
+    // the helicopter keeps its height above the ground, within its band
+    const ground0 = terrainY(ent.position.x, ent.position.z);
+    const above = heli ? Math.max(92, Math.min(380, ent.position.y - ground0)) : 0;
+    const destination = this.findTeleportPosition(x, z, heading, heli ? terrainY(x, z) + above : 0);
     if (destination) {
       ent.position.x = destination.x;
       ent.position.z = destination.z;
       ent.heading = heading;
-      ent.position.y = heli ? altitude : this.getGroundHeight(destination.x, destination.z, this.activeMode);
+      ent.position.y = heli ? terrainY(destination.x, destination.z) + above : this.getGroundHeight(destination.x, destination.z, this.activeMode);
     }
     ent.speed = 0;
     if (this.activeMode === 'person') {
@@ -184,8 +215,10 @@ class ThirdPersonControllerManager {
       ent.lastCollisionSpark = null;
       for (const wheel of ent.wheels) if (wheel.isFront) wheel.steerPivot.rotation.y = 0;
       if (ent.carState) ent.carState.value.x = 1;
+      this.settleOnTerrain(ent, true);
     } else if (this.activeMode === 'cyclist') {
       ent.leanAngle = ent.leanPivot.rotation.z = 0;
+      this.settleOnTerrain(ent, true);
     } else if (heli) {
       ent.verticalSpeed = ent.pitchAngle = ent.rollAngle = 0;
       ent.tiltPivot.rotation.x = ent.tiltPivot.rotation.z = 0;
@@ -226,12 +259,13 @@ class ThirdPersonControllerManager {
         if (west > east) return null;
         px = Math.max(west, Math.min(east, px));
       }
+      if (!heli && inBay(px, pz)) return null;
       return { x: px, z: pz };
     };
     const clear = (p) => {
       if (!p) return false;
       const baseY = heli ? altitude : this.getGroundHeight(p.x, p.z, this.activeMode);
-      const y = heli ? altitude : this.activeMode === 'person' ? baseY + 1 : 1;
+      const y = heli ? altitude : baseY + 1;
       // Keep other player models out of both the arrival and its default chase view. A corridor also prevents a
       // parked car between camera and character from hiding the character even when the camera itself is outside it.
       const viewTop = baseY + Math.max(body[entity.type][1], cameraUp);
@@ -242,7 +276,7 @@ class ThirdPersonControllerManager {
         if (Math.hypot(dx + sinH * back, dz + cosH * back) < other.radius + Math.max(body[entity.type][0], 0.5) + 0.1) return false;
       }
       for (const c of this.nearColliders(p.x, p.z, reach)) {
-        if (y > c.maxY + 1.5) continue;
+        if (y > c.maxY + 1.5 || y < (c.minY ?? -Infinity) - BELOW_COLLIDER) continue;
         if (p.x + extX <= c.minX || p.x - extX >= c.maxX || p.z + extZ <= c.minZ || p.z - extZ >= c.maxZ) continue;
         if (c.obb) {
           const o = c.obb, dx = p.x - o.cx, dz = p.z - o.cz;
@@ -659,21 +693,63 @@ class ThirdPersonControllerManager {
     return !!b && !(b.park > 0.6 && !b.median);
   }
 
+  // The terrain (the roadway), plus the curb for the pedestrian on a curb island
   getGroundHeight(x, z, mode = 'person') {
-    // Inside Central Park (5th Ave to Central Park West, 59th St to 110th St)
-    const cp = CENTRAL_PARK_BOUNDS;
-    if (x > cp.minX && x < cp.maxX && z > cp.minZ && z < cp.maxZ) {
-      return 1.24;
+    const ground = terrainY(x, z);
+    if (mode === 'person' && this.isPointOnSidewalk(x, z)) return ground + ISLAND_BOUNDS.sidewalkHeight;
+    return ground;
+  }
+
+  // Heading (0 = +z) along the street nearest (x, z), the side of it closest to `prefer`
+  roadHeading(x, z, prefer = Math.PI) {
+    const near = window.NYC.nearestRoads ? window.NYC.nearestRoads(x, z, 60) : [];
+    const pts = near.length ? near[0].road.pts : null;
+    if (!pts) return prefer;
+    let best = null, bd = Infinity;
+    for (let i = 0; i + 1 < pts.length; i++) {
+      const a = pts[i], b = pts[i + 1];
+      const dx = b.x - a.x, dz = b.z - a.z, L2 = dx * dx + dz * dz || 1e-9;
+      const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / L2));
+      const d = Math.hypot(a.x + t * dx - x, a.z + t * dz - z);
+      if (d < bd) { bd = d; best = Math.atan2(dx, dz); }
     }
-    // Inside Bryant Park's Great Lawn (west of the New York Public Library, 40th-42nd St)
-    const lawn = window.NYC.bryantParkLawn;
-    if (lawn && x > lawn.minX && x < lawn.maxX && z > lawn.minZ && z < lawn.maxZ) {
-      return lawn.top;
+    const diff = Math.atan2(Math.sin(prefer - best), Math.cos(prefer - best));
+    return Math.abs(diff) > Math.PI / 2 ? best + Math.PI : best;
+  }
+
+  // Car / bike on the terrain: y between the axles, smoothed pitch (& roll for the car) towards the ground under
+  // the wheels, written to the model (rotation order YXZ: heading, then pitch, then roll). `snap` skips the smoothing.
+  settleOnTerrain(ent, snap = false, dt = 0) {
+    const sh = Math.sin(ent.heading), ch = Math.cos(ent.heading);
+    const car = ent.type === 'car';
+    const half = (car ? CAR_AXLES.wheelbase : BIKE_WHEELBASE) / 2;
+    const x = ent.position.x, z = ent.position.z;
+    const front = terrainY(x + sh * half, z + ch * half);
+    const rear = terrainY(x - sh * half, z - ch * half);
+    const pitch = Math.atan2(front - rear, half * 2);
+    let roll = 0;
+    if (car) {
+      // local +x is the car's left (it faces +z)
+      const t = CAR_AXLES.track / 2;
+      const left = terrainY(x + ch * t, z - sh * t);
+      const right = terrainY(x - ch * t, z + sh * t);
+      roll = Math.atan2(left - right, t * 2);
     }
-    if (mode === 'person') {
-      return this.isPointOnSidewalk(x, z) ? ISLAND_BOUNDS.sidewalkHeight : 0.0;
+    if (snap || ent.terrainPitch === undefined) {
+      ent.terrainPitch = pitch;
+      ent.terrainRoll = roll;
+      ent.terrainPitchVel = ent.terrainRollVel = 0;
+    } else {
+      dampTowards(ent, 'terrainPitch', pitch, dt);
+      dampTowards(ent, 'terrainRoll', roll, dt);
     }
-    return 0.0;
+    ent.position.y = (front + rear) / 2;
+    if (ent.mesh) {
+      ent.mesh.rotation.order = 'YXZ';
+      ent.mesh.rotation.x = -ent.terrainPitch; // nose up is a negative turn about +x
+      ent.mesh.rotation.z = car ? ent.terrainRoll : 0;
+    }
+    return pitch;
   }
 
   // The colliders whose bounds come within `r` of (x, z), in their original order. They never move, so they are
@@ -721,6 +797,23 @@ class ThirdPersonControllerManager {
     const m = heli ? 6000 : 0;
     pos.x = Math.max(ISLAND_BOUNDS.minX - m, Math.min(ISLAND_BOUNDS.maxX + m, pos.x));
     pos.z = Math.max(ISLAND_BOUNDS.minZ + (heli ? -6000 : 30), Math.min(ISLAND_BOUNDS.maxZ + m, pos.z));
+    // never into the bay: back to the last dry spot
+    if (!heli) {
+      if (!this._dry) this._dry = new WeakMap();
+      const dry = this._dry.get(pos);
+      if (inBay(pos.x, pos.z)) {
+        if (dry) {
+          pos.x = dry.x;
+          pos.z = dry.z;
+          if (carEntity && carEntity.speed) carEntity.speed *= 0.4;
+        }
+      } else if (dry) {
+        dry.x = pos.x;
+        dry.z = pos.z;
+      } else {
+        this._dry.set(pos, { x: pos.x, z: pos.z });
+      }
+    }
     if (this.activeMode !== 'helicopter' && getIslandBoundsAtZ) {
       const shore = getIslandBoundsAtZ(pos.z);
       const minShoreX = shore.westX + 8.0;
@@ -745,7 +838,8 @@ class ThirdPersonControllerManager {
     let near = this.nearColliders(gx, gz, reach);
     for (let i = 0; i < near.length; i++) {
       const c = near[i];
-      if (yHeight > c.maxY + 1.5) continue;
+      // above the roof, or far below the building's lowest ground (a tunnel under it)
+      if (yHeight > c.maxY + 1.5 || yHeight < (c.minY ?? -Infinity) - BELOW_COLLIDER) continue;
 
       if (
         pos.x + extX > c.minX &&
@@ -827,7 +921,7 @@ class ThirdPersonControllerManager {
             if (vn > 2.2) {
               carEntity.lastCollisionSpark = {
                 x: pos.x - nx * extX * 0.92,
-                y: 0.56,
+                y: carEntity.position.y + 0.56,
                 z: pos.z - nz * extZ * 0.92,
                 nx,
                 nz,
@@ -885,6 +979,7 @@ class ThirdPersonControllerManager {
       p.speed = walkSpeed;
       p.position.x += Math.sin(p.heading) * walkSpeed * dt;
       p.position.z += Math.cos(p.heading) * walkSpeed * dt;
+      p.position.y = this.getGroundHeight(p.position.x, p.position.z, 'person');
       if (p.position.z < -340) p.heading = 0;
       else if (p.position.z > 340) p.heading = Math.PI;
     }
@@ -934,6 +1029,8 @@ class ThirdPersonControllerManager {
     if (this.keys.left) p.heading += turnRate * dt * this.keys.left;
     if (this.keys.right) p.heading -= turnRate * dt * this.keys.right;
 
+    // slower uphill: the grade along the way it walks (or backs)
+    if (targetSpeed !== 0) targetSpeed *= 1 - Math.min(0.5, Math.max(0, this.gradeAlong(p, Math.sign(targetSpeed)) * 0.8));
     p.speed += (targetSpeed - p.speed) * Math.min(1, dt * 10);
 
     p.position.x += Math.sin(p.heading) * p.speed * dt;
@@ -944,12 +1041,22 @@ class ThirdPersonControllerManager {
     if (this.keys.up && p.position.y <= groundY + 0.02) {
       p.verticalVel = 5.2;
     }
+    // Walking down a slope (or off a curb) the feet stay on the ground: a step down of under STEP_DOWN m while not
+    // jumping follows the ground instead of falling
+    const wasGrounded = p.verticalVel === 0;
     p.verticalVel -= 14.5 * dt;
     p.position.y += p.verticalVel * dt;
-    if (p.position.y < groundY) {
+    if (p.position.y < groundY || (wasGrounded && p.position.y - groundY < STEP_DOWN)) {
       p.position.y = groundY;
       p.verticalVel = 0;
     }
+  }
+
+  // Rise over run of the ground along the entity's heading (dir -1: backwards), over the next metre
+  gradeAlong(ent, dir = 1) {
+    const sh = Math.sin(ent.heading) * dir, ch = Math.cos(ent.heading) * dir;
+    const x = ent.position.x, z = ent.position.z;
+    return terrainY(x + sh * 0.5, z + ch * 0.5) - terrainY(x - sh * 0.5, z - ch * 0.5);
   }
 
   updateCar(dt) {
@@ -967,6 +1074,11 @@ class ThirdPersonControllerManager {
     } else {
       c.speed *= Math.max(0, 1 - dt * 2.8);
       if (Math.abs(c.speed) < 0.08) c.speed = 0;
+    }
+    // Grade: gravity along the slope (scaled down: the engine & brakes do the rest); a car left without throttle
+    // below walking pace holds on the brake instead of rolling
+    if (c.terrainPitch !== undefined && (throttle !== 0 || Math.abs(c.speed) > 1)) {
+      c.speed -= GRAVITY * Math.sin(c.terrainPitch) * CAR_GRADE * dt;
     }
 
     let steerInput = 0;
@@ -993,8 +1105,8 @@ class ThirdPersonControllerManager {
     c.vx *= tireGripDamp;
     c.vz *= tireGripDamp;
 
-    this.resolveHorizontalCollision(c.position, 1.35, 1.0, c);
-    c.position.y = this.getGroundHeight(c.position.x, c.position.z, 'car');
+    this.resolveHorizontalCollision(c.position, 1.35, c.position.y + 1.0, c);
+    this.settleOnTerrain(c, false, dt);
 
     // 3-DOF Spring-Damper Chassis Suspension (Pitch, Roll & Vertical Heave)
     const targetPitch = -throttle * 0.026;
@@ -1042,6 +1154,11 @@ class ThirdPersonControllerManager {
       b.speed *= Math.max(0, 1 - dt * 2.4);
       if (Math.abs(b.speed) < 0.05) b.speed = 0;
     }
+    // Grade: legs feel the climbs more than an engine does
+    if (b.terrainPitch !== undefined && (throttle !== 0 || Math.abs(b.speed) > 1)) {
+      const k = b.terrainPitch * Math.sign(b.speed || 1) > 0 ? BIKE_GRADE_UP : CAR_GRADE;
+      b.speed -= GRAVITY * Math.sin(b.terrainPitch) * k * dt;
+    }
 
     let turnInput = 0;
     if (this.keys.left) turnInput = this.keys.left;
@@ -1054,8 +1171,8 @@ class ThirdPersonControllerManager {
 
     b.position.x += Math.sin(b.heading) * b.speed * dt;
     b.position.z += Math.cos(b.heading) * b.speed * dt;
-    this.resolveHorizontalCollision(b.position, 0.65, 1.0);
-    b.position.y = this.getGroundHeight(b.position.x, b.position.z, 'cyclist');
+    this.resolveHorizontalCollision(b.position, 0.65, b.position.y + 1.0);
+    this.settleOnTerrain(b, false, dt);
 
     const targetLean = -turnInput * Math.min(1.0, Math.abs(b.speed) / 9.0) * 0.34;
     b.leanAngle += (targetLean - b.leanAngle) * Math.min(1, dt * 9);
@@ -1109,7 +1226,18 @@ class ThirdPersonControllerManager {
     h.position.z += Math.cos(h.heading) * h.speed * dt;
     h.position.y += h.verticalSpeed * dt;
 
-    h.position.y = Math.max(0.25, Math.min(380, h.position.y));
+    // No lower than 2 m over the ground under the rotor disc, and a soft ceiling HELI_CEILING m above the ground
+    let floorY = -Infinity;
+    for (const [ox, oz] of [[0, 0], [4.5, 0], [-4.5, 0], [0, 4.5], [0, -4.5]]) floorY = Math.max(floorY, terrainY(h.position.x + ox, h.position.z + oz));
+    const ceiling = floorY + HELI_CEILING;
+    if (h.position.y > ceiling) {
+      h.position.y += (ceiling - h.position.y) * Math.min(1, dt * 2);
+      h.verticalSpeed = Math.min(h.verticalSpeed, 0);
+    }
+    if (h.position.y < floorY + 2) {
+      h.position.y = floorY + 2;
+      h.verticalSpeed = Math.max(h.verticalSpeed, 0);
+    }
     this.resolveHorizontalCollision(h.position, 4.5, h.position.y);
 
     const targetPitch = (h.speed / maxHorizSpeed) * 0.24;

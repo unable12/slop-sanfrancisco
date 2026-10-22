@@ -238,3 +238,28 @@ test('teleport releases every camera pointer and ignores old gestures before acc
   close(h.camera.orbitYawOffset, -0.065);
   assert.equal(h.camera.isDragging, true);
 });
+
+test('follow cameras stay at least 0.5 m above the terrain on a hill (P2.6)', () => {
+  const ground = (x, z) => -0.3 * z;
+  for (const preset of ['chase', 'action']) {
+    const entity = {
+      position: new Vector3(0, 0, 0), heading: Math.PI, speed: 0, type: 'person',
+      chaseDistance: 4.3, chaseHeight: 1.95, cameraTargetOffset: new Vector3(0, 1.55, 0)
+    };
+    const h = cameraHarness(entity);
+    h.window.NYC.Terrain = { loaded: true, groundAt: ground };
+    h.camera.setCameraPreset(preset, true);
+    // walk downhill (+z) facing uphill backwards would put the camera into the slope behind: walk up instead, the
+    // camera trails downhill; then turn round so it trails uphill, into the hill
+    for (const heading of [Math.PI, 0]) {
+      entity.heading = heading;
+      for (let f = 0; f < 300; f++) {
+        entity.position.z += Math.cos(heading) * 1.4 / 60;
+        entity.position.y = ground(entity.position.x, entity.position.z);
+        h.camera.update(1 / 60, f / 60);
+        const c = h.camera.camera.position;
+        assert.ok(c.y >= ground(c.x, c.z) + 0.5, `${preset} frame ${f}: ${c.y - ground(c.x, c.z)}`);
+      }
+    }
+  }
+});

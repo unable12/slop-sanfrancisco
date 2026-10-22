@@ -299,7 +299,10 @@ class LightingSystem {
     // every frame inside SunShadowNode.renderShadow(), splitting [near, far] halfway between a uniform and a
     // logarithmic split (the near cascade ends at ~far / 4). Keep far at 300 m at street level so the near cascade
     // stays sharp, and expand it with altitude (helicopter / observatory) so shadows reach all the way down to street level.
-    const altitude = focusPos && Number.isFinite(focusPos.y) ? Math.max(0, focusPos.y) : 0;
+    // altitude above the ground under the camera (js/terrain.js), not above sea level
+    const T = window.NYC.Terrain;
+    const ground = T && T.loaded && focusPos ? T.groundAt(focusPos.x, focusPos.z) : 0;
+    const altitude = focusPos && Number.isFinite(focusPos.y) ? Math.max(0, focusPos.y - ground) : 0;
     this.sunLight.shadow.camera.far = Math.max(300, Math.min(720, 260 + altitude * 1.6));
   }
 }

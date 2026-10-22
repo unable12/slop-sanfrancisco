@@ -426,7 +426,8 @@ async function initApp() {
     elLocation.replaceChildren(...nodes);
   }
 
-  function teleportTo(x, z, heading = Math.PI) {
+  // No heading: face along the nearest street (controllers.js roadHeading)
+  function teleportTo(x, z, heading = NaN) {
     const destination = controllerManager.teleportActiveTo(x, z, heading);
     touchControls.reset();
     cameraSystem.resetForTeleport();
@@ -536,6 +537,14 @@ async function initApp() {
   // ?mode=person|car|cyclist|heli  ?time=golden|midday|twilight|midnight  ?teleport=x,z,headingDeg  ?hud=0
   const urlParams = new URLSearchParams(location.search);
   const urlMode = { heli: 'helicopter', helicopter: 'helicopter', person: 'person', car: 'car', cyclist: 'cyclist' }[urlParams.get('mode')];
+  // Every player model starts parked on the ground at the first teleport (Market St), clear of buildings & each other
+  const spawn = window.NYC.TELEPORT_LOCATIONS.market;
+  if (spawn) {
+    for (const mode of ['helicopter', 'cyclist', 'person', 'car']) {
+      controllerManager.setMode(mode);
+      controllerManager.teleportActiveTo(spawn.x, spawn.z, spawn.heading);
+    }
+  }
   selectMode(urlMode || 'car');
   selectCamera('chase', true);
   selectTime(['golden', 'midday', 'twilight', 'midnight'].includes(urlParams.get('time')) ? urlParams.get('time') : 'golden');

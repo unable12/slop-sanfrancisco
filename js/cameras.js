@@ -4,6 +4,12 @@
 // Low-Angle Action Cam, POV/Cockpit Cam, 7 Iconic NYC Architectural Cameras, and Auto-Director Drone.
 
 const { THREE } = window.NYC;
+// The ground under (x, z) (js/terrain.js), 0 before the terrain is loaded; cameras stay CAMERA_CLEARANCE above it
+const groundY = (x, z) => {
+  const T = window.NYC.Terrain;
+  return T && T.loaded ? T.groundAt(x, z) : 0;
+};
+const CAMERA_CLEARANCE = 0.55;
 
 const CAMERA_PRESETS = [
   { id: 'chase',       name: '3rd-Person Chase',         short: 'Chase',       category: 'follow', fov: 56 },
@@ -181,9 +187,21 @@ class CameraSystem {
 
         desiredPos.set(
           entity.position.x - Math.sin(totalYaw) * horizDist,
-          Math.max(0.65, entity.position.y + height),
+          entity.position.y + height,
           entity.position.z - Math.cos(totalYaw) * horizDist
         );
+        // A hill between the player and the camera shortens the boom: four samples along it, from the player out
+        const ax = entity.position.x, ay = entity.position.y + 1.5, az = entity.position.z;
+        let reach = 1;
+        for (const t of [0.25, 0.5, 0.75, 1]) {
+          const x = ax + (desiredPos.x - ax) * t, y = ay + (desiredPos.y - ay) * t, z = az + (desiredPos.z - az) * t;
+          if (groundY(x, z) + CAMERA_CLEARANCE + 0.1 > y) {
+            reach = Math.max(0.2, t - 0.25);
+            break;
+          }
+        }
+        if (reach < 1) desiredPos.set(ax + (desiredPos.x - ax) * reach, ay + (desiredPos.y - ay) * reach, az + (desiredPos.z - az) * reach);
+        desiredPos.y = Math.max(groundY(desiredPos.x, desiredPos.z) + 0.65, desiredPos.y);
 
         const lookUpBias = entity.type === 'helicopter' ? 0.2 : (entity.type === 'car' ? 0.52 : 1.55);
         desiredLook.set(
@@ -201,9 +219,10 @@ class CameraSystem {
 
         desiredPos.set(
           entity.position.x - Math.sin(entity.heading) * backDist + Math.cos(entity.heading) * sideOffset,
-          Math.max(0.55, lowY),
+          lowY,
           entity.position.z - Math.cos(entity.heading) * backDist - Math.sin(entity.heading) * sideOffset
         );
+        desiredPos.y = Math.max(groundY(desiredPos.x, desiredPos.z) + CAMERA_CLEARANCE, desiredPos.y);
         desiredLook.set(
           entity.position.x + Math.sin(entity.heading) * 3.2,
           entity.position.y + 1.05,
@@ -335,12 +354,13 @@ class CameraSystem {
       this.followLookOffset.lerp(desiredLook.sub(entity.position), k);
       this.currentPos.set(entity.position.x, this.followBaseY, entity.position.z).add(this.followOffset);
       this.currentLookAt.set(entity.position.x, this.followBaseY, entity.position.z).add(this.followLookOffset);
-      this.currentPos.y = Math.max(0.55, this.currentPos.y);
+      this.currentPos.y = Math.max(groundY(this.currentPos.x, this.currentPos.z) + CAMERA_CLEARANCE, this.currentPos.y);
     } else {
       this.followEntity = null;
       const k = 1 - Math.exp(-dt * 8.5);
       this.currentPos.lerp(desiredPos, k);
       this.currentLookAt.lerp(desiredLook, k);
+      this.currentPos.y = Math.max(groundY(this.currentPos.x, this.currentPos.z) + CAMERA_CLEARANCE, this.currentPos.y);
     }
 
     this.camera.position.copy(this.currentPos);

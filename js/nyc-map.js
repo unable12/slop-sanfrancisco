@@ -980,7 +980,9 @@ class NYCMapSystem {
     const px = ent.position.x;
     const pz = ent.position.z;
     // Ground-level radar shows ~800 m of the city; it zooms out as the camera climbs (helicopter)
-    const target = Math.max(0.05, RADAR_SCALE / (1 + Math.max(0, ent.position.y - 25) / 180));
+    const T = window.NYC.Terrain;
+    const above = ent.position.y - (T && T.loaded ? T.groundAt(px, pz) : 0); // height above the ground, not sea level
+    const target = Math.max(0.05, RADAR_SCALE / (1 + Math.max(0, above - 25) / 180));
     this.miniScale += (target - this.miniScale) * 0.08;
     const scale = this.miniScale;
 

@@ -207,16 +207,16 @@ Live. Colliders, `getGroundHeight` and the helicopter limits (P2.6). `getGroundH
 
 | ☐ | line | class | code | note / fix | owner |
 |---|---|---|---|---|---|
-| ☐ | 164 | A | `const altitude = heli ? Math.max(92, Math.min(380, ent.posit` | Helicopter teleport altitude band 92..380 is absolute: hilltops reach 117 m; use groundAt + clearance | P2.6.5 / P2.6.7 |
-| ☐ | 170 | A | `ent.position.y = heli ? altitude : this.getGroundHeight(dest` | Heli branch sets an absolute y; the ground branch calls getGroundHeight (fixed by P2.6.1) | P2.6.7 |
+| ☑ | 164 | A | `const altitude = heli ? Math.max(92, Math.min(380, ent.posit` | Helicopter teleport altitude band 92..380 is absolute: hilltops reach 117 m; use groundAt + clearance | P2.6.5 / P2.6.7 |
+| ☑ | 170 | A | `ent.position.y = heli ? altitude : this.getGroundHeight(dest` | Heli branch sets an absolute y; the ground branch calls getGroundHeight (fixed by P2.6.1) | P2.6.7 |
 | – | 183, 192, 289, 335-371 (4), 450-541 (13), 599-632 (5), 871, 1011, 1113, 1122 | B | (29 lines) | Local offset inside the entity model (child of the entity mesh), already relative to the placed parent | - |
 | – | 185, 195, 434-508 (8), 822, 825, 903, 1006-1024 (3) | C | (16 lines) | Rotation angle, impulse factor, material or geometry size | - |
 | – | 216 | B | (1 line) | Other entities' cylinders from their own y | - |
-| ☐ | 245 | A | `if (y > c.maxY + 1.5) continue;` | Teleport clearance test uses y = 1 (car, cyclist) or ground + 1 (person) against maxY with no minY; pass the real y and test minY | P2.6.2 |
-| ☐ | 718 | A | `resolveHorizontalCollision(pos, radius, yHeight = 1.0, carEn` | Default yHeight = 1.0 (callers for car and cyclist pass the constant too); pass position.y + 1 | P2.6.2 |
-| ☐ | 748 | A | `if (yHeight > c.maxY + 1.5) continue;` | Collider skip test uses yHeight against maxY only; add the minY test (skip if below minY - 0.5) | P2.6.2 |
+| ☑ | 245 | A | `if (y > c.maxY + 1.5) continue;` | Teleport clearance test uses y = 1 (car, cyclist) or ground + 1 (person) against maxY with no minY; pass the real y and test minY | P2.6.2 |
+| ☑ | 718 | A | `resolveHorizontalCollision(pos, radius, yHeight = 1.0, carEn` | Default yHeight = 1.0 (callers for car and cyclist pass the constant too); pass position.y + 1 | P2.6.2 |
+| ☑ | 748 | A | `if (yHeight > c.maxY + 1.5) continue;` | Collider skip test uses yHeight against maxY only; add the minY test (skip if below minY - 0.5) | P2.6.2 |
 | – | 859, 941-950 (5), 997, 1058, 1110 | B | (9 lines) | Player y follows getGroundHeight() (itself constant, row in the last section) or is relative to the entity y | - |
-| ☐ | 1112 | A | `h.position.y = Math.max(0.25, Math.min(380, h.position.y));` | Helicopter clamp 0.25..380 absolute; floor = groundAt + 2 (soft ceiling) | P2.6.5 |
+| ☑ | 1112 | A | `h.position.y = Math.max(0.25, Math.min(380, h.position.y));` | Helicopter clamp 0.25..380 absolute; floor = groundAt + 2 (soft ceiling) | P2.6.5 |
 
 ## `cameras.js`
 
@@ -225,10 +225,10 @@ Live (P2.6.6).
 | ☐ | line | class | code | note / fix | owner |
 |---|---|---|---|---|---|
 | – | 82, 219, 244, 268 | C | (4 lines) | Mouse y, horizontal offset, sway amplitude | - |
-| ☐ | 184 | A | `Math.max(0.65, entity.position.y + height),` | Chase camera floor 0.65 absolute; groundAt(x, z) + 0.65, plus the 4-sample boom test | P2.6.6 |
+| ☑ | 184 | A | `Math.max(0.65, entity.position.y + height),` | Chase camera floor 0.65 absolute; groundAt(x, z) + 0.65, plus the 4-sample boom test | P2.6.6 |
 | – | 191, 200, 209, 231, 236, 328, 333 | B | (7 lines) | Offset from the followed entity's y (already terrain-based once the entity is) | - |
-| ☐ | 204 | A | `Math.max(0.55, lowY),` | Action camera floor 0.55 absolute; groundAt + 0.55 | P2.6.6 |
-| ☐ | 338 | A | `this.currentPos.y = Math.max(0.55, this.currentPos.y);` | Follow-camera floor 0.55 absolute (research: 338); groundAt + 0.55 | P2.6.6 |
+| ☑ | 204 | A | `Math.max(0.55, lowY),` | Action camera floor 0.55 absolute; groundAt + 0.55 | P2.6.6 |
+| ☑ | 338 | A | `this.currentPos.y = Math.max(0.55, this.currentPos.y);` | Follow-camera floor 0.55 absolute (research: 338); groundAt + 0.55 | P2.6.6 |
 
 ## `lighting.js`
 
@@ -256,7 +256,7 @@ Live (radar zoom, P2.6.8). Canvas coordinates named `wy`, `panStart.y` are scree
 | ☐ | line | class | code | note / fix | owner |
 |---|---|---|---|---|---|
 | – | 254, 475, 571, 800, 1051-1053 (3), 1141-1143 (3), 1215 | C | (11 lines) | Canvas pixel y (wy / panStart.y), zoom thresholds, alpha, comment text matching the regex; none is a world height | - |
-| ☐ | 983 | A | `const target = Math.max(0.05, RADAR_SCALE / (1 + Math.max(0,` | Radar zoom-out starts at absolute y = 25; use height above ground | P2.6.8 |
+| ☑ | 983 | A | `const target = Math.max(0.05, RADAR_SCALE / (1 + Math.max(0,` | Radar zoom-out starts at absolute y = 25; use height above ground | P2.6.8 |
 
 ## `vehicle-lights.js`
 
@@ -315,13 +315,13 @@ From `docs/research.md` §3 and from reading the code. Class is A or S as in the
 | ☐ | `traffic.js:1165, 1299` | A | Collision sparks spawn at literal y 0.56 / 0.58 / 0.65 (the bounce floor is the 0.03 row above) | spawn at ground y + the same offset | P2.8 |
 | ☐ | `traffic.js:1624, 1671` | A | Draw-distance test adds camY^2, as if the vehicle stood at y = 0 (with the `camY` row above) | use the camera height above the vehicle's ground y | P2.8 |
 | – | `traffic.js:2135` | B | Highway player test: \|player y - lane y\| < 2.6 is relative to the lane, already correct (highway is off; this is the pattern to copy for `player.active`) | none | - |
-| ☐ | `controllers.js:662` | A | `getGroundHeight` is constants only: Central Park 1.24, Bryant lawn `top`, `ISLAND_BOUNDS.sidewalkHeight` on a curb island, else 0.0 | `Terrain.groundAt` (+ `CURB_H` on sidewalks for the person); drop the Central Park and Bryant cases | P2.6.1 |
-| ☐ | `controllers.js:301, 393, 560, 644` | A | Spawn positions: person y = sidewalkHeight, car 0.0, cyclist 0.0, helicopter 96 (all NYC grid, `SPAWN_Z = streetZ(37)`) | spawn through `teleportActiveTo` at a slice point (y from `groundAt`; heli at ground + clearance) | P2.6.7 |
-| ☐ | `controllers.js:234` | A | Teleport clearance uses y = 1 for car and cyclist (hit row for `y > c.maxY + 1.5` above) | ground + 1, and test `minY` | P2.6.2 |
-| ☐ | `controllers.js:224, 725` | A | Land test by the shore table (teleport `clampPoint` and the walk/drive clamp in `resolveHorizontalCollision`) | land polygon / `groundAt > waterLevel`; vehicles and the person must not enter the bay | P2.6 (with P2.7.3) |
-| ☐ | `controllers.js:1000` | A | Car (and cyclist) chassis pitch / roll come only from throttle and steering springs; no terrain pitch or roll | sample ground at front/rear axle and left/right, add smoothed pitch/roll | P2.6.3 |
+| ☑ | `controllers.js:662` | A | `getGroundHeight` is constants only: Central Park 1.24, Bryant lawn `top`, `ISLAND_BOUNDS.sidewalkHeight` on a curb island, else 0.0 | `Terrain.groundAt` (+ `CURB_H` on sidewalks for the person); drop the Central Park and Bryant cases | P2.6.1 |
+| ☑ | `controllers.js:301, 393, 560, 644` | A | Spawn positions: person y = sidewalkHeight, car 0.0, cyclist 0.0, helicopter 96 (all NYC grid, `SPAWN_Z = streetZ(37)`) | spawn through `teleportActiveTo` at a slice point (y from `groundAt`; heli at ground + clearance) | P2.6.7 |
+| ☑ | `controllers.js:234` | A | Teleport clearance uses y = 1 for car and cyclist (hit row for `y > c.maxY + 1.5` above) | ground + 1, and test `minY` | P2.6.2 |
+| ☑ | `controllers.js:224, 725` | A | Land test by the shore table (teleport `clampPoint` and the walk/drive clamp in `resolveHorizontalCollision`) | land polygon / `groundAt > waterLevel`; vehicles and the person must not enter the bay | P2.6 (with P2.7.3) |
+| ☑ | `controllers.js:1000` | A | Car (and cyclist) chassis pitch / roll come only from throttle and steering springs; no terrain pitch or roll | sample ground at front/rear axle and left/right, add smoothed pitch/roll | P2.6.3 |
 | ☐ | `cameras.js:242` | A | The 8 scenic presets (centralPark, fifthAve, timesSquare, chryslerGCT, observatory, bryantPark, waterfront, drone: `case` lines 242-300) use NYC world coordinates with literal y (5.5 m street level up to 322 m, drone 240-420 m); bryantPark reads `bryantParkLawn.top` with a fallback of 1.3 | No phase file assigns re-authoring or hiding them. At minimum the P2.6.6 ground clamp must apply to them; better, replace with SF viewpoints or hide the NYC ones | unassigned (suggest P2.6.6, P7) |
-| ☐ | `lighting.js:303` | A | Shadow far grows with absolute y (`focusPos.y`): on a 100 m hill at street level it already reaches 420 m | altitude = camera y - groundAt(x, z) | P2.6.9 |
+| ☑ | `lighting.js:303` | A | Shadow far grows with absolute y (`focusPos.y`): on a 100 m hill at street level it already reaches 420 m | altitude = camera y - groundAt(x, z) | P2.6.9 |
 | – | `lighting.js:220` | C | Aerial fog height falloff exp(-y / 900 m) on absolute y (`ya = max(positionWorld.y, 0)`). Decision: fine as world-height fog, altitude haze is physical with NAVD88 y. Marine layer extends it in P6.3 | none | P6.3 |
 | ☐ | `road-network.js:51` | A | `onLand` uses `getIslandBoundsAtZ` (shore table); `blocked`, `walkable` and `blockedOnStreet` all go through it | land polygon (P1.10) or `groundAt > waterLevel` | P2.7.3 |
 | ☐ | `road-network.js:443, 487` | A | Edges carry x0, z0, dx, dz, lanes and no y (both `addEdge` and `addEdgeGeneral`); curves (`k0 = 0.552` builder) carry no y either | height profile every 2 m from `groundAt`, cumulative 3D length, Hermite y for curves: `edgeY`, `edgeGrade`, `curveY` | P2.7.4 |

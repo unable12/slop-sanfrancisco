@@ -365,3 +365,70 @@ test('player clearance respects altitude and permits a ground arrival under an a
   helicopter.position.y = 1;
   assert.notDeepEqual({ ...controller.teleportActiveTo(0, 0) }, { x: 0, z: 0 }, 'a helicopter parked at street level must be avoided');
 });
+
+// P2.6: a stub terrain rising 30% to the north (-z): ground = 0.3 * -z
+function slopeHarness() {
+  const ground = (x, z) => -0.3 * z;
+  const harness = keyboardHarness({
+    ISLAND_BOUNDS: { minX: -5000, maxX: 5000, minZ: -5000, maxZ: 5000, sidewalkHeight: 0.15 },
+    getIslandBoundsAtZ: () => ({ westX: -5000, eastX: 5000 }),
+    blockAt: () => null,
+    Terrain: { loaded: true, groundAt: ground, heightAt: ground, waterLevel: -1000 }
+  });
+  harness.controller.colliders = [];
+  harness.controller._colliderCells = null;
+  return { ...harness, ground };
+}
+
+test('on a 30% slope the pedestrian keeps its feet on the ground walking up and down', () => {
+  const { controller, ground, key } = slopeHarness();
+  const p = { position: { x: 0, y: 0, z: 0 }, heading: Math.PI, speed: 0, verticalVel: 0 };
+  controller.entities = { person: p };
+  controller.activeMode = 'person';
+  key('keydown', 'KeyW');
+  for (const heading of [Math.PI, 0]) { // north = uphill, then back down
+    p.heading = heading;
+    for (let f = 0; f < 600; f++) {
+      controller.updatePerson(1 / 60);
+      assert.ok(Math.abs(p.position.y - ground(p.position.x, p.position.z)) < 0.02, `frame ${f}: ${p.position.y - ground(p.position.x, p.position.z)}`);
+    }
+  }
+  // 10 s up at the uphill pace, 10 s down at full pace: it ends below where it started
+  assert.ok(p.position.z > 5, `ended at z ${p.position.z}`);
+});
+
+test('a car on the slope pitches to the grade within 1 degree in 0.5 s', () => {
+  const { controller, ground } = slopeHarness();
+  const c = {
+    type: 'car', position: { x: 0, y: 0, z: 0 }, heading: Math.PI, speed: 0,
+    vx: 0, vz: 0, angularVel: 0, steerAngle: 0, pitchVel: 0, rollVel: 0, heaveVel: 0, heaveY: 0, wheelSpin: 0,
+    chassisPivot: { rotation: { x: 0, z: 0 }, position: { y: 0 } }, wheels: [],
+    mesh: { rotation: { x: 0, y: 0, z: 0 } }, terrainPitch: 0, terrainRoll: 0
+  };
+  controller.entities = { car: c };
+  controller.activeMode = 'car';
+  for (let f = 0; f < 30; f++) controller.updateCar(1 / 60);
+  const slope = Math.atan(0.3);
+  assert.ok(Math.abs(c.terrainPitch - slope) < Math.PI / 180, `pitch ${c.terrainPitch} vs ${slope}`);
+  assert.ok(Math.abs(c.terrainRoll) < 1e-9);
+  assert.ok(Math.abs(c.position.y - ground(c.position.x, c.position.z)) < 1e-9);
+  assert.equal(c.mesh.rotation.x, -c.terrainPitch, 'nose up');
+  assert.equal(c.speed, 0, 'a car left without throttle holds on the hill');
+});
+
+test('the helicopter cannot go below 2 m over the ground', () => {
+  const { controller, ground, key } = slopeHarness();
+  const h = {
+    position: { x: 0, y: 50, z: 0 }, heading: Math.PI, speed: 0,
+    verticalSpeed: 0, pitchAngle: 0, rollAngle: 0, tiltPivot: { rotation: { x: 0, z: 0 }, position: { y: 0 } }
+  };
+  controller.entities = { helicopter: h };
+  controller.activeMode = 'helicopter';
+  key('keydown', 'KeyC'); // descend
+  key('keydown', 'KeyW'); // fly uphill into the slope
+  for (let f = 0; f < 900; f++) {
+    controller.updateHelicopter(1 / 60, f / 60);
+    // the floor is the highest ground under the rotor disc (4.5 m around)
+    assert.ok(h.position.y >= ground(h.position.x, h.position.z) + 2 - 1e-9, `frame ${f}`);
+  }
+});
