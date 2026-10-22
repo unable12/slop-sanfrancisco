@@ -18,5 +18,19 @@
   "p3-civic-center": "cam=-1280,75,1160,64,-16&camGround=1&hud=0&time=midday",
   "p3-embarcadero": "cam=900,70,-450,24,-25&camGround=1&hud=0&time=midday",
   "p3-stockton-tunnel": "cam=-441,3,-138,9,2&camGround=1&hud=0&time=midday",
-  "p3-mission-creek-bridge": "cam=1110,22,1235,115,-9&camGround=1&hud=0&time=midday"
+  "p3-mission-creek-bridge": "cam=1110,22,1235,115,-9&camGround=1&hud=0&time=midday",
+  "p4-russian-hill-rowhouses": "cam=-1385,1.7,-1287,99,8&camGround=1&hud=0&time=midday&freeze=1",
+  "p4-north-beach": "cam=-425,1.7,-1332,99,4&camGround=1&hud=0&time=midday&freeze=1",
+  "p4-north-beach-night": "cam=-425,1.7,-1332,99,4&camGround=1&hud=0&time=midnight&freeze=1",
+  "p4-chinatown": "cam=-376,1.7,-630,9,6&camGround=1&hud=0&time=midday&freeze=1",
+  "p4-downtown-canyon": "cam=-13,1.7,-160,9,14&camGround=1&hud=0&time=midday&freeze=1",
+  "p4-soma-warehouses": "cam=930,1.7,715,135,6&camGround=1&hud=0&time=midday&freeze=1",
+  "p4-folsom-bike-lanes": "cam=-440,1.7,1262,135,2&camGround=1&hud=0&time=midday&freeze=1",
+  "p4-embarcadero-streetcar": "cam=568,2,-570,-46,2&camGround=1&hud=0&time=midday&freeze=1",
+  "p4-california-cable-car": "cam=-752,2,-349,-95,2&camGround=1&hud=0&time=midday&freeze=1",
+  "p4-powell-cable-cars": "cam=-600,2.2,-250,-171,6&camGround=1&hud=0&time=midday&freeze=1",
+  "p4-muni-shelter-trolley-wires": "cam=-1716,1.7,446,-72,-4&camGround=1&hud=0&time=midday&freeze=1",
+  "p4-embarcadero-palms": "cam=715,1.7,-645,60,10&camGround=1&hud=0&time=midday&freeze=1",
+  "p4-fidi-towers": "mode=heli&cam=300,260,250,20,-22&hud=0&freeze=1&time=midday",
+  "p4-russian-hill-air": "mode=heli&cam=-1250,140,-1150,100,-28&hud=0&freeze=1&time=midday"
 }

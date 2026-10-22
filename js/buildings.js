@@ -384,6 +384,14 @@ function buildCityBlocks(scene, opts = {}) {
       seed: 94.3
     }]
   ];
+  // San Francisco (P4.2, P4.3): the three masonry styles become painted ones, colour per building (sf-style.js): 0 downtown
+  // masonry, stone & concrete; 1 painted row houses, flats & apartments (narrow windows, low storeys); 2 brick & concrete
+  // warehouses (wide windows, tall storeys). The three curtain walls stay
+  if (sf) {
+    facades[0] = [createPreWarBuildingMaterial, { windowWidth: 2.4, floorHeight: 3.7, litProbability: 0.5, warmth: 0.82, seed: 12.4, paint: true }];
+    facades[1] = [createPreWarBuildingMaterial, { windowWidth: 1.7, floorHeight: 3.3, windowRatioX: 0.56, windowRatioY: 0.62, cornerPier: 0.5, litProbability: 0.45, warmth: 0.88, seed: 27.8, paint: true }];
+    facades[2] = [createPreWarBuildingMaterial, { windowWidth: 3.4, floorHeight: 4.4, windowRatioX: 0.7, windowRatioY: 0.6, cornerPier: 0.9, litProbability: 0.15, warmth: 0.7, seed: 41.2, paint: true, muntins: true }];
+  }
   const materials = facades.map(([create, opts]) => create({ ...opts, boxLocal: true }));
   // Storey height of each facade: buildings are massed in whole storeys so every window row lines up across tiers
   const storeys = facades.map(([, opts]) => opts.floorHeight);
@@ -2015,6 +2023,8 @@ function buildCityBlocks(scene, opts = {}) {
     const PARTY_GAP = 0.5;
     const FOUNDATION = 1.0;
     const PLINTH_MIN = 0.6;
+    const PODIUM_STOREYS = 4; // estimate (PLAN.md P4-3)
+    const CROWN_MIN = 6;
     const hash = (a, b) => Math.abs(Math.sin(a * 12.9898 + b * 78.233) * 43758.5453) % 1;
 
     // Every mass, and a grid over them for the party-wall and front tests
@@ -2074,17 +2084,43 @@ function buildCityBlocks(scene, opts = {}) {
       return WALL_KINDS.rear;
     }
 
+    // P4.1 classes (data/buildings-<box>.bin, tools/building-rules.json) -> material, paint & storey height (P4.2, P4.3):
+    // row houses, flats, apartments & sheds are painted (1); warehouses and SoMa's low offices brick & concrete (2);
+    // towers by the Tall Building Inventory's facade material (glass and metal: curtain walls by era; concrete, stone &
+    // terracotta: masonry 0 in panels), unknown ones half each; midrise, civic and the rest masonry (0)
+    const FI = Object.fromEntries(header.fields.map((f, k) => [f, k]));
+    const typeName = (v) => header.types[v] || 'apartment';
+    const FACADE_PAINT = { 2: [0xb9b4aa, 0xc8c2b4, 0xa9a7a2, 0xd2cab8], 3: [0xd6ccb8, 0xc9bda4, 0xe0d8c6], 5: [0xe2d6c0, 0xd9c9ab] }; // concrete, stone, terracotta
+    const { sfPaint } = window.NYC.SFStyle;
+    const details = { bays: [], garages: [], steps: [], gables: [], spires: [] };
+    function styleOf(i, type, palette, era, facade, height) {
+      const h1 = hash(i, 3.1), h2 = hash(i, 7.7), h3 = hash(i, 11.3);
+      let mat = 0;
+      let paint = sfPaint(type, palette, h1, h2, h3);
+      if (type === 'rowhouse' || type === 'flats' || type === 'apartment' || type === 'shed') mat = 1;
+      else if (type === 'warehouse' || (type === 'office-low' && palette === 4)) mat = 2;
+      else if (type === 'tower' || type === 'landmark' || (type === 'midrise' && height >= 45)) {
+        const glass = facade === 1 || facade === 4 || (facade === 0 && hash(i, 2.9) < 0.5);
+        if (glass) mat = facade === 4 || era === 4 ? 5 : era === 3 ? 4 : 3 + Math.floor(hash(i, 5.5) * 2);
+        else if (FACADE_PAINT[facade]) paint = [FACADE_PAINT[facade][Math.floor(h1 * FACADE_PAINT[facade].length)], 0xe8e2d4, window.NYC.SFStyle.SURFACE.panel, paint[3]];
+      }
+      return { mat, paint };
+    }
+
     const polyGeos = [];
     let massCount = 0;
     for (let i = 0; i < header.count; i++) {
-      const [base, roof, , ringStart, ringCount, theta, start, count, shopsFlag] = table.subarray(i * F, i * F + F);
+      const rec = table.subarray(i * F, i * F + F);
+      const [base, roof, , ringStart, ringCount, theta, start, count, shopsFlag] = rec;
+      const type = typeName(rec[FI.type]);
       const pts = [];
       for (let k = 0; k < ringCount; k++) pts.push({ x: verts[2 * (ringStart + k)], z: verts[2 * (ringStart + k) + 1] });
       const xs = pts.map((p) => p.x), zs = pts.map((p) => p.z);
       const minX = Math.min(...xs), maxX = Math.max(...xs), minZ = Math.min(...zs), maxZ = Math.max(...zs);
       const height = roof - base;
       const tone = hash(i, base);
-      const mat = height >= 45 ? 3 + Math.floor(hash(base, i) * 3) : height >= 18 ? (tone < 0.55 ? 0 : 1) : (tone < 0.6 ? 1 : 2);
+      const { mat, paint } = styleOf(i, type, rec[FI.palette], rec[FI.era], rec[FI.facade], height);
+      const storeyH = rec[FI.storeyH] || (type === 'tower' ? 3.9 : 0);
       const blk = {
         id: `sf_${i}`, cx: (minX + maxX) * 0.5, cz: (minZ + maxZ) * 0.5, minX, maxX, minZ, maxZ, district: 'sf', ry: theta,
         cornices: [], waterTowers: [], hvacUnits: [], fireEscapes: [], awnings: [], scaffoldSheds: [], yards: [],
@@ -2102,14 +2138,31 @@ function buildCityBlocks(scene, opts = {}) {
         g.translate(0, bottom, 0);
         const ng = g.index ? g.toNonIndexed() : g;
         ng.deleteAttribute('uv');
-        const bb = new Float32Array(ng.attributes.position.count * 2);
-        for (let k = 0; k < bb.length; k += 2) bb[k] = base;
-        ng.setAttribute('boxBase', new THREE.BufferAttribute(bb, 2));
+        const n = ng.attributes.position.count;
+        const bb = new Float32Array(n * 3);
+        const pw = new Float32Array(n * 4), pt = new Float32Array(n * 4);
+        const cw = new THREE.Color(paint[0]), ct = new THREE.Color(paint[1]);
+        for (let k = 0; k < n; k++) {
+          bb[k * 3] = base;
+          pw.set([cw.r, cw.g, cw.b, paint[2]], k * 4);
+          pt.set([ct.r, ct.g, ct.b, paint[3]], k * 4);
+        }
+        ng.setAttribute('boxBase', new THREE.BufferAttribute(bb, 3));
+        ng.setAttribute('paintWall', new THREE.BufferAttribute(pw, 4));
+        ng.setAttribute('paintTrim', new THREE.BufferAttribute(pt, 4));
         polyGeos.push(ng);
         colliders.push({ minX, maxX, minZ, maxZ, minY: base, maxY: roof });
       }
       const cs = Math.cos(theta), sn = Math.sin(theta);
       let top = null;
+      let topBox = null;
+      // towers (P4.3): a podium where the Tall Building Inventory's tower plan is under 3/4 of its base plan: the
+      // largest mass rises as a centred tower of that share from PODIUM_STOREYS storeys up (an estimate: the inventory
+      // has no podium height), the building's other masses stop there
+      let biggest = -1;
+      for (let k = start; k < start + count; k++) if (biggest < 0 || all[k].w * all[k].d > all[biggest].w * all[biggest].d) biggest = k;
+      const podiumShare = type === 'tower' ? rec[FI.podium] : 0;
+      const podiumTop = podiumShare > 0 && podiumShare < 0.75 ? Math.min(base + PODIUM_STOREYS * (storeyH || storeys[mat]), base + height * 0.4) : roof;
       for (let k = start; k < start + count; k++) {
         const m = all[massCount++];
         // lowest & highest ground under the mass (corners, edge midpoints & centre)
@@ -2123,23 +2176,59 @@ function buildCityBlocks(scene, opts = {}) {
           }
         }
         g0 = Math.max(g0, base);
-        const plinth = g1 - g0 > PLINTH_MIN ? Math.min(g1 - g0, roof - g0 - storeys[mat]) : 0;
+        const plinth = g1 - g0 > PLINTH_MIN ? Math.min(g1 - g0, roof - g0 - (storeyH || storeys[mat])) : 0;
         const box = {
           x: m.cx, y: (bottom + roof) * 0.5, z: m.cz, w: m.w, h: roof - bottom, d: m.d, ry: theta, tone,
-          base: g0, plinth: Math.max(0, plinth),
+          base: g0, plinth: Math.max(0, plinth), storeyH, paint,
           faces: WALLS.map(([lx, lz]) => wallKind(m, lx, lz, shopsFlag > 0))
         };
-        buckets[mat].push(box);
-        colliders.push({
-          minX: m.cx - (Math.abs(cs) * m.w + Math.abs(sn) * m.d) * 0.5, maxX: m.cx + (Math.abs(cs) * m.w + Math.abs(sn) * m.d) * 0.5,
-          minZ: m.cz - (Math.abs(sn) * m.w + Math.abs(cs) * m.d) * 0.5, maxZ: m.cz + (Math.abs(sn) * m.w + Math.abs(cs) * m.d) * 0.5,
-          minY: base, maxY: roof, obb: { cx: m.cx, cz: m.cz, hx: m.w * 0.5, hz: m.d * 0.5, cs, sn }
+        const collider = (mm, maxY) => colliders.push({
+          minX: mm.cx - (Math.abs(cs) * mm.w + Math.abs(sn) * mm.d) * 0.5, maxX: mm.cx + (Math.abs(cs) * mm.w + Math.abs(sn) * mm.d) * 0.5,
+          minZ: mm.cz - (Math.abs(sn) * mm.w + Math.abs(cs) * mm.d) * 0.5, maxZ: mm.cz + (Math.abs(sn) * mm.w + Math.abs(cs) * mm.d) * 0.5,
+          minY: base, maxY, obb: { cx: mm.cx, cz: mm.cz, hx: mm.w * 0.5, hz: mm.d * 0.5, cs, sn }
         });
+        if (podiumTop < roof) {
+          // the podium part of every mass, and the tower over the largest
+          box.h = podiumTop - bottom;
+          box.y = (bottom + podiumTop) * 0.5;
+          buckets[mat].push(box);
+          collider(m, podiumTop);
+          if (k === biggest) {
+            const f = Math.max(0.4, Math.sqrt(podiumShare));
+            const tm = { cx: m.cx, cz: m.cz, w: m.w * f, d: m.d * f };
+            const tower = { ...box, y: (podiumTop + roof) * 0.5, w: tm.w, h: roof - podiumTop, d: tm.d, plinth: Math.max(0, box.plinth), faces: [WALL_KINDS.entry, WALL_KINDS.entry, WALL_KINDS.entry, WALL_KINDS.entry] };
+            buckets[mat].push(tower);
+            collider(tm, roof);
+            top = tm;
+            topBox = tower;
+          }
+          continue;
+        }
+        buckets[mat].push(box);
+        collider(m, roof);
         if (mat <= 2 && m.w > 3 && m.d > 3) blk.cornices.push({ x: m.cx, y: roof, z: m.cz, w: m.w + 1.0, h: 0.8, d: m.d + 1.0 });
-        if (!top || m.w * m.d > top.w * top.d) top = m;
+        if (!top || m.w * m.d > top.w * top.d) { top = m; topBox = box; }
       }
-      // a bulkhead / mechanical penthouse on the largest roof
-      if (top && top.w >= 6 && top.d >= 6) {
+      // row houses, flats & apartments: bay windows, garage door, stoop & false-front gable on the main front (sf-buildings.js)
+      if (mat === 1 && topBox && (type === 'rowhouse' || type === 'flats' || type === 'apartment')) {
+        window.NYC.sfFrontDetails(details, topBox, {
+          i, roof, bays: rec[FI.bays], garage: rec[FI.garage] > 0, storey: storeys[1], windowWidth: facades[1][1].windowWidth,
+          cornerPier: facades[1][1].cornerPier, groundAt: (x, z) => T.groundAt(x, z), roadAt: onRoadway, gable: type !== 'apartment' && hash(i, 13.7) < 0.3, hash: (a) => hash(i, a)
+        });
+      }
+      // warehouses: roll-up doors & loading docks; civic buildings: a colonnade (sf-buildings.js)
+      if (topBox && (type === 'warehouse' || type === 'civic')) {
+        window.NYC[type === 'warehouse' ? 'sfWarehouseFront' : 'sfCivicFront'](details, topBox, {
+          roof, storey: storeyH || storeys[mat], groundAt: (x, z) => T.groundAt(x, z), roadAt: onRoadway, hash: (a) => hash(i, a)
+        });
+      }
+      // towers & midrise: the crown the lidar's highest return shows over the main roof (peak - roof > CROWN_MIN m):
+      // a penthouse up to 12 m, a setback storey block up to 45 m, higher a setback and a spire (sf-buildings.js)
+      const crown = rec[2] - roof;
+      if (top && topBox && crown > CROWN_MIN && (type === 'tower' || type === 'midrise' || type === 'landmark')) {
+        window.NYC.sfCrown(details, blk, topBox, { roof, crown, storey: storeyH || storeys[mat], bucket: buckets[mat] });
+      } else if (top && top.w >= 6 && top.d >= 6 && !(type === 'rowhouse' || type === 'flats' || type === 'shed')) {
+        // a bulkhead / mechanical penthouse on the largest roof (not on row houses, flats and sheds)
         const hw = Math.min(top.w - 1.2, Math.max(2.4, top.w * range(0.25, 0.45)));
         const hd = Math.min(top.d - 1.2, Math.max(2.4, top.d * range(0.25, 0.45)));
         blk.hvacUnits.push({ x: top.cx, y: roof, z: top.cz, w: hw, h: height >= 45 ? range(3.4, 5.8) : range(2.4, 3.2), d: hd });
@@ -2147,8 +2236,10 @@ function buildCityBlocks(scene, opts = {}) {
       quadtree.insert(blk);
       allBlocks.push(blk);
     }
+    for (const b of details.bays) buckets[1].push(b);
+    window.NYC.buildSFDetailMeshes(group, details);
     if (polyGeos.length) {
-      const mesh = new THREE.Mesh(mergeGeometries(polyGeos, false), createPreWarBuildingMaterial({ ...facades[1][1], groundBase: true }));
+      const mesh = new THREE.Mesh(mergeGeometries(polyGeos, false), createPreWarBuildingMaterial({ ...facades[0][1], groundBase: true }));
       mesh.name = 'SFBuildingOutlines';
       mesh.castShadow = true;
       mesh.receiveShadow = true;

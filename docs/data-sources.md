@@ -34,7 +34,7 @@ Check each geometry column name against `/api/views/<id>.json` once in P1.5. The
 - `piers.overpassql`: `man_made=pier` ways and relations.
 - `landuse.overpassql`: `leisure=park|golf_course`, `landuse=forest|grass|cemetery|industrial`, `natural=wood|scrub|beach|cliff|water`.
 - `landmarks.overpassql`: names in the phase 5 tiers (`building`, `man_made`, `leisure=stadium`, `tourism`), with `out geom tags`.
-- `rail.overpassql`: `railway=tram|light_rail|funicular|rail` ways, plus `route=tram|light_rail|trolleybus` relations; `trolley_wire=yes` ways.
+- `rail.overpassql`: `railway=tram|light_rail|funicular|rail` ways, plus `route=tram|light_rail|trolleybus` relations; `trolley_wire=yes` ways. It ends `out geom` (P4.6), so the relations keep their members: the transit runs and stops are built from them.
 - `roads-tags.overpassql`: `highway=*` ways with `lanes|width|bridge|tunnel|layer|oneway` tags, used to enrich DataSF links.
 - `peaks.overpassql`: `natural=peak` with `ele`, used for terrain checks.
 

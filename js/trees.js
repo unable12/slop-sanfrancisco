@@ -1,7 +1,8 @@
 (function () {
 // js/trees.js
-// Procedural NYC street & park trees, planted by street-details.js (section 7):
-// - London plane, honey locust & American elm grown from seeded per-species rules: a flared trunk / leader carrying
+// Procedural NYC street & park trees, planted by street-details.js (section 7), and San Francisco's street trees
+// (sf-street-details.js, P4.5):
+// - London plane, honey locust & American elm (and SF's ficus, palm & conifer) grown from seeded per-species rules: a flared trunk / leader carrying
 //   scaffold limbs, branches and twigs as tapered, curving bark tubes (uv in metres for the bark shader)
 // - Leaf sprays on alpha-tested cards hung from the twigs, cut from a generated leaf atlas (palmate plane leaves,
 //   feathery locust fronds, toothed elm leaves and a dense far-canopy clump) whose mipmaps keep their coverage, so
@@ -422,6 +423,34 @@ const SPECIES = [
     twigs: { n: 3, t: [0.3, 1.0], angle: [0.5, 0.95], len: [1.3, 0.85], up: 0, out: 0, droop: 0.16, jitter: 0.12, segs: 2 },
     cards: { perTwig: 2, scale: [0.85, 1.1], droop: 0.4 },
     tints: [0x44622a, 0x53702e, 0x3a5724]
+  },
+  // San Francisco's street trees (P4.5, sf-street-details.js) add three more from the same rules:
+  { // 3: Ficus & other dense evergreens (laurel fig, Brisbane box, magnolia): short trunk, many limbs, a dense dark dome
+    name: 'ficus', tile: 2,
+    trunk: { r: 0.26, top: 2.6, lean: 0.03, segs: 6 },
+    limbs: { n: 7, y: [1.9, 2.6], tilt: [1.05, 0.5], len: [3.6, 2.6], r: 0.6, up: 0.1, out: 0, droop: 0, jitter: 0.1, segs: 6 },
+    branches: { n: 5, t: [0.25, 0.98], angle: [0.5, 0.95], len: [0.55, 0.4], up: 0.05, out: 0.03, droop: 0.02, jitter: 0.12, segs: 4 },
+    twigs: { n: 4, t: [0.3, 1.0], angle: [0.6, 1.05], len: [1.0, 0.7], up: 0.03, out: 0, droop: 0.03, jitter: 0.12, segs: 2 },
+    cards: { perTwig: 3, scale: [0.9, 1.15], droop: 0.05 },
+    tints: [0x2f4a22, 0x3a5527, 0x29421d]
+  },
+  { // 4: Palm (Canary Island date, Mexican fan, queen): a tall bare trunk under a head of arching fronds
+    name: 'palm', tile: 1, fronds: true,
+    trunk: { r: 0.28, top: 9.0, lean: 0.05, segs: 8 },
+    limbs: { n: 16, y: [8.6, 9.0], tilt: [1.5, 0.35], len: [3.6, 2.6], r: 0.15, up: 0, out: 0, droop: 0.22, jitter: 0.05, segs: 5 },
+    branches: { n: 0, t: [0.15, 0.98], angle: [1.1, 1.3], len: [0.18, 0.1], up: 0, out: 0, droop: 0.05, jitter: 0.05, segs: 2 },
+    twigs: { n: 0, t: [0.6, 1.0], angle: [0.3, 0.5], len: [0.5, 0.4], up: 0, out: 0, droop: 0.1, jitter: 0.05, segs: 1 },
+    cards: { perTwig: 2, scale: [2.2, 2.6], droop: 0.3 },
+    tints: [0x5b6e2c, 0x6a7a33, 0x4f6427]
+  },
+  { // 5: Conifer (pines, cypress, fern pine): a straight leader, near-level limbs shortening upward into a cone
+    name: 'conifer', tile: 1,
+    trunk: { r: 0.3, top: 11, lean: 0.02, segs: 9 },
+    limbs: { n: 14, y: [1.8, 10.5], tilt: [1.45, 1.0], len: [3.4, 0.7], r: 0.35, up: 0.02, out: 0, droop: 0.05, jitter: 0.06, segs: 4 },
+    branches: { n: 3, t: [0.3, 0.95], angle: [0.7, 1.1], len: [0.45, 0.3], up: 0, out: 0.02, droop: 0.05, jitter: 0.1, segs: 3 },
+    twigs: { n: 2, t: [0.3, 1.0], angle: [0.6, 1.0], len: [0.9, 0.6], up: 0, out: 0, droop: 0.08, jitter: 0.1, segs: 2 },
+    cards: { perTwig: 2, scale: [0.8, 1.0], droop: 0.1 },
+    tints: [0x23402a, 0x2c4a30, 0x1f3a26]
   }
 ];
 
@@ -510,7 +539,7 @@ function growTree(sp, seed) {
     const limb = growBranch(base.p, dir, len, base.r * L.r, 0.035, L.segs, L, rng, 1);
     branches.push(limb);
 
-    const nb = B.n + (rng() < 0.5 ? 1 : 0);
+    const nb = B.n ? B.n + (rng() < 0.5 ? 1 : 0) : 0; // (none at all on a palm's fronds)
     let baz = R(0, Math.PI * 2);
     for (let j = 0; j < nb; j++) {
       const bt = lerp(B.t[0], B.t[1], (j + R(0.15, 0.85)) / nb);
@@ -710,6 +739,26 @@ function placeCards(sp, branches, lod, tileMeters, rng, crown) {
     return { up, face: face.normalize() };
   };
   const size = tileMeters[sp.tile];
+  if (sp.fronds && lod <= 1) {
+    // palm fronds: cards along each frond (limb), overlapping from its base to its tip
+    const step = lod === 0 ? 0.11 : 0.2;
+    for (const b of branches) {
+      if (b.level !== 1) continue;
+      for (let t = 0.08; t < 1; t += step) {
+        const a = along(b, t);
+        const up = a.d.clone();
+        let face = new V3(0, 1, 0).addScaledVector(up, -up.y);
+        if (face.lengthSq() < 1e-4) face = new V3(1, 0, 0);
+        face.normalize().applyAxisAngle(up, R(-0.35, 0.35));
+        const at = a.p.clone().addScaledVector(up, -size * 0.25);
+        const sz = size * R(sp.cards.scale[0], sp.cards.scale[1]) * (lod === 0 ? 1 : 1.3) * lerp(1.0, 0.55, t);
+        // two cards crossed along the frond: one lying on it, one standing in it (seen from below and from the side)
+        cards.push({ at, up, face, size: sz, tile: sp.tile });
+        cards.push({ at, up, face: face.clone().applyAxisAngle(up, Math.PI / 2), size: sz, tile: sp.tile });
+      }
+    }
+    return cards;
+  }
   if (lod === 0) {
     for (const b of branches) {
       if (b.level !== 3) continue;
@@ -811,6 +860,10 @@ function buildTreeGeometries(speciesIndex, variant, tileMeters) {
 const LOD_NEAR = 105; // full detail within (m)
 const LOD_MID = 420; // coarse cards & branches within; whole-crown cards beyond
 const LOD_HYSTERESIS = 6;
+// The camera moves this far before the levels are worked out again (was 4 m: with San Francisco's ~23k street trees
+// every re-sort re-uploads the instance buffers, and at driving speed that cost a 20 ms frame several times a second);
+// from the air, a fifth of the camera's height above the ground
+const RELEVEL_STEP = 10;
 // Draw distance per tier (0 park & plaza, 1 avenue & esplanade, 2 cross-street); at street level everything beyond
 // LOW_CUTOFF is behind the buildings anyway
 const MAX_DIST = [3000, 1600, 950];
@@ -941,7 +994,10 @@ function createTreeField(scene, sites) {
   const cam = new V3();
   function update(position) {
     cam.copy(position);
-    if (cam.distanceToSquared(last) < 16) return false;
+    const T = window.NYC.Terrain;
+    const above = cam.y - (T && T.loaded ? T.groundAt(cam.x, cam.z) : 0);
+    const step = Math.max(RELEVEL_STEP, above * 0.2); // (from the air the levels change slowly)
+    if (cam.distanceToSquared(last) < step * step) return false;
     last.copy(cam);
     const low = cam.y < 40;
     let changed = false;
@@ -977,8 +1033,16 @@ function createTreeField(scene, sites) {
     update(viewPos.setFromMatrixPosition(camera.matrixWorld));
   };
 
-  // Levels for the start-up view (Midtown, 5th Ave), so the precompile pass sees the tree meshes
+  // Levels for the start-up view (Midtown, 5th Ave), so the precompile pass sees the tree meshes; a mesh the view has
+  // no tree for draws one zero-scale instance until its first rebuild, so its pipeline is compiled up front too (not
+  // on the frame its first tree comes into range)
   update(new V3(0, 10, 140));
+  for (const mesh of instanced) {
+    if (mesh.count > 0) continue;
+    mesh.instanceMatrix.array.fill(0, 0, 16);
+    mesh.count = 1;
+    mesh.visible = true;
+  }
 
   const stats = {
     trees: N,

@@ -1,6 +1,7 @@
 // Facade floors count from each building's ground (P2.5.1): the production `vCoord` / `gridV` / plinth lines of
 // facadeCell (js/tsl-materials.js), evaluated numerically, give a box standing at y = 0 and the same box at y = 87 the
-// same floor index at every height on the wall, and a solid plinth below base + plinth.
+// same floor index at every height on the wall, and a solid plinth below base + plinth; a box's own storey height
+// (`boxBase.z`, P4.3) replaces the material's.
 const assert = require('node:assert/strict');
 const { readFileSync } = require('node:fs');
 const { join } = require('node:path');
@@ -17,6 +18,7 @@ class N {
   constructor(v) { this.v = v; }
   get x() { return new N(this.v[0]); }
   get y() { return new N(this.v[1]); }
+  get z() { return new N(this.v[2]); }
   sub(o) { return new N(this.v - val(o)); }
   add(o) { return new N(this.v + val(o)); }
   div(o) { return new N(this.v / val(o)); }
@@ -24,12 +26,13 @@ class N {
 }
 const val = (o) => (o instanceof N ? o.v : o);
 
-function evaluate(worldY, base, plinth, floorHeight = 3.4) {
+function evaluate(worldY, base, plinth, floorHeight = 3.4, storeyH = 0) {
   const context = {
     positionWorld: { y: new N(worldY) },
-    attribute: () => new N([base, plinth]),
+    attribute: () => new N([base, plinth, storeyH]),
     float: (v) => new N(v),
     step: (edge, x) => new N(val(x) < val(edge) ? 0 : 1),
+    mix: (a, b, t) => new N(val(a) * (1 - val(t)) + val(b) * val(t)),
     groundBase: true,
     floorHeight
   };
@@ -53,4 +56,10 @@ test('a downhill plinth is solid below base + plinth and floors start above it',
   assert.equal(above.plinth, 0);
   assert.equal(Math.floor(above.gridV), 0);
   assert.equal(Math.floor(evaluate(87 + 2.4 + 3.5, 87, 2.4).gridV), 1);
+});
+
+test('a box’s own storey height replaces the material’s; 0 keeps it', () => {
+  assert.equal(Math.floor(evaluate(87 + 3.6, 87, 0, 3.4, 0).gridV), 1);
+  assert.equal(Math.floor(evaluate(87 + 3.6, 87, 0, 3.4, 3.9).gridV), 0);
+  assert.equal(Math.floor(evaluate(87 + 3.95, 87, 0, 3.4, 3.9).gridV), 1);
 });

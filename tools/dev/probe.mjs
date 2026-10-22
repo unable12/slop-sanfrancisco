@@ -51,7 +51,7 @@ ws.onmessage = (m) => {
   if (d.method === 'Runtime.consoleAPICalled') {
     const text = d.params.args.map((a) => a.value ?? a.description ?? '').join(' ');
     if (d.params.type === 'error') errors.push(text.slice(0, 300));
-    else if (/^\[(init|bench)\]/.test(text)) logs.push(text);
+    else if (/^\[(init|bench|details|buildings|paint)\]/.test(text)) logs.push(text);
   }
   if (d.method === 'Runtime.exceptionThrown') errors.push(`exception: ${(d.params.exceptionDetails.exception?.description || d.params.exceptionDetails.text || '').slice(0, 300)}`);
 };
@@ -83,6 +83,12 @@ async function sample() {
   const backend = await evalJs('window.__NYC_APP?.renderer?.backend?.isWebGPUBackend ? "webgpu" : "other"');
   return { fps, heapMB, stats, backend };
 }
+// JS heap still in use after a forced garbage collection (heapMB, read without one, also counts garbage not yet
+// collected and, in --shots mode, what the previous shots' pages left behind)
+async function liveHeapMB() {
+  await send('HeapProfiler.collectGarbage');
+  return evalJs('performance.memory ? Math.round(performance.memory.usedJSHeapSize/1e6) : null');
+}
 async function screenshot(out) {
   const shot = await send('Page.captureScreenshot', { format: 'png' });
   if (shot.result?.data) writeFileSync(out, Buffer.from(shot.result.data, 'base64'));
@@ -101,7 +107,7 @@ if (argv.includes('--shots')) {
     await sleep(2500); // let streaming, shadows & traffic settle
     const s = await sample();
     await screenshot(join(outDir, `${name}.png`));
-    const row = { name, ...r, fps: s.fps, heapMB: s.heapMB, backend: s.backend, errors: errors.length, firstError: errors[0] };
+    const row = { name, ...r, fps: s.fps, heapMB: s.heapMB, heapLiveMB: await liveHeapMB(), backend: s.backend, errors: errors.length, firstError: errors[0] };
     console.log(JSON.stringify(row));
     if (!r.ready || errors.length) failed = true;
   }
@@ -112,7 +118,8 @@ if (argv.includes('--shots')) {
   let bench = null;
   for (let i = 0; i < 40 && !bench && r.ready; i++) { await sleep(1000); bench = await evalJs('window.__NYC_APP.bench || null'); }
   const heapMB = await evalJs('performance.memory ? Math.round(performance.memory.usedJSHeapSize/1e6) : null');
-  console.log(JSON.stringify({ ...r, bench, heapMB, errors: errors.length, firstError: errors[0], init: logs.find((l) => l.startsWith('[init]')) }));
+  const heapLiveMB = await liveHeapMB();
+  console.log(JSON.stringify({ ...r, bench, heapMB, heapLiveMB, errors: errors.length, firstError: errors[0], init: logs.find((l) => l.startsWith('[init]')) }));
   if (!bench || errors.length) failed = true;
 } else {
   const [url, out] = argv;

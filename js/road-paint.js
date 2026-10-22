@@ -3,8 +3,10 @@
 // Road markings generated from the drivable road network (js/road-network.js), so the paint matches where traffic
 // actually drives and stops: dashed lane lines, double yellow centre lines on two-way roads, stop bars and continental
 // crosswalks (curb to curb, where traffic.js walks its pedestrians) at the junctions with signals or stop signs, and
-// green bike lanes along wide one-way roads; and the track beds and rails of the surface rail lines. Every strip is a
-// ribbon draped on the terrain (js/terrain.js), a vertex pair every metre.
+// green bike lanes where the DataSF Bike Network has class II lanes or class IV separated ones (GEO.bikeways, P4.4:
+// along both curbs, or along the curb on the right of a one-way lane's travel; a white buffer line on buffered ones);
+// and the track beds and rails of the surface rail lines, with the cable slot along the cable-car lines. Every strip is a ribbon draped on the terrain
+// (js/terrain.js), a vertex pair every metre.
 
 const { THREE, CROSSWALK, createRoadPaintMaterial, blockAt } = window.NYC;
 
@@ -13,6 +15,7 @@ const YELLOW = new THREE.Color(0xe8ad22);
 const GREEN = new THREE.Color(0x2a8a4e);
 const STEEL = new THREE.Color(0x8d8f91);
 const TRACK_BED = new THREE.Color(0x4d4a45);
+const SLOT = new THREE.Color(0x141414);
 const GAUGE = 1.435; // standard gauge, between the rails' centres (near enough)
 const HEIGHT = 0.012; // above the asphalt
 const STEP = 1; // metres between the vertex pairs of a strip
@@ -73,7 +76,47 @@ function buildRoadPaint(scene, network) {
   const along = (e, o, w, col, period, duty) => strip(...at(e, 0.9, o), ...at(e, e.len - 0.9, o), w, col, period, duty);
   const across = (e, s, o0, o1, w, col, period, duty) => strip(...at(e, s, o0), ...at(e, s, o1), w, col, period, duty);
 
+  // Bike lanes (GEO.bikeways) by 16 m grid cell, segment by segment, to find the one running along a road
+  const BIKE_CELL = 16;
+  const bikeGrid = new Map();
+  for (const b of window.NYC.GEO.bikeways || []) {
+    for (let i = 2; i < b.pts.length; i += 2) {
+      const ax = b.pts[i - 2], az = b.pts[i - 1], bx = b.pts[i], bz = b.pts[i + 1];
+      const L = Math.hypot(bx - ax, bz - az);
+      if (L < 0.5) continue;
+      const seg = { b, ax, az, ux: (bx - ax) / L, uz: (bz - az) / L, L };
+      for (let t = 0; t <= L; t += BIKE_CELL / 2) {
+        const k = Math.floor((ax + seg.ux * t) / BIKE_CELL) * 100000 + Math.floor((az + seg.uz * t) / BIKE_CELL);
+        if (!bikeGrid.has(k)) bikeGrid.set(k, new Set());
+        bikeGrid.get(k).add(seg);
+      }
+    }
+  }
+  // the bike lane along edge e: its segments within 4 m of e's centreline at a quarter, half & three quarters, running
+  // within 25 degrees of it (at two of the three); with the drawing direction's sign against e
+  function bikewayAlong(e) {
+    const hits = new Map();
+    for (const f of [0.25, 0.5, 0.75]) {
+      const [x, z] = at(e, e.len * f, 0);
+      const seen = new Set();
+      for (const seg of bikeGrid.get(Math.floor(x / BIKE_CELL) * 100000 + Math.floor(z / BIKE_CELL)) || []) {
+        if (seen.has(seg.b)) continue;
+        const dot = seg.ux * e.dx + seg.uz * e.dz;
+        if (Math.abs(dot) < 0.9) continue;
+        const t = Math.max(0, Math.min(seg.L, (x - seg.ax) * seg.ux + (z - seg.az) * seg.uz));
+        if (Math.hypot(seg.ax + seg.ux * t - x, seg.az + seg.uz * t - z) > 4) continue;
+        seen.add(seg.b);
+        const h = hits.get(seg.b) || { n: 0, sign: Math.sign(dot) };
+        h.n++;
+        hits.set(seg.b, h);
+      }
+    }
+    for (const [b, h] of hits) if (h.n >= 2) return { b, sign: h.sign };
+    return null;
+  }
+
   // The one or two directed edges of each road between a pair of intersections
+  let bikeLanes = 0;
   const roads = new Map();
   for (const e of network.edges) {
     if (e.bore) continue; // paint is draped on the terrain: tunnels and bridges have their own (grade-separation.js)
@@ -103,14 +146,24 @@ function buildRoadPaint(scene, network) {
       }
     }
 
-    // Wide one-way avenues: edge line, then a buffer and a green bike lane along the curb on the side left free
-    if (!back && e.axis === 'ave' && lanes.length >= 4) {
-      for (const [edge, sign] of [[lanes[lanes.length - 1].o + 1.8, 1], [lanes[0].o - 1.8, -1]]) {
-        const curb = sign * e.half;
-        if ((curb - edge) * sign < 3.5) continue;
-        along(e, edge + sign * 0.2, 0.13, WHITE);
-        along(e, curb - sign * 2.4, 0.13, WHITE);
-        along(e, curb - sign * 1.3, 2.0, GREEN);
+    // Bike lanes: a 1.6 m green lane with white edge lines, outside a 2.4 m parking lane (class II, where it fits
+    // beside the traffic lanes) or against the curb (class IV, separated); a buffered one gets a line 0.9 m further in
+    const bike = bikewayAlong(e);
+    if (bike) {
+      const curbR = e.half, curbL = -(back ? back.half : e.half);
+      // a one-way bike lane runs on the right of its travel: travel along e when the drawing runs with e and side is 1
+      const sides = bike.b.side === 0 ? [1, -1] : [bike.b.side * bike.sign > 0 ? 1 : -1];
+      for (const sign of sides) {
+        const curb = sign > 0 ? curbR : curbL;
+        const outer = sign > 0 ? lanes[lanes.length - 1].o : lanes[0].o; // the traffic lane nearest this curb
+        let c = curb - sign * (bike.b.cls === 4 ? 1.1 : 3.2);
+        if ((c - outer) * sign < 2.4) c = curb - sign * 1.1;
+        if ((c - outer) * sign < 1.6) continue; // no room beside the traffic
+        along(e, c, 1.6, GREEN);
+        along(e, c - sign * 0.86, 0.12, WHITE);
+        along(e, c + sign * 0.86, 0.12, WHITE);
+        if (bike.b.buffered && (c - sign * 1.76 - outer) * sign > 1.2) along(e, c - sign * 1.76, 0.12, WHITE);
+        bikeLanes++;
       }
     }
 
@@ -143,6 +196,12 @@ function buildRoadPaint(scene, network) {
     }
   }
 
+  // The cable cars' slot between their rails (GEO.transit cable-car runs, P4.6): a dark line down the track's middle
+  for (const t of window.NYC.GEO.transit || []) {
+    if (t.kind !== 'cablecar') continue;
+    for (let i = 2; i < t.pts.length; i += 2) strip(t.pts[i - 2], t.pts[i - 1], t.pts[i], t.pts[i + 1], 0.05, SLOT, 1, 1, true, 0.006);
+  }
+
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(position, 3));
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normal, 3));
@@ -156,6 +215,7 @@ function buildRoadPaint(scene, network) {
   mesh.receiveShadow = true;
   mesh.renderOrder = -1; // under the other see-through ground effects (contact shadows, headlight beams)
   scene.add(mesh);
+  console.info(`[paint] ${bikeLanes} bike lanes along ${roads.size} roads`);
   return mesh;
 }
 

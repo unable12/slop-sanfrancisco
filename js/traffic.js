@@ -141,7 +141,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
   };
 
   // =========================================================================
-  // 1. 3D LOFTED NYC YELLOW TAXIS, SEDANS, SUVS & NYPD CRUISERS (200 VEHICLES)
+  // 1. 3D LOFTED ROBOTAXIS, SEDANS, SUVS, VANS & POLICE CRUISERS (200 VEHICLES)
   // =========================================================================
   function createVehicle(bus, half, halfWidth, axle, driver, v0) {
     return {
@@ -157,27 +157,35 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
     };
   }
 
-  // Build 3 distinct 3D LoftGeometry vehicle classes (Taxi, Sedan/NYPD, SUV) with separate spinning 3D wheels
+  // Build 4 distinct 3D LoftGeometry vehicle classes (robotaxi, sedan / police cruiser, SUV, van) with separate
+  // spinning 3D wheels
   const taxiGeo = buildCarGeometry(BODY_SPECS.taxi, false);
   const sedanGeo = buildCarGeometry(BODY_SPECS.sedan, false);
   const suvGeo = buildCarGeometry(BODY_SPECS.suv, false);
+  const vanGeo = buildCarGeometry(BODY_SPECS.van, false);
   const carWheelLeftGeo = buildSteerableWheelGeo(BODY_SPECS.sedan, -1);
   const carWheelRightGeo = buildSteerableWheelGeo(BODY_SPECS.sedan, 1);
 
   const taxiMat = createLoftedCarMaterial(BODY_SPECS.taxi);
   const sedanMat = createLoftedCarMaterial(BODY_SPECS.sedan);
   const suvMat = createLoftedCarMaterial(BODY_SPECS.suv);
+  const vanMat = createLoftedCarMaterial(BODY_SPECS.van);
   const carWheelMat = createLoftedCarMaterial(BODY_SPECS.sedan, 0xffbe14);
 
   const taxiYellow = new THREE.Color(0xf1f3f5); // the 'taxi' class is San Francisco's white robotaxi (actor-models.js)
-  const nypdWhite = new THREE.Color(0xf6f9fc);
+  const nypdWhite = new THREE.Color(0x15171a); // the police cruiser's black body (its white doors: the car material)
+  // San Francisco's sedans: rideshare-style white, silver, grey & black, a few colours
   const sedanPalette = [
-    new THREE.Color(0x1c2026), // Black Town Car / Uber
-    new THREE.Color(0xcfd6de), // Metallic Silver Sedan
-    new THREE.Color(0x1d3b6c), // Deep Navy Sedan
-    new THREE.Color(0x52575e), // Graphite Grey Sedan
-    new THREE.Color(0x6e1f24)  // Burgundy Sedan
+    new THREE.Color(0xe9ecef), // White
+    new THREE.Color(0x1c2026), // Black
+    new THREE.Color(0xcfd6de), // Metallic Silver
+    new THREE.Color(0x52575e), // Graphite Grey
+    new THREE.Color(0x1d3b6c), // Deep Navy
+    new THREE.Color(0x8a8f96), // Mid Grey
+    new THREE.Color(0x6e1f24)  // Burgundy
   ];
+  // Delivery & shuttle vans: mostly white
+  const vanPalette = [new THREE.Color(0xf2f3f4), new THREE.Color(0xf2f3f4), new THREE.Color(0xd8dcdf), new THREE.Color(0x2b4a6e)];
   const suvPalette = [
     new THREE.Color(0x16191e), // Executive Black Escalade/Suburban
     new THREE.Color(0xf0f3f7), // Pearl White SUV
@@ -190,12 +198,16 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
   let taxiCount = 0;
   let sedanCount = 0;
   let suvCount = 0;
+  let vanCount = 0;
   let nypdCount = 0;
 
+  // San Francisco's mix (P4.6): 1 in 20 a police cruiser, 1 in 7 a robotaxi with its roof sensor pod, 1 in 6 of the
+  // rest a van, then SUVs and sedans half each
   for (let i = 0; i < NUM_CARS; i++) {
-    const isNYPD = (i % 10) === 6;
-    const isTaxi = !isNYPD && (i % 7) < 4;
-    const isSUV = !isNYPD && !isTaxi && (i % 2 === 0);
+    const isNYPD = (i % 20) === 6;
+    const isTaxi = !isNYPD && (i % 7) === 0;
+    const isVan = !isNYPD && !isTaxi && (i % 6) === 3;
+    const isSUV = !isNYPD && !isTaxi && !isVan && (i % 2 === 0);
 
     let bodyType = 'sedan';
     let col;
@@ -204,6 +216,10 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
       bodyType = 'taxi';
       taxiCount++;
       col = taxiYellow;
+    } else if (isVan) {
+      bodyType = 'van';
+      vanCount++;
+      col = vanPalette[i % vanPalette.length];
     } else if (isSUV) {
       bodyType = 'suv';
       suvCount++;
@@ -214,10 +230,10 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
       if (isNYPD) nypdCount++;
     }
 
-    const car = createVehicle(false, isSUV ? 2.3 : 2.25, isSUV ? 0.92 : 0.86, isSUV ? 1.4 : 1.38, CAR_DRIVER, 10 + (i % 5) * 0.9);
+    const car = createVehicle(false, isSUV || isVan ? 2.3 : 2.25, isSUV || isVan ? 0.92 : 0.86, isSUV || isVan ? 1.4 : 1.38, CAR_DRIVER, 10 + (i % 5) * 0.9);
     // paint as float32 values, so renderCar() can tell whether an instance slot's paint changes by comparing
     const paint = [Math.fround(col.r), Math.fround(col.g), Math.fround(col.b)];
-    Object.assign(car, { isTaxi, isNYPD, isSUV, bodyType, paint });
+    Object.assign(car, { isTaxi, isNYPD, isSUV: isSUV || isVan, bodyType, paint });
     cars.push(car);
   }
 
@@ -226,7 +242,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
   // can see (or whose shadow it may see), see renderCar(). Per-instance paint & lamp / livery state the car material
   // reads: brake lights, left (+x) & right (-x) turn signals, livery (1 = NYPD).
   const bodies = {};
-  for (const [kind, geo, count, mat] of [['taxi', taxiGeo, taxiCount, taxiMat], ['sedan', sedanGeo, sedanCount, sedanMat], ['suv', suvGeo, suvCount, suvMat]]) {
+  for (const [kind, geo, count, mat] of [['taxi', taxiGeo, taxiCount, taxiMat], ['sedan', sedanGeo, sedanCount, sedanMat], ['suv', suvGeo, suvCount, suvMat], ['van', vanGeo, vanCount, vanMat]]) {
     const n = Math.max(1, count);
     const lodMesh = (g) => {
       g.setAttribute('paintColor', new THREE.InstancedBufferAttribute(new Float32Array(n * 3), 3));
@@ -290,7 +306,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
   );
 
   // =========================================================================
-  // 2. LOFTED MTA SELECT BUS SERVICE BLUE & WHITE CITY BUSES (32 BUSES)
+  // 2. LOFTED MUNI SILVER & RED CITY BUSES
   // =========================================================================
   const busBodyGeo = buildLoftedBusBodyGeometry();
   // Per-instance lamp state the bus material reads: brake lights, left (+x) & right (-x) turn signals (renderBus)
@@ -2172,7 +2188,7 @@ function createHighwayTraffic(scene, lanes) {
     lane.cars = [];
     for (let u = rand() * 30; u < lane.len - 12; u += 24 + rand() * 50) {
       const h = rand();
-      const kind = h < 0.32 ? 'taxi' : h < 0.72 ? 'sedan' : 'suv';
+      const kind = h < 0.1 ? 'taxi' : h < 0.6 ? 'sedan' : 'suv';
       const col = new THREE.Color(PALETTES[kind][Math.floor(rand() * PALETTES[kind].length)]);
       // (float32 values, so update() can tell whether an instance slot's paint changes by comparing with the buffer)
       const car = { lane, kind, u, v: lane.speed, acc: 0, seg: 0, col: [Math.fround(col.r), Math.fround(col.g), Math.fround(col.b)] };

@@ -1,0 +1,12 @@
+{
+  "_comment": "DataSF Street Tree Inventory (tkzw-k3nq) species -> visual class (P4.5), by the botanical name before ' :: ', first matching regex wins. Classes: 0 plane (broad deciduous crowns), 1 ficus (dense rounded evergreen crowns), 2 palm, 3 broadleaf (elm-like), 4 conifer, 5 broadleaf-fine (feathery or small-leaved crowns, drawn with the locust builder). Unknown or unnamed trees are broadleaf. Records that are not standing trees are dropped. Visual grouping chosen for this game, not a botanical classification.",
+  "drop": "^(Planting [Ss]ite|Stump|Paved Over|Potential Site|Vacant)",
+  "classes": [
+    [2, "^(Phoenix|Washingtonia|Syagrus|Trachycarpus|Archontophoenix|Butia|Chamaerops|Brahea|Livistona|Arecastrum|Cordyline|Dracaena)"],
+    [4, "^(Pinus|Cupressus|Hesperocyparis|Callitropsis|Juniperus|Araucaria|Sequoia|Sequoiadendron|Cedrus|Podocarpus|Afrocarpus|Cryptomeria|Taxodium|Metasequoia|Thuja|Abies|Picea|Chamaecyparis|Populus nigra 'Italica')"],
+    [0, "^(Platanus|Liquidambar|Acer|Liriodendron|Fraxinus|Tilia|Celtis|Aesculus|Catalpa|Quercus rubra|Zelkova)"],
+    [1, "^(Ficus|Magnolia|Metrosideros|Pittosporum|Laurus|Ligustrum|Eriobotrya|Lophostemon|Tristaniopsis|Arbutus|Ceratonia|Rhamnus|Quercus (agrifolia|virginiana|ilex)|Lyonothamnus|Prunus (ilicifolia|caroliniana|lusitanica))"],
+    [5, "^(Robinia|Gleditsia|Acacia|Jacaranda|Koelreuteria|Maytenus|Schinus|Pistacia|Melaleuca|Callistemon|Geijera|Olea|Albizia|Sophora|Styphnolobium|Leptospermum|Grevillea|Agonis)"]
+  ],
+  "default": 3
+}

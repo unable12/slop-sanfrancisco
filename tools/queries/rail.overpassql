@@ -4,4 +4,4 @@
   way["trolley_wire"="yes"]({{bbox}});
   relation["route"~"^(tram|light_rail|trolleybus|funicular)$"]({{bbox}});
 );
-out geom tags;
+out geom;

@@ -312,6 +312,11 @@ const BODY_SPECS = {
 // place of New York's yellow cab: the player's car and the 'taxi' class of the traffic
 BODY_SPECS.robotaxi = Object.assign({}, BODY_SPECS.sedan, { name: 'robotaxi', sign: false, sensors: true, chrome: false });
 BODY_SPECS.taxi = BODY_SPECS.robotaxi;
+// San Francisco's delivery & shuttle vans (P4.6): the SUV's chassis under a tall, long roof, no cladding or roof rails
+BODY_SPECS.van = Object.assign({}, BODY_SPECS.suv, {
+  name: 'van', cladding: 0, rails: false,
+  cabin: Object.assign({}, BODY_SPECS.suv.cabin, { roofY: [[0.08, 2.0], [-0.9, 2.08], [-2.15, 2.06]], roofRear: -2.15, deck: -2.25, pillars: [-0.3] })
+});
 for (const spec of Object.values(BODY_SPECS)) {
   // Kept for code that places lamp flares: lamp heights (front, rear) and centres across the car
   spec.lamps = [spec.headlight[1], spec.taillight[1]];
@@ -1138,18 +1143,18 @@ function createLoftedCarMaterial(spec, fixedColorHex = null) {
   );
 
   // ---- Colour ---------------------------------------------------------------------------------------------------
-  // Liveries: NYPD (white with blue & light-blue side stripes, lettering on the front doors); the taxi's door badges
-  // and medallion number
+  // Liveries: the police cruiser (state.w 1; San Francisco, P4.6: a generic black-and-white, white doors with dark
+  // lettering on a black body; SFPD's own current scheme is not verified, docs/landmarks/muni.md); the taxi's door
+  // badges and medallion number
   const isNYPD = step(0.5, state.w).mul(isSide).mul(isBody);
   const doorMid = (spec.doors[0] + spec.doors[1]) / 2;
-  const along = smoothstep(spec.zRear + 0.22, spec.zRear + 0.3, p.z).mul(smoothstep(spec.zFront - 0.28, spec.zFront - 0.36, p.z));
-  const band = smoothstep(0.495, 0.5, p.y).mul(smoothstep(0.645, 0.64, p.y)).mul(along);
-  const pin = smoothstep(0.663, 0.667, p.y).mul(smoothstep(0.687, 0.683, p.y)).mul(along);
   const lettering = step(0.45, sin(p.z.mul(70.0)))
     .mul(smoothstep(0.725, 0.73, p.y))
     .mul(smoothstep(0.81, 0.805, p.y))
     .mul(step(abs(p.z.sub(doorMid)), 0.22));
-  let painted = mix(mix(paint, color(0x1d3f8f), max(band, lettering).mul(isNYPD)), color(0x6fa8dc), pin.mul(isNYPD));
+  const doorPanel = smoothstep(spec.doors[2] - 0.01, spec.doors[2] + 0.01, p.z).mul(smoothstep(spec.doors[0] + 0.01, spec.doors[0] - 0.01, p.z))
+    .mul(smoothstep(0.36, 0.4, p.y)).mul(smoothstep(0.86, 0.82, p.y));
+  let painted = mix(mix(paint, color(0xf4f5f6), doorPanel.mul(isNYPD)), color(0x15181c), lettering.mul(isNYPD));
   if (spec.sign) {
     const badge = roundedRect(vec2(p.z.sub(doorMid), p.y.sub(0.66)), vec2(0.21, 0.052), 0.012).mul(isSide).mul(isBody);
     const emblem = smoothstep(0.042, 0.036, length(vec2(abs(p.z.sub(doorMid)).sub(0.15), p.y.sub(0.66))));
@@ -1179,7 +1184,7 @@ function createLoftedCarMaterial(spec, fixedColorHex = null) {
   body = body.mul(one.sub(seams.mul(onDoors).mul(0.55))).mul(one.sub(bumperSeam.mul(0.5)));
   body = mix(body, color(0x15181b), cowlPanel);
 
-  // Nose: slatted lower grille & upper slot, headlamp housings with projector & LED strip, NY plate
+  // Nose: slatted lower grille & upper slot, headlamp housings with projector & LED strip, plate
   const slats = step(0.5, fract(p.y.mul(42.0))).mul(0.4).add(0.6);
   body = mix(body, color(0x111417).mul(slats), max(intake, grille));
   body = mix(body, mix(mix(color(0x23292f), color(0xdfe9f2), headlightLens), color(0xffffff), drl), headlight);
@@ -1188,7 +1193,7 @@ function createLoftedCarMaterial(spec, fixedColorHex = null) {
   body = mix(body, color(0x7a0a10), reflector);
   body = mix(body, mix(color(0x8c0a12), color(0xc24d10), turnRear), taillight);
   body = mix(body, body.mul(0.55), plateRecess);
-  body = mix(body, color(0xf2b718), plates);
+  body = mix(body, color(0xeeeeea), plates); // California: white plates
   body = mix(body, color(0x0e1013), under);
 
   // Glasshouse: tinted glass, black seals & B / C pillars, painted roof & A pillars, chrome sill strip, CHMSL
@@ -1462,13 +1467,13 @@ function createBusWheelMaterial() {
 let _busLoftedMat = null;
 
 /**
- * Creates the TSL procedural material for MTA buses:
+ * Creates the TSL procedural material for the city buses (Muni in San Francisco, P4.6):
  * - Wraparound split windshield with gasket & centre post, destination sign band above it; rear window & engine
  *   louvres on the rear face
  * - Continuous side window band with mullions, the driver's window, glazed curb-side front & rear doors
- * - MTA livery: pearl white with the vivid blue band & cyan ribbon below the windows and a dark skirt
+ * - Muni livery: silver with a red stripe & pinstripe below the windows and a dark skirt (docs/landmarks/muni.md)
  * - Headlamps, turn signals (per-instance `busState`: brake, left (+x), right (-x)), tail / brake light columns,
- *   NY plates; black trims & light-grey roof pods
+ *   white plates; black trims & light-grey roof pods
  */
 function createLoftedBusMaterial() {
   if (_busLoftedMat) return _busLoftedMat;
@@ -1518,12 +1523,13 @@ function createLoftedBusMaterial() {
   const glass = clamp(max(max(frontGlass, rearGlass), max(max(sideBand.mul(mullion), driverWin), max(d0.glass, d1.glass))), 0.0, 1.0);
   const seal = clamp(max(max(frontSeal, rearSeal), max(max(sideSeal, signBand), doorFrame)), 0.0, 1.0);
 
-  // MTA livery
+  // Muni livery (P4.6, docs/landmarks/muni.md): silver with red striping; the stripe's place and width are this
+  // model's, not measured
   const shadeY = smoothstep(0.34, 1.2, p.y).mul(0.2).add(0.8);
-  const blueStripe = smoothstep(0.9, 0.93, p.y).mul(smoothstep(1.2, 1.17, p.y));
-  const cyanRibbon = smoothstep(0.84, 0.86, p.y).mul(smoothstep(0.885, 0.865, p.y));
+  const redStripe = smoothstep(0.93, 0.95, p.y).mul(smoothstep(1.12, 1.1, p.y));
+  const pinStripe = smoothstep(0.86, 0.87, p.y).mul(smoothstep(0.895, 0.885, p.y));
   const skirt = smoothstep(0.53, 0.5, p.y);
-  const livery = mix(mix(mix(color(0xf0f4f8), color(0x0058b8), blueStripe), color(0x00a8e8), cyanRibbon), color(0x1c2026), skirt).mul(shadeY);
+  const livery = mix(mix(mix(color(0xc3c8cd), color(0xbe1e2d), redStripe), color(0xbe1e2d), pinStripe), color(0x2a2e33), skirt).mul(shadeY);
 
   // Lamps: twin round headlamps & amber turn signals in black pods; red tail / brake light columns, amber turn &
   // white reverse lamps at the rear corners; plates
@@ -1546,7 +1552,7 @@ function createLoftedBusMaterial() {
   body = mix(body, color(0x9a0d14), tailLamp);
   body = mix(body, color(0xc8641a), turnRear);
   body = mix(body, color(0xe8eef2), reverse);
-  body = mix(body, color(0xf2b718), plate);
+  body = mix(body, color(0xeeeeea), plate);
   const glassTint = mix(color(0x0e1a26), color(0x1b3046), clamp(p.y.sub(1.3).mul(0.8), 0.0, 1.0));
   body = mix(body, glassTint, glass);
 

@@ -1,57 +1,72 @@
-# Handover (2026-10-22, end of phase 3)
+# Handover (2026-10-22, end of phase 4)
 
 ## State
 
-**Phase 3 is complete; the gate passed** (`docs/phases/phase-3-core-scale.md`, Gate and Results).
-- Tests: 130/130 (`node --test tests/*.test.cjs tests/*.test.mjs`), all on the core data.
-- Probe benches: street 244, car 238, heli 204, hill 208, russian-hill-view 208 fps; heap ≤ 809 MB; ready ≤ 5.3 s;
-  0 console errors.
-- Gallery: `docs/review/p3/index.md`. Perf: `docs/perf-log.md`. Decisions P3-1 … P3-7 in `PLAN.md` §10.
+**Phase 4 is complete; the gate passed** (`docs/phases/phase-4-sf-look.md`, Gate and Results).
+- Tests: 136/136 (`node --test tests/*.test.cjs tests/*.test.mjs`). New: `buildings-runtime` (4), `transit` (1), and a
+  storey-height case in `facade-base`.
+- Probe benches (two runs each): street 161–169, car 152, heli 137–139, hill 123–127, russian-hill-view 127 fps; live
+  heap ≤ 587 MB (≤ 753 MB read without a GC); ready ≤ 5.9 s; 0 console errors.
+- Gallery: `docs/review/p4/index.md` (with a self-review). Perf: `docs/perf-log.md`. Decisions P4-1 … P4-7 in
+  `PLAN.md` §10.
 
-**Commits.** Kamil commits (K1). Nothing of phase 3 is committed yet: **one ready-to-run command** at the end of
-`docs/commits.md` (the earlier P3.1–P3.5 batch above it is superseded). It also removes the slice's three binaries from
-git (`git rm --cached`; they are already deleted on disk).
+**Commits.** Kamil commits (K1). Nothing of phase 4 is committed yet: **one ready-to-run command** at the end of
+`docs/commits.md`. The P4.1–P4.3 and P4.1–P4.5 batches above it are superseded.
 
-## What the core now has
+## What the SF look added
 
-- Data for the core box (`tools/boxes.json` `core`, 4.03 × 5.35 km); `js/sf-geodata.js` and `data/*-core.bin` are the
-  game's data. Tests follow the box the geodata was built for (`tests/helpers/geo-box.cjs`).
-- `js/grade-separation.js`: tunnel bores and portals, bridge decks, freeway decks on columns, `floorAt` / `roofAt` /
-  `carveAt` for the player, cameras and the terrain mesh; highway traffic on the freeway main lines (`FEATURES.highway`).
-- `road-network.js`: `spans()` (tunnels and bridges), edges' `bore`, `speedCap`, `noWalk`; the P3-4 network rules; the
-  40% grade cut (P3-5).
-- `GEO.roadGraph.decks` (OSM deck layers), `GEO.rail` (surface rail), point landmarks; flag 64 `crooked`.
-- `city-config.js`: rail medians (`block.rail`), landmark teleports (`TELEPORT_LOCATIONS[*].landmark`), labels.
-- `stats().gpuMB`; bench `russian-hill-view`.
+- **Data.** `data/buildings-core.bin` version 3 carries the P4.1 class fields (`docs/formats.md`). The rules are in
+  `tools/building-rules.json`, the report in `docs/reports/building-types-core.md`.
+- **`GEO`** (`js/sf-geodata.js`) adds `trolley`, `muniStops`, `bikeways`, `trees` and `transit`. The tree classes are
+  in `tools/tree-classes.json`.
+- **`js/sf-style.js`:** palettes and surfaces.
+- **`js/sf-buildings.js`:** fronts (bays, garages, stoops, gables), warehouse doors and docks, civic colonnades, crowns
+  and spires.
+- **`js/sf-transit.js`:** streetcars, Muni Metro and cable cars.
+- **`js/sf-street-details.js`:** Muni stops and shelters, trolley wires, parking meters, street trees.
+- **`tsl-materials.js`:** the pre-war material's `paint` and `muntins` modes, and `boxBase` as vec3 (storey height).
+- **Fleet (`actor-models.js`, `traffic.js`, `controllers.js`):** a van body, the black-and-white cruiser, white
+  plates and Muni's silver and red.
+- **Probe:** `heapLiveMB` (forced GC) and the `[details]`, `[buildings]` and `[paint]` lines.
+- **Overpass:** `tools/queries/rail.overpassql` ends `out geom`, so the route relations keep their members. The rail
+  ways came back unchanged.
 
-## Next session: start phase 4 (`docs/phases/phase-4-sf-look.md`)
+## Next session: start phase 5 (`docs/phases/phase-5-landmarks.md`)
 
-1. Read `docs/commits.md`: if the phase 3 command is still pending, leave it; don't redo the work.
-2. Start the dev server in the background (`node tools/serve.mjs 8080`); probe with `node tools/dev/probe.mjs`.
-3. P4 owns several things this phase left visible (gallery known issues): curb gaps in Mission Bay and SoMa (94.0% of
-   footprints in a curb island; buildings there stand on asphalt), stairs drawn as streets (Kearny, Greenwich,
-   Montgomery on Telegraph Hill, Macondray Ln), Lombard's flower beds, Union Square's paving, trams on `GEO.rail`
-   (the cable-car lines on Powell, Hyde and California are in it too).
-4. Phases 4 and 5 could run in parallel worktrees (RUNBOOK §6) only if Kamil says so.
+1. Read `docs/commits.md`: if the phase 4 command is still pending, leave it; don't redo the work.
+2. Start the dev server in the background (`node tools/serve.mjs 8080`); probe with `node tools/dev/probe.mjs`. Read
+   heap budgets from `heapLiveMB`.
+3. The landmark footprints are already typed `landmark` (`tools/building-rules.json` `landmarks`: Transamerica,
+   Salesforce Tower, Coit Tower, Grace Cathedral, City Hall, Oracle Park, the Ferry Building, Chase Center, Ghirardelli
+   Square). Until P5 replaces them they get the generic crown rule: City Hall's dome and the Ferry Building's clock
+   tower read as spires.
+4. P5 owns the Powell & Market cable-car turntable (`GEO.transit` runs start and end there) and Lombard's flower beds.
 
 ## Open questions / risks
 
-- **Heap is climbing:** P2 ≤ 283 MB, P3 ≤ 809 MB on the benches (budget 1.2 GB), and P4–P6 add trees, row houses and
-  the region. The grade-separation build arrays were being kept alive by its lookup closures (fixed: 922 → 677 MB on
-  the street bench); look for the same pattern in `sf-ground.js` (drape cells) and `buildings.js` before streaming.
-- **Freeway heights are estimates** (P3-3: 8 / 15 / 22 m by OSM layer). The I-80 main lines end at the box's
-  waterfront where the Bay Bridge starts (P5); highway cars dip and reappear at lane ends.
-- **Broadway Tunnel** is two one-way links ~3 m apart in the data; its bore is drawn per edge pair. Look at it from
-  inside (`?cam=` near (-1200, y, -880)) when the look pass touches tunnels.
-- **Road network on the core:** 95.4% connected, just above the 95% bar. The rest is mostly Mission Bay's new streets
-  (2016 curbs), Terry A Francois Blvd's one-way loop, and the Telegraph Hill stairs streets.
-- **Some pier decks show as flat white slabs on the water** off the Embarcadero (not looked into; P5 piers).
-- **`build in under 2 s`** in `tests/road-network.test.cjs` runs at 1.2–1.7 s on the core in vm: tight if the network
-  grows (P6 region has no traffic, so it shouldn't).
+- **Frame time is up about 50% since P3** (street 244 → 161–169 fps, heli 204 → 137–139). Most of it is the 22,886
+  street trees (A/B in `docs/perf-log.md`). The heli bench's p95 is 22.8 ms (P3: 7.2), from the tree field re-uploading
+  its instance buffers as the camera flies; its JS takes about 1 ms, so the cost is on the GPU side. The re-sort step
+  is now 10 m, or a fifth of the height above ground (`trees.js` `RELEVEL_STEP`), which fixed the street and car p95.
+  Still inside the budgets (≥ 75 / ≥ 60), but P6 adds the whole city. Next candidates: upload only the changed
+  levels' ranges, drop far tree shadows, fewer bay boxes far away.
+- **Rail vehicles are invisible to the traffic**, so cars drive through streetcars on Market St and the Embarcadero.
+  Registering them as obstacles in `traffic.js` (leaders on shared lanes) is the fix.
+- **Curb gaps (SoMa, Mission Bay)** are still open from P3. 18% of street trees are left out there, and buildings
+  stand on asphalt. Stairs drawn as streets and Union Square's lawn (the ground mask paves it; the park lawn mesh over
+  it still shows) are also still open. None was a P4 task.
+- **Estimates in the look, all labelled:** the podium height (4 storeys), crowns (spire vs mast), era by type, residential
+  floor area (900 sq ft per unit), the SFPD livery (unverified) and the F-line liveries (generic).
+- **Bench noise:** identical runs differ by up to ±20% on this machine, so compare medians of two runs or more.
 - `docs/data-sources.md` still has the USGS 3DEP license row as "confirm on the product page" (from P1).
 
 ## Decisions made this phase
 
-P3-1 … P3-7 in `PLAN.md` §10: the core box and the tests' recalibrated bounds, no streaming, grade separation
-(tunnels, bridges, estimated freeway decks), the core's road-network rules, the 40% grade cut, Lombard's crooked
-block and the rail medians, landmark teleports and the landmarks query fix.
+P4-1 … P4-7 in `PLAN.md` §10:
+- the building rule table and its deviations from the phase file;
+- per-instance paint and storey height;
+- podium and crown estimates;
+- street furniture sources and placement;
+- street-tree classes and snapping;
+- transit from the OSM route relations, and the fleet;
+- the live-heap metric and the bench spread.

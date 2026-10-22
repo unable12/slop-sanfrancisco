@@ -100,7 +100,50 @@ Map species to 4–5 visual classes using NYC tree builders (`trees.js`): London
 ---------------------------------------------------------------------------------------------------------------------
 
 ## Gate (P4)
-- [ ] Type distribution report and SVG.
-- [ ] Gallery shows SF character (self-review notes in the gallery index: what reads well, what does not).
-- [ ] Budgets met; tests green (add `tests/buildings-runtime.test.cjs`: masses inside blocks, collider counts, spatial queries).
-- [ ] Logs and handover.
+- [x] Type distribution report and SVG. (`docs/reports/building-types-core.md`, `docs/review/p4/types.svg`.)
+- [x] Gallery shows SF character (self-review notes in the gallery index: what reads well, what does not).
+      (`docs/review/p4/index.md`: 14 shots and the type map, with a self-review and known issues.)
+- [x] Budgets met; tests green (add `tests/buildings-runtime.test.cjs`: masses inside blocks, collider counts, spatial queries).
+      (Two runs per bench: street 161, 169; car 152, 152; heli 137, 139; hill 123, 127; russian-hill-view 127, 127 fps;
+      live heap ≤ 587 MB; ready ≤ 5.9 s; 0 errors. Tests 136/136, with `buildings-runtime` and `transit`.)
+- [x] Logs and handover. (`docs/perf-log.md`, `PLAN.md` §10 P4-1 … P4-7 and §11, `docs/handover.md`.)
+
+## Results (2026-10-22, one session)
+
+- **P4.1** `tools/geo-buildings.mjs` joins Land Use by block-lot (94.8%; else the parcel under the centroid) and the Tall
+  Building Inventory (174 of 179 records, by ring then lot). It finds each building's front (the widest facing within
+  12 m of the road), its ground drop along the front, its row (shared walls ≥ 3 m) and its neighbourhood (nearest
+  street's `nhood`), and types it by `tools/building-rules.json`. The binary is now version 3 with `type, palette,
+  bays, garage, era, frontW, row, storeyH, stories, facade, podium` (`docs/formats.md`). Report:
+  `docs/reports/building-types-core.md`; map: `docs/review/p4/types.svg`. Of 15,735: rowhouse 4,507, flats 3,068,
+  apartment 2,848, office-low 2,756, shed 713, midrise 695, warehouse 522, civic 422, tower 192, landmark 12. The
+  rule-table changes are decision P4-1.
+- **P4.2** `js/sf-style.js` holds the palettes (five neighbourhood sets) and surfaces by type. The masonry facade
+  material gained a `paint` mode with per-instance wall and trim colours, a surface (brick, stucco, wood siding,
+  panels) and a lit-window share. Paint mode also gives tar-grey roofs and drops AC units and ghost signs. `boxBase` is
+  vec3 with a per-box storey height. `js/sf-buildings.js` `sfFrontDetails` lines up with the shader's window bays and
+  adds:
+  - bay windows (square, or angled from three boxes) from the second storey up;
+  - a garage at the downhill end of the front, the entrance moved uphill;
+  - stoops sized to the sidewalk;
+  - on fronts too high for a stoop, a street-level door and a garage under the floors;
+  - false-front gables on 30%.
+  No bulkheads on row houses, flats or sheds. Count: 24,214 bay boxes and 1,714 gables.
+- **P4.3** Towers take their storey height, facade material and podium from the inventory (P4-3). Crowns come from the
+  lidar peak: penthouse, setback block, or setback and spire. Warehouses get multi-pane windows, roll-up doors and
+  docks on alleys; civic buildings get engaged colonnades.
+- **P4.4** Pipeline: `GEO.trolley`, `GEO.muniStops`, `GEO.bikeways`. Runtime: 603 Muni stops (228 shelters), 80.7 km of
+  trolley wire pairs on 2,124 poles (1-pixel lines), 13,731 parking meters downtown and 742 bike lanes (`road-paint.js`).
+  The old "green lane on wide one-way avenues" rule is gone, and no NYC street furniture is built in SF mode (P4-4).
+- **P4.5** `GEO.trees`: 27,918 standing trees in five looks (`tools/tree-classes.json`). `trees.js` gained ficus,
+  palm (frond cards) and conifer recipes and a palm bark. 22,886 are planted, 3,693 of them moved ≤ 2 m onto the
+  sidewalk; 5,032 are left out (P4-5).
+- **P4.6** Fleet: police cruisers 1 in 20, black and white with white doors (SFPD's scheme unverified); robotaxis 1 in
+  7; vans; SF sedan colours; white plates (the player's car reads "California"); Muni buses silver and red. Transit:
+  `GEO.transit` from the OSM route relations (rail query now `out geom`), and `js/sf-transit.js` with 10 F-line
+  streetcars, 10 Muni Metro cars and 30 cable cars on 14 runs, braking into the stops, cable cars at 15 km/h, and the
+  cable slot painted between the rails. Sources and simplifications: `docs/landmarks/muni.md` (P4-6).
+- **P4.7** Gallery `docs/review/p4/` (14 shots + the type map). New tests: `tests/buildings-runtime.test.cjs` (the
+  real `buildCityBlocks` in vm: masses on curb islands, colliders, quadtree, details) and `tests/transit.test.cjs`.
+  The probe now reports `heapLiveMB` (forced GC) and the `[details]`, `[buildings]` and `[paint]` counts.
+

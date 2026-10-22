@@ -6,9 +6,20 @@
 // - landmarks: OSM named buildings & towers with their footprints and height tags (phase 5 builds on these), and
 //   named attractions, monuments and neighbourhoods as points (teleports, labels)
 // - rail: OSM surface tram & light rail centrelines (rail paint and rail medians, P3.4)
+// - trolley: OSM streets tagged trolley_wire=yes (overhead wires, P4.4), with their oneway tag
+// - muniStops: DataSF Muni Stops (i28k-bkz6) points and whether the stop has a shelter (`shelter` 1)
+// - bikeways: DataSF Bike Network (ygmz-vaxd) painted lanes: class II (lanes) and IV (separated), `buffered`, the
+//   travel direction of one-way ones (`dir`: compass) against the drawing direction
+// - transit: OSM Muni route relations (streetcar F, the cable cars, Muni Metro): each route's track ways chained in
+//   the relation's order, cut to the box and to the surface (no tunnel ways), and its stop nodes as distances along
+//   the run (P4.6)
+// - trees: DataSF Street Tree Inventory (tkzw-k3nq) standing trees: position, visual class (tools/tree-classes.json) and
+//   trunk diameter at breast height in inches (`mapdbh`, else the middle of its `dbhrange`: 1 = 3-10, 2 = 11-20,
+//   3 = 21+ in, as the inventory's own mapdbh values fall in the core)
 // Every ring follows NYC's orientation (negative ringArea()).
+import fs from 'node:fs';
 import path from 'node:path';
-import { osm, datasf, worldPolygons, toWorld, rdp, rdpRing, ringArea, bbox, boxWorld, log, ROOT, BOX } from './geo-base.mjs';
+import { osm, datasf, worldPolygons, worldLines, toWorld, rdp, rdpRing, ringArea, bbox, boxWorld, log, ROOT, BOX } from './geo-base.mjs';
 import { readBin } from './geo-terrain.mjs';
 
 const neg = (r) => (ringArea(r) > 0 ? r.slice().reverse() : r);
@@ -142,9 +153,136 @@ export function buildExtra(box = BOX) {
     rail.push({ kind: t.railway, pts: rdp(e.geometry.map((g) => toWorld(g.lon, g.lat)), 0.2) });
   }
 
-  log(`extra ${box}: ${land.length} land polygons, ${pierOut.length} piers, ${parks.length} parks, ${water.length} water bodies, ${Object.keys(landmarks).length} landmark footprints, ${rail.length} rail lines`);
+  // --- overhead trolleybus wires: OSM highways tagged trolley_wire=yes (1: one-way along the drawing, -1 against) ---
+  const inBox = ([x, z]) => x >= B.x0 && x <= B.x1 && z >= B.z0 && z <= B.z1;
+  const trolley = [];
+  for (const e of osm('roads-tags', box)) {
+    const t = e.tags || {};
+    if (e.type !== 'way' || !e.geometry || t.trolley_wire !== 'yes' || (t.tunnel && t.tunnel !== 'no')) continue;
+    const pts = rdp(e.geometry.map((g) => toWorld(g.lon, g.lat)), 0.3);
+    if (!pts.some(inBox)) continue;
+    trolley.push({ oneway: t.oneway === 'yes' ? 1 : t.oneway === '-1' ? -1 : 0, pts });
+  }
+  // --- Muni stops: position and shelter ---
+  const muniStops = [];
+  for (const f of datasf('muni-stops', box)) {
+    const p = f.properties;
+    const xz = toWorld(Number(p.longitude), Number(p.latitude));
+    if (!xz.every(Number.isFinite) || !inBox(xz)) continue;
+    muniStops.push([...xz, String(p.shelter) === '1' ? 1 : 0]);
+  }
+  // --- bike lanes: class II & IV; side 0 both curbs, 1 the right of the drawing direction, -1 its left ---
+  const COMPASS = { N: [0, -1], S: [0, 1], E: [1, 0], W: [-1, 0] };
+  const bikeways = [];
+  for (const f of datasf('bikeways', box)) {
+    const p = f.properties;
+    const cls = p.facility_t === 'CLASS II' ? 2 : p.facility_t === 'CLASS IV' ? 4 : 0;
+    if (!cls) continue;
+    for (const line of worldLines(f.geometry)) {
+      const pts = rdp(line, 0.3);
+      if (pts.length < 2 || !pts.some(inBox)) continue;
+      let side = 0;
+      if (p.direct === '1W' && COMPASS[p.dir]) {
+        const [a, b] = [pts[0], pts[pts.length - 1]];
+        side = (b[0] - a[0]) * COMPASS[p.dir][0] + (b[1] - a[1]) * COMPASS[p.dir][1] >= 0 ? 1 : -1;
+      }
+      bikeways.push({ cls, buffered: p.buffered === 'YES' ? 1 : 0, side, pts });
+    }
+  }
+  // --- transit routes (OSM route relations: full members since the rail query ends `out geom`) ---
+  const railEls = osm('rail', box);
+  const wayById = new Map(railEls.filter((e) => e.type === 'way').map((e) => [e.id, e]));
+  const transit = [];
+  for (const r of railEls) {
+    if (r.type !== 'relation' || !/^(tram|light_rail)$/.test(r.tags?.route || '') || !r.members) continue;
+    const name = r.tags.name || '';
+    const kind = /Cable Car/i.test(name) ? 'cablecar' : r.tags.route === 'tram' ? 'streetcar' : 'lightrail';
+    // the track ways in order, each turned to start where the last one ended; a tunnel way breaks the run
+    const runs = [];
+    let run = [];
+    for (const m of r.members) {
+      if (m.type !== 'way' || m.role !== '' || !m.geometry) continue;
+      const w = wayById.get(m.ref);
+      let pts = m.geometry.map((g) => toWorld(g.lon, g.lat));
+      if ((w?.tags?.tunnel && w.tags.tunnel !== 'no') || w?.tags?.railway === 'subway') { if (run.length) runs.push(run); run = []; continue; }
+      if (run.length) {
+        const end = run[run.length - 1];
+        const d0 = Math.hypot(pts[0][0] - end[0], pts[0][1] - end[1]), d1 = Math.hypot(pts[pts.length - 1][0] - end[0], pts[pts.length - 1][1] - end[1]);
+        if (d1 < d0) pts = pts.reverse();
+        if (Math.min(d0, d1) > 30) { runs.push(run); run = []; }
+      } else if (runs.length === 0) {
+        // the first way: turn it to run into the second
+        const next = r.members.find((n) => n !== m && n.type === 'way' && n.role === '' && n.geometry);
+        if (next) {
+          const q = next.geometry.map((g) => toWorld(g.lon, g.lat));
+          const near = (a) => Math.min(Math.hypot(a[0] - q[0][0], a[1] - q[0][1]), Math.hypot(a[0] - q[q.length - 1][0], a[1] - q[q.length - 1][1]));
+          if (near(pts[0]) < near(pts[pts.length - 1])) pts = pts.reverse();
+        }
+      }
+      for (const pt of pts) {
+        const last = run[run.length - 1];
+        if (!last || Math.hypot(pt[0] - last[0], pt[1] - last[1]) > 0.05) run.push(pt);
+      }
+    }
+    if (run.length) runs.push(run);
+    const stopPts = r.members.filter((m) => m.type === 'node' && /^stop/.test(m.role) && Number.isFinite(m.lat)).map((m) => toWorld(m.lon, m.lat));
+    for (const full of runs) {
+      // the stretches inside the box
+      let piece = [];
+      const pieces = [];
+      for (const pt of full) {
+        if (inBox(pt)) piece.push(pt);
+        else if (piece.length) { pieces.push(piece); piece = []; }
+      }
+      if (piece.length) pieces.push(piece);
+      for (const raw of pieces) {
+        const pts = rdp(raw, 0.15);
+        const cum = [0];
+        for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+        const len = cum[cum.length - 1];
+        if (len < 300) continue;
+        // stops within 12 m of the run, as distances along it
+        const stops = [];
+        for (const [sx, sz] of stopPts) {
+          let best = null;
+          for (let i = 1; i < pts.length; i++) {
+            const [ax, az] = pts[i - 1], [bx, bz] = pts[i];
+            const L = cum[i] - cum[i - 1] || 1e-9;
+            const t = Math.max(0, Math.min(1, ((sx - ax) * (bx - ax) + (sz - az) * (bz - az)) / (L * L)));
+            const d = Math.hypot(ax + (bx - ax) * t - sx, az + (bz - az) * t - sz);
+            if (d < 12 && (!best || d < best.d)) best = { d, s: cum[i - 1] + t * L };
+          }
+          if (best) stops.push(Math.round(best.s * 10) / 10);
+        }
+        transit.push({ name, kind, colour: r.tags.colour || '', pts, len, stops: [...new Set(stops)].sort((a, b) => a - b) });
+      }
+    }
+  }
+  log(`extra ${box}: ${transit.length} transit runs (${transit.map((t) => `${t.name.replace(/^Muni /, '').split(':')[0]} ${Math.round(t.len)} m, ${t.stops.length} stops`).join('; ')})`);
+
+  // --- street trees ---
+  const TC = JSON.parse(fs.readFileSync(path.join(ROOT, 'tools/tree-classes.json'), 'utf8'));
+  const drop = new RegExp(TC.drop);
+  const classes = TC.classes.map(([c, re]) => [c, new RegExp(re)]);
+  const trees = [];
+  const treeStats = { dropped: 0, noPoint: 0, outside: 0, byClass: [0, 0, 0, 0, 0, 0] };
+  for (const f of datasf('trees', box)) {
+    const p = f.properties;
+    const name = String(p.species || '').split(' :: ')[0].trim();
+    if (drop.test(name)) { treeStats.dropped++; continue; }
+    const c = f.geometry?.coordinates;
+    if (!c || !c.every(Number.isFinite)) { treeStats.noPoint++; continue; }
+    const xz = toWorld(c[0], c[1]);
+    if (!inBox(xz)) { treeStats.outside++; continue; }
+    const cls = classes.find(([, re]) => re.test(name))?.[0] ?? TC.default;
+    const dbh = Number(p.mapdbh) > 0 ? Number(p.mapdbh) : [6, 6, 15, 28][Number(p.dbhrange) || 0];
+    treeStats.byClass[cls]++;
+    trees.push([...xz, cls, Math.round(Math.min(dbh, 99))]);
+  }
+  log(`extra ${box}: ${trees.length} street trees (plane ${treeStats.byClass[0]}, ficus ${treeStats.byClass[1]}, palm ${treeStats.byClass[2]}, broadleaf ${treeStats.byClass[3]}, conifer ${treeStats.byClass[4]}, fine ${treeStats.byClass[5]}); dropped ${treeStats.dropped} non-trees, ${treeStats.noPoint} without a point, ${treeStats.outside} outside the box`);
+  log(`extra ${box}: ${land.length} land polygons, ${pierOut.length} piers, ${parks.length} parks, ${water.length} water bodies, ${Object.keys(landmarks).length} landmark footprints, ${rail.length} rail lines, ${trolley.length} trolley-wire ways, ${muniStops.length} Muni stops (${muniStops.filter((m) => m[2]).length} sheltered), ${bikeways.length} bike lanes`);
   void B;
-  return { land, piers: pierOut, parks, water, landmarks, rail };
+  return { land, piers: pierOut, parks, water, landmarks, rail, trolley, muniStops, bikeways, trees, transit };
 }
 
 // Outer contours of the mask's 4-connected components larger than minArea (m^2): corner walk with the component on the

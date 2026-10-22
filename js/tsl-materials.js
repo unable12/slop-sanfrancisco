@@ -452,13 +452,15 @@ function facadeCell(windowWidth, floorHeight, boxLocal, cornerPier = 0, groundBa
   }
 
   // Height on the wall: above the building's ground (`boxBase`: x = its ground y, y = the plinth drop; floors count from
-  // x + y, the band below that is a solid plinth where the ground falls away downhill), or world y without groundBase
+  // x + y, the band below that is a solid plinth where the ground falls away downhill; z = its own storey height, 0 for
+  // the material's), or world y without groundBase
   let vCoord = positionWorld.y;
   let plinthBand = float(0.0);
   if (groundBase) {
-    const boxBase = attribute('boxBase', 'vec2');
+    const boxBase = attribute('boxBase', 'vec3');
     vCoord = positionWorld.y.sub(boxBase.x.add(boxBase.y));
     plinthBand = float(1.0).sub(step(0.0, vCoord));
+    floorHeight = mix(floorHeight, boxBase.z, step(0.5, boxBase.z));
   }
   const gridV = vCoord.div(floorHeight);
   const cellId = vec2(floor(gridU), floor(gridV));
@@ -488,7 +490,7 @@ function facadeCell(windowWidth, floorHeight, boxLocal, cornerPier = 0, groundBa
   const solid = max(max(max(inPier.mul(float(1.0).sub(isGroundFloor)), blank), partial), plinthBand.mul(wall));
   return {
     isRoof, uCoord, vCoord, gridV, cellId, cellUV, fw, bayWidth, isGroundFloor, solid, floor0, back, blank, door, tone,
-    wallS, wallW, wallH, fromTop, boxSeed, partial, coping
+    wallS, wallW, wallH, fromTop, boxSeed, partial, coping, floorH: floorHeight
   };
 }
 
@@ -552,7 +554,7 @@ function createCurtainWallMaterial(opts = {}) {
     vec2(0.0),
     vec2(1.0)
   );
-  const aptRoom = evaluateApartmentInterior(uCoord, vCoord, winUV, cellId, bayWidth, uFloorHeight, uSeed, uWarmth, uLitProbability.mul(0.65), fw);
+  const aptRoom = evaluateApartmentInterior(uCoord, vCoord, winUV, cellId, bayWidth, facade.floorH, uSeed, uWarmth, uLitProbability.mul(0.65), fw);
   const shopLit = step(0.24, hash2D(cellId.add(vec2(uSeed, 19.4))));
   const floorIdx = floor(gridV);
   const isMechFloor = float(1.0).sub(step(1.0, mod(floorIdx.add(uSeed), 16.0))).mul(step(4.0, floorIdx));
@@ -712,10 +714,15 @@ function createPreWarBuildingMaterial(opts = {}) {
     seed = 42.0,
     boxLocal = false,
     cornerPier = 1.2, // solid masonry at both ends of every wall above the shopfronts (box-local mode)
-    groundBase = boxLocal // floors count from the per-vertex / per-instance `boxBase` (facadeCell)
+    groundBase = boxLocal, // floors count from the per-vertex / per-instance `boxBase` (facadeCell)
+    // San Francisco (P4.2): wall & trim colours per building from the `paintWall` (rgb, surface: 0 brick, 1 stucco,
+    // 2 painted wood siding, 3 stone / concrete panels) and `paintTrim` (rgb, lit-window share) attributes instead of
+    // stoneColor / trimColor; every wall is the building's paint (party walls blank), no window AC units, no ghost signs
+    paint = false,
+    muntins = false // multi-pane industrial sash (4 x 3 lights) on the upper floors (P4.3 warehouses)
   } = opts;
 
-  const cacheKey = `${stoneColor}_${trimColor}_${windowWidth}_${floorHeight}_${litProbability}_${warmth}_${crownGlowHeight}_${seed}_${boxLocal}_${cornerPier}_${groundBase}`;
+  const cacheKey = `${stoneColor}_${trimColor}_${windowWidth}_${floorHeight}_${litProbability}_${warmth}_${crownGlowHeight}_${seed}_${boxLocal}_${cornerPier}_${groundBase}_${paint}_${windowRatioX}_${windowRatioY}_${muntins}`;
   if (_preWarCache.has(cacheKey)) {
     return _preWarCache.get(cacheKey);
   }
@@ -726,8 +733,15 @@ function createPreWarBuildingMaterial(opts = {}) {
   });
 
   // The style's parameters are uniforms (not baked-in constants), so every masonry style compiles to one shader
-  const cStone = uniform(new THREE.Color(stoneColor));
-  const cTrim = uniform(new THREE.Color(trimColor));
+  const paintWall = paint ? attribute('paintWall', 'vec4') : null;
+  const paintTrim = paint ? attribute('paintTrim', 'vec4') : null;
+  const cStone = paint ? paintWall.xyz : uniform(new THREE.Color(stoneColor));
+  const cTrim = paint ? paintTrim.xyz : uniform(new THREE.Color(trimColor));
+  // surface masks (paint mode): brick coursing, painted siding boards, stone / concrete panel joints; stucco has none
+  const surf = paint ? paintWall.w : float(0.0);
+  const isBrick = paint ? float(1.0).sub(step(0.5, surf)) : float(1.0);
+  const isSiding = paint ? step(1.5, surf).mul(float(1.0).sub(step(2.5, surf))) : float(0.0);
+  const isPanel = paint ? step(2.5, surf) : float(0.0);
   const cGlass = uniform(new THREE.Color(windowGlassColor));
   const cCrown = uniform(new THREE.Color(crownGlowColor));
   const uWindowWidth = uniform(windowWidth);
@@ -764,13 +778,13 @@ function createPreWarBuildingMaterial(opts = {}) {
     vec2(0.0),
     vec2(1.0)
   );
-  const aptRoom = evaluateApartmentInterior(uCoord, vCoord, winUV, cellId, bayWidth, uFloorHeight, uSeed, uWarmth, uLitProbability.mul(0.62), fw);
+  const aptRoom = evaluateApartmentInterior(uCoord, vCoord, winUV, cellId, bayWidth, facade.floorH, uSeed, uWarmth, paint ? paintTrim.w.mul(0.62) : uLitProbability.mul(0.62), fw);
   const shopLit = step(0.24, hash2D(cellId.add(vec2(uSeed, 19.4))));
   const bulbCol = mix(cCoolWindow, cWarmWindow, step(float(1.0).sub(uWarmth), hash2D(cellId.add(vec2(uSeed.mul(1.9), 83.1)))));
   // Window AC units (~12% of upper-floor windows), none in the floor the band course covers
   const beltFloor = step(5.0, mod(floor(gridV), 6.0)).mul(front);
   const acRand = hash2D(cellId.add(vec2(uSeed.mul(1.3).add(7.1), 91.7)));
-  const hasAC = step(0.88, acRand).mul(float(1.0).sub(isGroundFloor)).mul(float(1.0).sub(isRoof)).mul(open).mul(float(1.0).sub(beltFloor));
+  const hasAC = paint ? float(0.0) : step(0.88, acRand).mul(float(1.0).sub(isGroundFloor)).mul(float(1.0).sub(isRoof)).mul(open).mul(float(1.0).sub(beltFloor));
 
   mat.colorNode = Fn(() => {
     const oneMinusEffX = float(1.0).sub(effHalfX);
@@ -791,7 +805,8 @@ function createPreWarBuildingMaterial(opts = {}) {
     const sashBarX = lineAA(cellUV.x.sub(0.50), 0.009).mul(float(1.0).sub(isGroundFloor)).mul(0.55);
     const storeTransom = lineAA(cellUV.y.sub(0.70), 0.015).mul(isGroundFloor);
     const storeMullion = lineAA(fract(cellUV.x.mul(2.0)).sub(0.5), 0.018).mul(isGroundFloor);
-    const sashMask = clamp(max(max(sashBarY, sashBarX), max(storeTransom, storeMullion)), 0.0, 1.0);
+    const panes = muntins ? max(lineAA(fract(winUV.x.mul(4.0).add(0.5)).sub(0.5), 0.02), lineAA(fract(winUV.y.mul(3.0).add(0.5)).sub(0.5), 0.025)).mul(float(1.0).sub(isGroundFloor)) : float(0.0);
+    const sashMask = clamp(max(max(max(sashBarY, sashBarX), max(storeTransom, storeMullion)), panes), 0.0, 1.0);
 
     // Protruding Window Air-Conditioner Unit, sitting on the sill (see hasAC)
     const acMinX = float(0.31);
@@ -836,22 +851,26 @@ function createPreWarBuildingMaterial(opts = {}) {
       const pargePatch = smoothstep(0.6, 0.76, noise2D(vec2(uCoord.mul(0.11), vCoord.mul(0.07)).add(tone.mul(37.0))));
       parged.assign(max(step(0.74, fract(tone.mul(3.7))), pargePatch.mul(0.85)));
     });
-    const backTint = mix(backBrick, color(0x8f8b84), parged);
-    const mortarJoint = max(
+    const backTint = paint ? cStone.mul(0.9) : mix(backBrick, color(0x8f8b84), parged);
+    const brickJoint = max(
       gridLine(colCoord.mul(brickL), brickL, 0.016),
       gridLine(vCoord, brickH, 0.016)
-    ).mul(float(1.0).sub(isRoof)).mul(float(1.0).sub(parged)).mul(float(1.0).sub(coping));
+    );
+    const surfaceJoint = paint
+      ? max(max(brickJoint.mul(isBrick), gridLine(vCoord, 0.16, 0.012).mul(isSiding)), max(gridLine(uCoord, 1.5, 0.01), gridLine(vCoord, 0.75, 0.01)).mul(isPanel))
+      : brickJoint;
+    const mortarJoint = surfaceJoint.mul(float(1.0).sub(isRoof)).mul(float(1.0).sub(parged)).mul(float(1.0).sub(coping));
 
     // Per-brick tint fades out once bricks shrink to a pixel (and soot streaks once they do), so neither can shimmer
     const uFw = fwidth(uCoord);
     const brickVar = float(1.0).sub(smoothstep(0.5, 1.0, max(uFw.div(brickL), fwidth(rowCoord))));
     const brickCell = vec2(floor(colCoord), courseRow);
-    const brickRnd = hash2D(brickCell.add(vec2(uSeed, 5.3))).sub(0.5).mul(brickVar);
-    const brickWarmShift = hash2D(brickCell.add(vec2(17.1, uSeed))).sub(0.5).mul(0.12).mul(brickVar);
+    const brickRnd = hash2D(brickCell.add(vec2(uSeed, 5.3))).sub(0.5).mul(brickVar).mul(isBrick);
+    const brickWarmShift = hash2D(brickCell.add(vec2(17.1, uSeed))).sub(0.5).mul(0.12).mul(brickVar).mul(isBrick);
     const brickShiftVec = vec3(float(1.0).add(brickWarmShift), float(1.0), float(1.0).sub(brickWarmShift));
 
     const streakNoise = mix(float(0.5), noise2D(vec2(uCoord.mul(1.4), vCoord.mul(0.05))), float(1.0).sub(smoothstep(0.5, 1.0, uFw.mul(1.4))));
-    const sootDirt = smoothstep(0.25, 0.78, streakNoise).mul(float(1.0).sub(smoothstep(0.0, 180.0, vCoord))).mul(0.36);
+    const sootDirt = smoothstep(0.25, 0.78, streakNoise).mul(float(1.0).sub(smoothstep(0.0, 180.0, vCoord))).mul(paint ? 0.12 : 0.36);
 
     const lintelShadow = smoothstep(oneMinusEffY.sub(0.14), oneMinusEffY, cellUV.y).mul(0.58);
     const jambShadow = float(1.0).sub(smoothstep(effHalfX, effHalfX.add(0.08), cellUV.x)).mul(0.42);
@@ -869,7 +888,7 @@ function createPreWarBuildingMaterial(opts = {}) {
     // over a smaller one, flaking off the brick. The lettering is only worked out inside the panel.
     const signW = min(wallW.sub(3.0), 18.0);
     const signH = min(min(wallH.mul(0.3), signW.mul(0.42)), 6.5);
-    const hasSign = blank.mul(back).mul(float(1.0).sub(step(0.74, fract(tone.mul(3.7)))))
+    const hasSign = blank.mul(back).mul(paint ? 0.0 : 1.0).mul(float(1.0).sub(step(0.74, fract(tone.mul(3.7)))))
       .mul(step(0.8, fract(tone.mul(13.7).add(boxSeed.mul(0.618)))))
       .mul(step(5.0, signW)).mul(step(2.6, signH));
     const su = wallS.sub(wallW.sub(signW).mul(0.5)).div(signW); // 0..1 across the panel
@@ -915,7 +934,7 @@ function createPreWarBuildingMaterial(opts = {}) {
     const masonryTint = mix(wallTint, cTrim, trimMix)
       .mul(brickRnd.mul(0.14).add(1.0))
       .mul(brickShiftVec);
-    const masonryWithMortar = mix(masonryTint, masonryTint.mul(0.62), mortarJoint);
+    const masonryWithMortar = mix(masonryTint, masonryTint.mul(paint ? mix(float(0.62), float(0.8), isSiding) : 0.62), mortarJoint);
     const masonryWeathered = mix(masonryWithMortar, cSoot, sootDirt)
       .mul(float(1.0).sub(corniceShadow))
       .mul(float(1.0).sub(isSillUnderShadow.mul(0.42)))
@@ -942,7 +961,7 @@ function createPreWarBuildingMaterial(opts = {}) {
 
     const frameCol = masonryTint.mul(0.46).mul(recessShade);
     const roofNoise = noise2D(positionWorld.xz.mul(0.35));
-    const roofCol = mix(cTrim.mul(0.42), cTrim.mul(0.62), roofNoise);
+    const roofCol = paint ? mix(color(0x5f5c58), color(0x7d7973), roofNoise) : mix(cTrim.mul(0.42), cTrim.mul(0.62), roofNoise);
 
     const wallOrRoof = mix(masonryWeathered, roofCol, isRoof);
     const withFrames = mix(wallOrRoof, frameCol, isWindowOpening.mul(sashMask));
@@ -1007,7 +1026,7 @@ function createPreWarBuildingMaterial(opts = {}) {
     const distU = float(0.5).sub(abs(fract(colCoord).sub(0.5))).mul(brickL);
     const distV = float(0.5).sub(abs(fract(rowCoord).sub(0.5))).mul(brickH);
     const brickDome = smoothstep(0.0, 0.018, distU).mul(smoothstep(0.0, 0.018, distV)).mul(0.0045)
-      .mul(float(1.0).sub(smoothstep(0.006, 0.012, footprint)));
+      .mul(float(1.0).sub(smoothstep(0.006, 0.012, footprint))).mul(isBrick);
 
     const sillLedge = filteredPulse(cellUV.y, effHalfY.sub(0.032), effHalfY, ramp.y).mul(inX).mul(0.016);
     const corniceLedge = belt.mul(0.022);
@@ -1040,7 +1059,8 @@ function createPreWarBuildingMaterial(opts = {}) {
     const sashBarX = lineAA(cellUV.x.sub(0.50), 0.010).mul(float(1.0).sub(isGroundFloor)).mul(0.55);
     const storeTransom = lineAA(cellUV.y.sub(0.70), 0.016).mul(isGroundFloor);
     const storeMullion = lineAA(fract(cellUV.x.mul(2.0)).sub(0.5), 0.020).mul(isGroundFloor);
-    const sashMask = clamp(max(max(sashBarY, sashBarX), max(storeTransom, storeMullion)), 0.0, 1.0);
+    const panes = muntins ? max(lineAA(fract(winUV.x.mul(4.0).add(0.5)).sub(0.5), 0.02), lineAA(fract(winUV.y.mul(3.0).add(0.5)).sub(0.5), 0.025)).mul(float(1.0).sub(isGroundFloor)) : float(0.0);
+    const sashMask = clamp(max(max(max(sashBarY, sashBarX), max(storeTransom, storeMullion)), panes), 0.0, 1.0);
 
     const inACBox = filteredPulse(cellUV.x, 0.31, 0.69, fw.x)
       .mul(filteredPulse(cellUV.y, glowHalfY, glowHalfY.add(0.22), fw.y))
@@ -1084,17 +1104,26 @@ function createPreWarBuildingMaterial(opts = {}) {
  * (y = centre; ry: turn about +y, for blocks laid out along a non-grid street), with the per-instance `box` attribute
  * (size + a spread seed carrying the building's tone in its fraction) that lays each wall out in whole window bays,
  * and `faces`: the WALL_KINDS of the box's -x, +x, -z & +z walls (storefront fronts all round when omitted).
- * `base` (the building's ground y, default 0) and `plinth` (metres of solid plinth above it, default 0) go to the
- * `boxBase` attribute: floors count from base + plinth, wherever the box stands (facadeCell).
+ * `base` (the building's ground y, default 0), `plinth` (metres of solid plinth above it, default 0) and `storeyH` (its
+ * own storey height, default 0: the material's) go to the `boxBase` attribute: floors count from base + plinth, wherever
+ * the box stands (facadeCell). Boxes for a `paint` material carry `paint: [wallHex, trimHex, surface, litShare]`.
  */
 function createFacadeBoxes(material, boxes) {
   const geometry = new THREE.BoxGeometry(1, 1, 1);
   const box = new THREE.InstancedBufferAttribute(new Float32Array(boxes.length * 4), 4);
   const faces = new THREE.InstancedBufferAttribute(new Float32Array(boxes.length * 4), 4);
-  const boxBase = new THREE.InstancedBufferAttribute(new Float32Array(boxes.length * 2), 2);
+  const boxBase = new THREE.InstancedBufferAttribute(new Float32Array(boxes.length * 3), 3);
   geometry.setAttribute('box', box);
   geometry.setAttribute('faces', faces);
   geometry.setAttribute('boxBase', boxBase);
+  const painted = boxes.some((b) => b.paint);
+  const paintWall = painted ? new THREE.InstancedBufferAttribute(new Float32Array(boxes.length * 4), 4) : null;
+  const paintTrim = painted ? new THREE.InstancedBufferAttribute(new Float32Array(boxes.length * 4), 4) : null;
+  if (painted) {
+    geometry.setAttribute('paintWall', paintWall);
+    geometry.setAttribute('paintTrim', paintTrim);
+  }
+  const col = new THREE.Color();
 
   const mesh = new THREE.InstancedMesh(geometry, material, boxes.length);
   const matrix = new THREE.Matrix4();
@@ -1107,7 +1136,14 @@ function createFacadeBoxes(material, boxes) {
     else mesh.setMatrixAt(i, matrix.makeScale(b.w, b.h, b.d).setPosition(b.x, b.y, b.z));
     box.setXYZW(i, b.w, b.h, b.d, ((i * 29) % 1000) + 0.1 + 0.8 * (b.tone ?? 0.5));
     if (b.faces) faces.setXYZW(i, b.faces[0], b.faces[1], b.faces[2], b.faces[3]);
-    boxBase.setXY(i, b.base ?? 0, b.plinth ?? 0);
+    boxBase.setXYZ(i, b.base ?? 0, b.plinth ?? 0, b.storeyH ?? 0);
+    if (painted) {
+      const [wall, trim, surface, lit] = b.paint || [0xd8cdb8, 0xf2efe6, 1, 0.4];
+      col.setHex(wall);
+      paintWall.setXYZW(i, col.r, col.g, col.b, surface);
+      col.setHex(trim);
+      paintTrim.setXYZW(i, col.r, col.g, col.b, lit);
+    }
   });
   return mesh;
 }
@@ -1454,7 +1490,10 @@ function createTreeMaterial(leafAtlas) {
     const ridge = float(1.0).sub(abs(n1.sub(0.5).mul(2.0)));
     const furrowed = mix(color(0x2e261f), color(0x5c5043), smoothstep(0.35, 0.9, ridge));
     const planeBark = mix(mix(color(0x645e4b), color(0x948c73), smoothstep(0.56, 0.66, n2)), color(0x4a3f31), smoothstep(0.3, 0.22, n2));
-    const bark = mix(furrowed, planeBark, step(species, 0.5)).mul(crownAO.mul(0.4).add(0.6));
+    // (a palm's: pale grey-brown with the rings of old leaf bases, P4.5)
+    const palmBark = mix(color(0x6f6556), color(0x9a8e78), smoothstep(0.2, 0.8, fract(bu.y.mul(3.0))).mul(n2.mul(0.5).add(0.5)));
+    const isPalm = step(3.5, species).mul(step(species, 4.5));
+    const bark = mix(mix(furrowed, planeBark, step(species, 0.5)), palmBark, isPalm).mul(crownAO.mul(0.4).add(0.6));
 
     return vec4(mix(bark, foliage, isLeaf), alpha);
   })();

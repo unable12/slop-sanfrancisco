@@ -1,0 +1,58 @@
+{
+  "_comment": "Building classification for tools/geo-buildings.mjs (P4.1). Heights are roof - base (median first return over the lowest ground, m). Land-use floor areas are DataSF Land Use square feet; residential floor area is not in the dataset and is estimated as resunits x resUnitSqft (an assumption, not data). Rules are tried in order; the first that matches wins, then the fallbacks. Tuned on docs/review/p4/types.svg; counts in docs/reports/building-types-<box>.md.",
+  "types": ["shed", "rowhouse", "flats", "apartment", "office-low", "warehouse", "midrise", "tower", "civic", "landmark"],
+  "resUnitSqft": 900,
+  "frontReach": 12,
+  "partyGap": 0.5,
+  "sharedWallMin": 3,
+  "garageDrop": 0.6,
+  "landmarks": [
+    "Transamerica Pyramid", "Salesforce Tower", "Coit Tower", "Grace Cathedral", "San Francisco City Hall", "Oracle Park",
+    "San Francisco Ferry Building", "Chase Center", "Ghirardelli Square"
+  ],
+  "civicNames": "City Hall|Courthouse|Federal Building|State Office|Library|Museum|Church|Cathedral|Opera|Symphony|Memorial|Theatre|Theater|Asian Art|Post Office|Fire Station|Police|School|Mint",
+  "waterfrontNhoods": ["South of Market", "South Beach", "Mission Bay", "North Waterfront"],
+  "rules": [
+    { "type": "shed", "maxH": 5 },
+    { "type": "tower", "minH": 60 },
+    { "type": "tower", "inventoryMinStories": 15 },
+    { "type": "civic", "dominant": ["cie", "med"] },
+    { "type": "midrise", "minH": 25, "maxH": 60 },
+    { "type": "warehouse", "minArea": 800, "maxH": 20, "pdr": true },
+    { "type": "warehouse", "minArea": 800, "maxH": 20, "waterfront": true, "notDominant": ["res"] },
+    { "type": "rowhouse", "minH": 6, "maxH": 14, "minFront": 5, "maxFront": 10, "minRow": 3, "minUnits": 1, "maxUnits": 3 },
+    { "type": "flats", "minH": 9, "maxH": 16, "minFront": 7, "maxFront": 12, "minUnits": 2, "maxUnits": 8 },
+    { "type": "apartment", "minH": 12, "maxH": 30, "minArea": 300, "minUnits": 9 },
+    { "type": "office-low", "minH": 8, "maxH": 25, "dominant": ["mips", "retail", "visitor"], "minFront": 15 }
+  ],
+  "fallbacks": [
+    { "type": "midrise", "minH": 25 },
+    { "type": "apartment", "minUnits": 9 },
+    { "type": "rowhouse", "maxH": 14, "maxFront": 10, "minUnits": 1 },
+    { "type": "flats", "minUnits": 1 },
+    { "type": "warehouse", "minArea": 800, "maxH": 20 },
+    { "type": "office-low" }
+  ],
+  "palettes": {
+    "_comment": "Palette sets by neighbourhood (DataSF streets nhood of the nearest street; Chinatown from analysis_neighborhood). The colours of each set are in js/sf-style.js.",
+    "names": ["victorian", "north-beach", "chinatown", "downtown", "soma"],
+    "byNhood": {
+      "Telegraph Hill": 1, "North Beach": 1, "North Waterfront": 1,
+      "Chinatown": 2,
+      "Financial District North": 3, "Financial District South": 3, "Downtown - Tenderloin": 3, "Nob Hill": 3, "Van Ness - Civic Center": 3,
+      "South of Market": 4, "South Beach": 4, "Mission Bay": 4, "San Francisco Bay": 4
+    },
+    "default": 0
+  },
+  "eras": {
+    "_comment": "Era codes. From the Tall Building Inventory completion_date where joined (data), otherwise by type (an inferred rule, counted separately in the report). There is no year-built field in the datasets fetched.",
+    "names": ["unknown", "victorian-edwardian", "interwar", "postwar", "contemporary"],
+    "byYear": [[1915, 1], [1946, 2], [1980, 3], [9999, 4]],
+    "byType": { "rowhouse": 1, "flats": 1, "apartment": 2, "office-low": 2, "warehouse": 2, "midrise": 2, "civic": 2 }
+  },
+  "facades": {
+    "_comment": "Tall Building Inventory facade_material -> facade code: the material named first in the text (case-insensitive). 0 = unknown.",
+    "names": ["unknown", "glass", "concrete", "stone", "metal", "terracotta"],
+    "match": [["terra", 5], ["granite|garnite|stone|marble", 3], ["glass|glazing|curtain", 1], ["alumin|metal|steel", 4], ["concrete|gfrc|precast", 2]]
+  }
+}

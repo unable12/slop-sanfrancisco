@@ -43,7 +43,8 @@ const FEATURES = {
   landmarks: false,
   details: 'sf', // 'sf' (sf-street-details.js, on the road network) | true (street-details.js, New York's) | false
   traffic: true,
-  highway: true // on the freeway decks (grade-separation.js)
+  highway: true, // on the freeway decks (grade-separation.js)
+  transit: true // streetcars, light rail & cable cars (sf-transit.js)
 };
 
 // Scripted camera paths for ?bench=name: keyframes [x, y, z, yawDeg, pitchDeg] spread evenly over BENCH_SECONDS
@@ -162,6 +163,8 @@ async function initApp() {
   if (cityGrid.terrain) cityGrid.terrain.rebuild(); // the portals carved
   markInit('grade');
   const highwayTraffic = FEATURES.highway ? createHighwayTraffic(scene, gradeSeparation.highwayLanes) : { update() {} };
+  // Streetcars, light rail & cable cars on the Muni route runs (sf-transit.js, P4.6)
+  const transit = FEATURES.transit ? window.NYC.buildSFTransit(scene) : { update() {} };
   // ?debug=roads: the road network's lanes, junction curves, arms & control drawn over the ground (road-network.js)
   if (new URLSearchParams(location.search).get('debug') === 'roads') {
     scene.add(window.NYC.buildRoadDebug(roadNetwork || buildRoadNetwork(cityGrid.sidewalks, [])));
@@ -804,6 +807,7 @@ async function initApp() {
       cameraSystem.camera
     );
     highwayTraffic.update(trafficDt, cameraSystem.camera, controllerManager.getActiveEntity(), controllerManager.activeMode);
+    transit.update(debugState.freeze ? 0 : dt);
     if (boroughs.update) boroughs.update(elapsed); // Roosevelt Island Tramway cabins
     cityBlocks.update(cameraSystem.currentPos.x, cameraSystem.currentPos.z);
     if (cityBlocks.updateLights) cityBlocks.updateLights(cameraSystem.camera);
