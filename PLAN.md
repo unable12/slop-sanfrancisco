@@ -195,7 +195,7 @@ optional and only with the user's OK (RUNBOOK §6).
 
 **Git.**
 - Work on `main`; this repo is not `layers_app`, so no branch is needed.
-- Commit per task, message `Pn.m: what`, with the harness's attribution line.
+- **Kamil commits; sessions never run git write commands** (since 2026-10-22, decision K1). Every 2–4 tasks, and at gates and handovers, sessions write ready-to-run, path-limited `git add … && git commit -m "…" -- …` commands into `docs/commits.md` and their reply. Subjects are lowercase in Kamil's style with the task ID in parentheses, with no Claude attribution (`docs/RUNBOOK.md` §8).
 - **Never push, never create remotes, never publish.**
 - `.gitignore`: `.DS_Store`, `data/raw/`, `node_modules/`, `tools/node_modules/`, `shots/`, `*.tmp.*`.
 
@@ -269,6 +269,7 @@ Everything else: decide, log the decision (section 10), continue. Visual reviews
 | P2-2 | 2026-10-22 | Seawall = the terrain itself: vertices on the bay drop 4 m below the water, the land's edge becomes a steep face painted as stone by the ground mask (class 5). No separate OSM-coastline extrusion | The DEM's land/water edge is the coastline (P1 traced `land` from it); one surface, no seams |
 | P2-3 | 2026-10-22 | Hills cast shadows through a static 8 m stand-in drawn back faces only (`shadowSide = BackSide`) on the shadow proxy layer | No self-shadow acne on sunlit slopes; lee slopes still shade what lies behind them |
 | P2-4 | 2026-10-22 | D5 settled: no road conforming. Second difference along all 837 slice links (1 m samples, 5 m windows): p50 0.0005, p95 0.0072, max 0.17 m⁻¹ (threshold p95 > 0.04). Worst: Broadway (tunnel portal), Ecker, Reed, Joice | `docs/reports/road-smoothness-slice.md` |
+| K1 | 2026-10-22 | Sessions stop committing. Every 2–4 tasks they write ready-to-run, path-limited commit commands (Kamil's lowercase style, task ID in parentheses, no Claude attribution) to `docs/commits.md`; Kamil runs them. History up to P2.3 was regrouped by Kamil (the Phase 1 work is now 5 commits) | Kamil's request: he creates every commit himself |
 
 ---------------------------------------------------------------------------------------------------------------------
 

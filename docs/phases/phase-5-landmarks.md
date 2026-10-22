@@ -124,7 +124,7 @@ Far-view LOD: merge instanced suspenders; only the main cables and towers are vi
 
 ### P5.3 Tier 1 buildings
 Per landmark per the method. Order: Transamerica, Salesforce Tower, Ferry Building, Coit Tower, City Hall, Sutro Tower, Palace of Fine Arts, Oracle Park.
-After each: commit `P5.3: <name>`; log shots in `docs/landmarks/INDEX.md`.
+After each: note the files for the next commit batch (RUNBOOK §8); log shots in `docs/landmarks/INDEX.md`.
 
 ### P5.4 Tier 2
 Same method. Skip any item whose facts cannot be found; record why.

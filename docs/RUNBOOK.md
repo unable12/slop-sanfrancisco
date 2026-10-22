@@ -19,14 +19,18 @@ Recommended model: the most capable model available. Data and pipeline tasks may
 1. **Orient (≤ 5% of the session).**
    - Read `PLAN.md` §11 (progress log) and the last handover note in `docs/handover.md`.
    - Read the current phase file. Find the first unchecked task.
-   - Run `git status` and `git log --oneline -10`. If the tree is dirty from an interrupted session, inspect the diff. Finish it or revert your own partial work. Never discard work you do not understand: log it and stop (🛑 3).
+   - Run `git status` and `git log --oneline -10`, and read `docs/commits.md`.
+     - **A dirty tree is normal:** Kamil commits (§8), so finished tasks wait uncommitted until he runs the commands.
+     - A batch in `docs/commits.md` whose subject is not in `git log` is still pending. Leave it in place, and never redo or revert that work.
+     - Only an unfinished task with no batch is yours to finish.
+     - Never discard work you do not understand: log it and stop (🛑 3).
 2. **Check health.** Run the tests (`node --test tests/*.test.cjs tests/*.test.mjs`). If they fail at the start, fixing that is the first task.
 3. **Do the task:**
    - Read only the code the task needs (`grep -n` first; line numbers in `docs/research.md` §3).
    - Make the change.
    - Run the task's acceptance check: tests, a probe run, a data report.
-   - Commit: `Pn.m: <what>` plus the attribution line.
-4. **Repeat** step 3 with the next task.
+   - Note the task's files (changed, new and deleted) for its commit command. **Do not commit** (§8).
+4. **Repeat** step 3 with the next task. After every 2–4 finished tasks, and always at a gate and at the handover, write the commit commands for the tasks since the last batch (§8).
 5. **Gate.** When the phase's tasks are done:
    - Run the gate checklist in the phase file.
    - Run the probe benches.
@@ -58,7 +62,7 @@ Recommended model: the most capable model available. Data and pipeline tasks may
    - open questions;
    - risks noticed;
    - any decision made (also in `PLAN.md` §10).
-3. Commit: `Handover: <date>`.
+3. Write a final commit batch (§8) that covers the remaining tasks plus `PLAN.md` and `docs/handover.md`. Say in the closing message that it is waiting for Kamil.
 
 ## 5. Context and cost discipline
 
@@ -73,7 +77,7 @@ Recommended model: the most capable model available. Data and pipeline tasks may
 
 ## 6. Parallel sessions (optional, only if the user says so)
 
-After P3, phases 4 (SF look) and 5 (landmarks) touch mostly different files (`buildings.js` + `sf-buildings.js` + `street-details.js` + `trees.js` vs `landmarks.js` + bridge code). They can run in two worktree sessions, each on its own branch.
+After P3, phases 4 (SF look) and 5 (landmarks) touch mostly different files (`buildings.js` + `sf-buildings.js` + `street-details.js` + `trees.js` vs `landmarks.js` + bridge code). They can run in two worktree sessions, each on its own branch. Kamil creates the branches; sessions do not.
 
 The integration risk is in `main.js`, `index.html` (script list) and `tsl-materials.js`. Merge order: P4 first, then P5 rebased onto it.
 
@@ -87,7 +91,26 @@ At each gate, write `docs/review/pN/index.md` containing:
 
 The user can review at any time. Feedback arrives as a message in a later session; treat it as the top-priority task.
 
-## 8. Tools
+## 8. Commits: Kamil commits, sessions write the commands
+
+Since 2026-10-22, sessions **never run git write commands**: no `commit`, `add`, `branch`, `checkout`/`switch`, `reset`, `restore`, `stash`, `rebase`, `merge`, `tag`, `update-ref` or `push`. Read-only git (`status`, `log`, `diff`, `show`) is fine. Instead, every 2–4 finished tasks, and always at a gate and at the handover:
+
+1. Run the tests and the probe once more. Only finished, passing work goes into a batch.
+2. Append a batch to `docs/commits.md`: a dated heading, the task IDs, and one ready-to-run `bash` block per commit. Show the same blocks in the reply to the user.
+3. Write each commit as **one command** that commits only its own files, so nothing else in the working tree is swept in:
+
+   ```bash
+   git add -- js/drape.js js/sf-ground.js docs/ground-audit.md && git commit -m "drape the sidewalks and curbs on the terrain (P2.4)" -- js/drape.js js/sf-ground.js docs/ground-audit.md
+   ```
+
+   - Use the same path list for `git add` and `git commit`. List new files, changed files and deleted files (for a deleted file use `git rm --cached -q -- <path>` in place of `git add`).
+   - **Subject:** one lowercase line in Kamil's style. Name the behaviour change, not the files. Put the task ID in parentheses at the end. No body, no `Co-Authored-By` or any Claude attribution.
+   - One commit per task. Fold a tiny task into its neighbour's commit, joining the IDs in the subject.
+   - Order the blocks so each commit builds on the previous one. If two tasks edited the same file, give them a single commit.
+   - Files under `shots/` and `data/raw/` are git-ignored; never list them. Do list generated outputs that are committed (`js/sf-geodata.js`, `data/*.bin`, `docs/review/**`).
+4. Before writing a new batch, check `git log` for the previous batch's subjects. If Kamil has not run them yet, the new batch must not list the same files again. Fold the earlier tasks into the new batch instead, rewrite the pending batch in `docs/commits.md`, and mark it superseded.
+
+## 9. Tools
 
 | Need | Command |
 |---|---|
