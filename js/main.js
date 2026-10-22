@@ -33,6 +33,24 @@ const { LightingSystem } = window.NYC;
 const { NYCMapSystem } = window.NYC;
 const { setupSceneCulling, updateSceneCulling } = window.NYC;
 
+// Scripted camera paths for ?bench=name: keyframes [x, y, z, yawDeg, pitchDeg] spread evenly over BENCH_SECONDS
+// (yaw 0 looks north, -z). Coordinates are in the current city's world frame.
+const BENCH_SECONDS = 20;
+const BENCH_PATHS = {
+  street: [[0, 1.7, 0, 0, 0], [0, 1.7, -400, 0, 0]],
+  car: [[3, 1.4, 600, 0, -2], [3, 1.4, -600, 0, -2]],
+  heli: [[0, 220, 800, 0, -20], [600, 260, 0, 90, -20], [0, 300, -800, 180, -20], [-600, 260, 0, 270, -20], [0, 220, 800, 360, -20]],
+  hill: [[0, 60, 0, 0, -8], [0, 60, 0, 360, -8]]
+};
+function samplePath(keys, u) {
+  const f = u * (keys.length - 1);
+  const i = Math.min(keys.length - 2, Math.floor(f));
+  const t = f - i;
+  const [a, b] = [keys[i], keys[i + 1]];
+  const mix = (k) => a[k] + (b[k] - a[k]) * t;
+  return { x: mix(0), y: mix(1), z: mix(2), yaw: mix(3), pitch: mix(4) };
+}
+
 async function initApp() {
   const container = document.getElementById('canvas-container');
   const loadingOverlay = document.getElementById('loading-overlay');
@@ -489,10 +507,18 @@ async function initApp() {
     }
   });
 
-  // Initialize default selection
-  selectMode('car');
+  // Initialize default selection, overridable from the URL (debug & screenshot harness, see debugParams below):
+  // ?mode=person|car|cyclist|heli  ?time=golden|midday|twilight|midnight  ?teleport=x,z,headingDeg  ?hud=0
+  const urlParams = new URLSearchParams(location.search);
+  const urlMode = { heli: 'helicopter', helicopter: 'helicopter', person: 'person', car: 'car', cyclist: 'cyclist' }[urlParams.get('mode')];
+  selectMode(urlMode || 'car');
   selectCamera('chase', true);
-  selectTime('golden');
+  selectTime(['golden', 'midday', 'twilight', 'midnight'].includes(urlParams.get('time')) ? urlParams.get('time') : 'golden');
+  if (urlParams.has('teleport')) {
+    const [tx, tz, th = 180] = urlParams.get('teleport').split(',').map(Number);
+    if (Number.isFinite(tx) && Number.isFinite(tz)) teleportTo(tx, tz, (th * Math.PI) / 180);
+  }
+  if (urlParams.get('hud') === '0') document.body.classList.add('hud-minimized');
   // the web fonts change the buttons' widths once they arrive
   if (document.fonts) document.fonts.ready.then(placeModeIndicator);
   markInit('ui');
@@ -501,6 +527,18 @@ async function initApp() {
   // until the first frame is on screen
   if (loadingStatus) {
     loadingStatus.textContent = 'Compiling Shaders & Render Pipelines...';
+  }
+
+  // Debug & screenshot harness state (URL: ?cam=x,y,z,yawDeg,pitchDeg  ?freeze=1  ?bench=name):
+  // `camera` pins the view to a fixed pose, `freeze` stops traffic, `bench` flies a scripted path (BENCH_PATHS) and logs
+  // "[bench] name median_ms p95_ms fps" when done (also left in __NYC_APP.bench)
+  const debugState = { camera: null, freeze: urlParams.get('freeze') === '1', bench: null };
+  if (urlParams.has('cam')) {
+    const [x, y, z, yaw = 0, pitch = 0] = urlParams.get('cam').split(',').map(Number);
+    if ([x, y, z].every(Number.isFinite)) debugState.camera = { x, y, z, yaw, pitch };
+  }
+  if (BENCH_PATHS[urlParams.get('bench')]) {
+    debugState.bench = { name: urlParams.get('bench'), keys: BENCH_PATHS[urlParams.get('bench')], t: -2, frames: [] };
   }
 
   // Expose programmatic API for testing & inspection
@@ -524,7 +562,22 @@ async function initApp() {
     selectCamera,
     cycleCamera,
     selectTime,
-    getFps: () => currentFps
+    getFps: () => currentFps,
+    debug: {
+      // draw calls, triangles & live counts for the probe (tools/dev/probe.mjs)
+      stats: () => ({
+        fps: currentFps,
+        calls: renderer.info.render.drawCalls ?? renderer.info.render.calls,
+        triangles: renderer.info.render.triangles,
+        geometries: renderer.info.memory.geometries,
+        textures: renderer.info.memory.textures
+      }),
+      heightAt: (x, z) => controllerManager.getGroundHeight(x, z, 'car'),
+      teleport: (x, z, headingDeg = 180) => teleportTo(x, z, (headingDeg * Math.PI) / 180),
+      setTime: selectTime,
+      freeze: (on) => { debugState.freeze = !!on; },
+      setCamera: (pose) => { debugState.camera = pose; }
+    }
   };
 
   // 6b. Shader pre-compilation behind the loading screen. compileAsync() builds the node graphs in slices and has the GPU
@@ -613,6 +666,35 @@ async function initApp() {
 
   if (elFps) elFps.textContent = '60';
 
+  // Pins the camera to the ?cam pose, or flies the ?bench path once the city is on screen and records frame times
+  function setCameraPose({ x, y, z, yaw, pitch }) {
+    const cam = cameraSystem.camera;
+    cameraSystem.currentPos.set(x, y, z);
+    cam.position.set(x, y, z);
+    cam.rotation.set((pitch * Math.PI) / 180, (yaw * Math.PI) / 180, 0, 'YXZ');
+    cam.updateMatrixWorld();
+  }
+  function updateDebugCamera(rawDt) {
+    const b = debugState.bench;
+    if (!b) {
+      if (debugState.camera) setCameraPose(debugState.camera);
+      return;
+    }
+    if (window.__NYC_APP.ready && !b.done) {
+      b.t += rawDt;
+      if (b.t >= 0) b.frames.push(rawDt * 1000);
+      if (b.t >= BENCH_SECONDS) {
+        b.done = true;
+        const ms = b.frames.slice().sort((p, q) => p - q);
+        const median = ms[Math.floor(ms.length / 2)];
+        const p95 = ms[Math.floor(ms.length * 0.95)];
+        window.__NYC_APP.bench = { name: b.name, medianMs: +median.toFixed(2), p95Ms: +p95.toFixed(2), fps: Math.round(1000 / median), frames: ms.length };
+        console.log(`[bench] ${b.name} median_ms=${median.toFixed(2)} p95_ms=${p95.toFixed(2)} fps=${Math.round(1000 / median)}`);
+      }
+    }
+    setCameraPose(samplePath(b.keys, Math.min(1, Math.max(0, b.t / BENCH_SECONDS))));
+  }
+
   renderer.setAnimationLoop((now) => {
     const rawDt = (now - lastTime) * 0.001;
     lastTime = now;
@@ -622,16 +704,19 @@ async function initApp() {
     // Update 3rd-person controllers, camera, signals, traffic & vehicle collisions, building LODs, and dynamic shadow focus
     controllerManager.update(dt, elapsed);
     cameraSystem.update(dt, elapsed);
+    updateDebugCamera(rawDt);
+    // traffic divides by its step (traffic.js), so a frozen city still steps by a negligible 0.1 ms
+    const trafficDt = debugState.freeze ? 1e-4 : dt;
     streetDetails.signalClock.value = elapsed;
     trafficSystem.update(
-      dt,
+      trafficDt,
       elapsed,
       cameraSystem.currentPos,
       controllerManager.getActiveEntity(),
       controllerManager.activeMode,
       cameraSystem.camera
     );
-    highwayTraffic.update(dt, cameraSystem.camera, controllerManager.getActiveEntity(), controllerManager.activeMode);
+    highwayTraffic.update(trafficDt, cameraSystem.camera, controllerManager.getActiveEntity(), controllerManager.activeMode);
     if (boroughs.update) boroughs.update(elapsed); // Roosevelt Island Tramway cabins
     cityBlocks.update(cameraSystem.currentPos.x, cameraSystem.currentPos.z);
     if (cityBlocks.updateLights) cityBlocks.updateLights(cameraSystem.camera);

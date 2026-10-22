@@ -1,0 +1,6 @@
+{
+  "_comment": "Named screenshot shots for tools/dev/probe.mjs --shots. Values are query strings. NYC coordinates until the SF frame exists (P1.7); replace them then.",
+  "street": "cam=0,1.7,60,0,0&freeze=1&hud=0",
+  "heli": "cam=0,300,900,0,-25&freeze=1&hud=0",
+  "car": "mode=car&hud=0"
+}
