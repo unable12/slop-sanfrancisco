@@ -2,7 +2,9 @@
 //   js/sf-geodata.js        vector data as window.NYC.GEO (frame, land, road graph, curb islands, parks, piers, landmarks)
 //   data/terrain-<box>.bin  height field (tools/geo-terrain.mjs)
 //   data/buildings-<box>.bin footprints & heights (tools/geo-buildings.mjs)
-// plus reports in docs/reports/. Order: terrain -> curb islands -> road graph -> extra (needs terrain) -> buildings.
+//   data/groundmask-<box>.bin what the ground is made of, 1 m cells (tools/geo-groundmask.mjs)
+// plus reports in docs/reports/. Order: terrain -> curb islands -> road graph -> extra (needs terrain) -> buildings ->
+// ground mask (needs terrain, curb islands & parks).
 //
 // usage: node tools/build-geodata.mjs [box] [out.js]      (box from tools/boxes.json, default "slice")
 import fs from 'node:fs';
@@ -13,6 +15,7 @@ import { buildCurbIslands } from './geo-curbs.mjs';
 import { buildRoadGraph } from './geo-roadgraph.mjs';
 import { buildExtra } from './geo-extra.mjs';
 import { buildBuildings } from './geo-buildings.mjs';
+import { buildGroundMask } from './geo-groundmask.mjs';
 
 const box = process.argv[2] || process.env.GEO_BOX || 'slice';
 if (process.env.GEO_BOX && process.env.GEO_BOX !== box) throw new Error('GEO_BOX and the box argument disagree');
@@ -26,6 +29,7 @@ const curbs = buildCurbIslands(box);
 const roadGraph = buildRoadGraph(box, curbs);
 const extra = buildExtra(box);
 const buildings = buildBuildings(box);
+const groundMask = buildGroundMask(box, { blocks: curbs.blocks.map((b) => b.ring), parks: extra.parks });
 
 const B = boxWorld(box);
 const GEO = {
@@ -35,7 +39,8 @@ const GEO = {
   box: { name: box, x0: q(B.x0), x1: q(B.x1), z0: q(B.z0), z1: q(B.z1) },
   data: {
     terrain: { url: `data/terrain-${box}.bin`, waterLevel: terrain.waterLevel, minH: terrain.minH, maxH: terrain.maxH },
-    buildings: { url: `data/buildings-${box}.bin`, count: buildings.count }
+    buildings: { url: `data/buildings-${box}.bin`, count: buildings.count },
+    groundMask: { url: groundMask.url }
   },
   land: extra.land.filter((r) => Math.abs(ringArea(r)) > 2000).map(flat),
   // [outline, lot rects (none), park share, park name, rectangular, frames, kind]

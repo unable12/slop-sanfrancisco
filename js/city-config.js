@@ -114,11 +114,12 @@ function getIslandBoundsAtZ(z) {
     eastX: SHORE.east[k] + (SHORE.east[k + 1] - SHORE.east[k]) * t
   };
 }
+const CURB_H = 0.15; // San Francisco curb height (m): sidewalks & curb islands stand this far above the roadway
 const ISLAND_BOUNDS = (() => {
   let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
   for (const r of LAND_RINGS) for (const p of r) { minX = Math.min(minX, p.x); maxX = Math.max(maxX, p.x); minZ = Math.min(minZ, p.z); maxZ = Math.max(maxZ, p.z); }
-  // San Francisco curbs are ~15 cm. The ground is still flat at y = 0 until the terrain (phase 2), the bay below it.
-  return { minX, maxX, minZ, maxZ, sidewalkHeight: 0.15, waterLevel: -2.2 };
+  // San Francisco curbs are ~15 cm (CURB_H); the bay is the terrain's hydro-flattened water level (NAVD88 m)
+  return { minX, maxX, minZ, maxZ, sidewalkHeight: CURB_H, waterLevel: GEO.data.terrain.waterLevel };
 })();
 const CUT_Z = GEO.box.z0;
 
@@ -357,6 +358,7 @@ function walkSignal(time, isAvenue) {
 }
 
 Object.assign(window.NYC, {
+  CURB_H,
   AVENUES,
   ALL_AVENUES,
   CENTRAL_PARK_BOUNDS,

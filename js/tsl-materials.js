@@ -1854,6 +1854,63 @@ function createRoadSurfaceMaterial() {
 }
 
 /**
+ * The terrain surface (js/terrain-mesh.js): the asphalt above wherever the ground mask (tools/geo-groundmask.mjs, one
+ * byte per 1 m cell) says roadway, blended into concrete, lawn, sand, rock or the stone seawall elsewhere. The mask is
+ * read nearest-neighbour at the four cells around each fragment; their bilinear class shares are sharpened to about a
+ * pixel with fwidth, so class borders are crisp up close and settle to a blend in the distance.
+ * `maskTexture`: R8 DataTexture; `mask`: { originX, originZ, cell, w, h }.
+ */
+function createTerrainMaterial(maskTexture, mask) {
+  const mat = createRoadSurfaceMaterial();
+  const asphaltColor = mat.colorNode;
+  const asphaltRoughness = mat.roughnessNode;
+  const asphaltMetalness = mat.metalnessNode;
+  const asphaltEmissive = mat.emissiveNode;
+
+  const cSidewalk = color(0x8e8d85);
+  const cLawn = color(0x4d6a2c);
+  const cSand = color(0xc8b58e);
+  const cRock = color(0x6f6556);
+  const cSeawall = color(0x5f5b54);
+  const classColor = (c) => {
+    const is = (k) => float(1.0).sub(step(0.5, abs(c.sub(k))));
+    return cSidewalk.mul(is(1)).add(cLawn.mul(is(2))).add(cSand.mul(is(3))).add(cRock.mul(is(4))).add(cSeawall.mul(is(5)));
+  };
+  const size = vec2(mask.w, mask.h);
+  // cell coordinates with texel centres on integers: the four cells around the fragment and its place between them
+  const p = positionWorld.xz.sub(vec2(mask.originX, mask.originZ)).div(mask.cell).sub(0.5);
+  const base = floor(p);
+  const f = fract(p);
+  const sampleClass = (dx, dz) => floor(texture(maskTexture, base.add(vec2(dx + 0.5, dz + 0.5)).div(size)).r.mul(255.0).add(0.5));
+  const c00 = sampleClass(0, 0);
+  const c10 = sampleClass(1, 0);
+  const c01 = sampleClass(0, 1);
+  const c11 = sampleClass(1, 1);
+  const w00 = float(1.0).sub(f.x).mul(float(1.0).sub(f.y));
+  const w10 = f.x.mul(float(1.0).sub(f.y));
+  const w01 = float(1.0).sub(f.x).mul(f.y);
+  const w11 = f.x.mul(f.y);
+  const paved = (c) => float(1.0).sub(step(0.5, c)); // 1 for asphalt
+  const asphaltShare = paved(c00).mul(w00).add(paved(c10).mul(w10)).add(paved(c01).mul(w01)).add(paved(c11).mul(w11));
+  const aa = max(fwidth(asphaltShare), 0.0001);
+  const asphalt = smoothstep(float(0.5).sub(aa), float(0.5).add(aa), asphaltShare);
+  // the other classes, weighted among themselves
+  const ow00 = w00.mul(step(0.5, c00));
+  const ow10 = w10.mul(step(0.5, c10));
+  const ow01 = w01.mul(step(0.5, c01));
+  const ow11 = w11.mul(step(0.5, c11));
+  const otherColor = classColor(c00).mul(ow00).add(classColor(c10).mul(ow10)).add(classColor(c01).mul(ow01)).add(classColor(c11).mul(ow11))
+    .div(max(ow00.add(ow10).add(ow01).add(ow11), 0.0001));
+  const tone = noise2D(positionWorld.xz.mul(0.35)).mul(0.2).add(noise2D(positionWorld.xz.mul(2.1)).mul(0.08)).add(0.86);
+
+  mat.colorNode = mix(otherColor.mul(tone), asphaltColor, asphalt);
+  mat.roughnessNode = mix(float(0.92), asphaltRoughness, asphalt);
+  mat.metalnessNode = asphaltMetalness.mul(asphalt);
+  mat.emissiveNode = asphaltEmissive.mul(asphalt);
+  return mat;
+}
+
+/**
  * Road markings built from the road network (js/road-paint.js): vertex-coloured strips whose `paint` attribute
  * holds (metres along the strip, pattern period, duty cycle) and `side` the offset from the strip's centre line.
  * Strips thinner than ~1.5 px are widened on screen and faded to match (phone-wire AA) and dashes are box-filtered,
@@ -3154,5 +3211,5 @@ function createCarFlareMaterial() {
   return mat;
 }
 
-Object.assign(window.NYC, { cityUniforms, WALL_KINDS, createCurtainWallMaterial, createPreWarBuildingMaterial, createFacadeBoxes, createChryslerCrownMaterial, createCarPaintMaterial, createFoliageMaterial, createTreeBarkMaterial, createTreeMaterial, createParkPavingMaterial, createParkWallMaterial, createIronFenceMaterial, createParkLampGlobeMaterial, createParkLampPoolMaterial, createTunnelShadeMaterial, createTktsStepMaterial, createMarbleAshlarMaterial, createTreeGrateMaterial, createRoadSurfaceMaterial, createRoadPaintMaterial, createSidewalkMaterial, createCurbMaterial, createBillboardMaterial, createWaterMaterial, createParkLawnMaterial, createSteamMaterial, createGodRayMaterial, createContactShadowMaterial, createHeadlightBeamMaterial, createCarFlareMaterial });
+Object.assign(window.NYC, { cityUniforms, WALL_KINDS, createCurtainWallMaterial, createPreWarBuildingMaterial, createFacadeBoxes, createChryslerCrownMaterial, createCarPaintMaterial, createFoliageMaterial, createTreeBarkMaterial, createTreeMaterial, createParkPavingMaterial, createParkWallMaterial, createIronFenceMaterial, createParkLampGlobeMaterial, createParkLampPoolMaterial, createTunnelShadeMaterial, createTktsStepMaterial, createMarbleAshlarMaterial, createTreeGrateMaterial, createRoadSurfaceMaterial, createTerrainMaterial, createRoadPaintMaterial, createSidewalkMaterial, createCurbMaterial, createBillboardMaterial, createWaterMaterial, createParkLawnMaterial, createSteamMaterial, createGodRayMaterial, createContactShadowMaterial, createHeadlightBeamMaterial, createCarFlareMaterial });
 })();

@@ -37,7 +37,7 @@ const { loadCityData, buildSFGround, buildSFBuildingsV0 } = window.NYC;
 // Subsystems on / off while San Francisco replaces the New York city builders phase by phase (PLAN.md, docs/phases):
 // the NYC builders still exist but expect Manhattan's tables, which are empty here (city-config.js)
 const FEATURES = {
-  ground: 'sf-flat', // 'sf-flat' (sf-ground.js) | 'nyc' (city-grid.js)
+  ground: 'sf', // 'sf' (sf-ground.js on js/terrain-mesh.js) | 'nyc' (city-grid.js)
   buildings: 'v0', // 'v0' (sf-buildings.js extrusions) | 'nyc' (buildings.js)
   boroughs: false,
   landmarks: false,
@@ -49,8 +49,10 @@ const FEATURES = {
 // Scripted camera paths for ?bench=name: keyframes [x, y, z, yawDeg, pitchDeg] spread evenly over BENCH_SECONDS
 // (yaw 0 looks north, -z). Coordinates are in the current city's world frame.
 const BENCH_SECONDS = 20;
-// San Francisco slice (flat until phase 2): street = up Grant Ave through Chinatown, car = along California St from Nob
-// Hill to the Financial District, heli = a loop around the slice, hill = a turn on the spot at Nob Hill
+// San Francisco slice: street = up Grant Ave through Chinatown, car = along California St from Nob Hill to the Financial
+// District, heli = a loop around the slice, hill = a turn on the spot at Nob Hill. The y of the paths in BENCH_ON_GROUND
+// is height above the ground (Terrain.groundAt), the others' absolute
+const BENCH_ON_GROUND = new Set(['street', 'car', 'hill']);
 const BENCH_PATHS = {
   street: [[-391, 1.7, -727, 9, 0], [-446, 1.7, -1073, 9, 0]],
   car: [[-902, 1.4, -325, -99, -2], [-612, 1.4, -371, -99, -2], [400, 1.4, -531, -99, -2]],
@@ -557,13 +559,16 @@ async function initApp() {
   // Debug & screenshot harness state (URL: ?cam=x,y,z,yawDeg,pitchDeg  ?freeze=1  ?bench=name):
   // `camera` pins the view to a fixed pose, `freeze` stops traffic, `bench` flies a scripted path (BENCH_PATHS) and logs
   // "[bench] name median_ms p95_ms fps" when done (also left in __NYC_APP.bench)
+  // ?camGround=1: the ?cam y is height above the ground
   const debugState = { camera: null, freeze: urlParams.get('freeze') === '1', bench: null };
   if (urlParams.has('cam')) {
     const [x, y, z, yaw = 0, pitch = 0] = urlParams.get('cam').split(',').map(Number);
-    if ([x, y, z].every(Number.isFinite)) debugState.camera = { x, y, z, yaw, pitch };
+    const y0 = urlParams.get('camGround') === '1' ? window.NYC.Terrain.groundAt(x, z) : 0;
+    if ([x, y, z].every(Number.isFinite)) debugState.camera = { x, y: y + y0, z, yaw, pitch };
   }
   if (BENCH_PATHS[urlParams.get('bench')]) {
-    debugState.bench = { name: urlParams.get('bench'), keys: BENCH_PATHS[urlParams.get('bench')], t: -2, frames: [] };
+    const name = urlParams.get('bench');
+    debugState.bench = { name, keys: BENCH_PATHS[name], onGround: BENCH_ON_GROUND.has(name), t: -2, frames: [] };
   }
 
   // Expose programmatic API for testing & inspection
@@ -595,7 +600,8 @@ async function initApp() {
         calls: renderer.info.render.drawCalls ?? renderer.info.render.calls,
         triangles: renderer.info.render.triangles,
         geometries: renderer.info.memory.geometries,
-        textures: renderer.info.memory.textures
+        textures: renderer.info.memory.textures,
+        terrain: cityGrid.terrain ? cityGrid.terrain.stats() : null
       }),
       heightAt: (x, z) => window.NYC.Terrain.heightAt(x, z),
       groundAt: (x, z) => window.NYC.Terrain.groundAt(x, z),
@@ -718,7 +724,9 @@ async function initApp() {
         console.log(`[bench] ${b.name} median_ms=${median.toFixed(2)} p95_ms=${p95.toFixed(2)} fps=${Math.round(1000 / median)}`);
       }
     }
-    setCameraPose(samplePath(b.keys, Math.min(1, Math.max(0, b.t / BENCH_SECONDS))));
+    const pose = samplePath(b.keys, Math.min(1, Math.max(0, b.t / BENCH_SECONDS)));
+    if (b.onGround) pose.y += window.NYC.Terrain.groundAt(pose.x, pose.z);
+    setCameraPose(pose);
   }
 
   renderer.setAnimationLoop((now) => {
@@ -750,6 +758,7 @@ async function initApp() {
     lightingSystem.update(cameraSystem.currentPos);
     mapSystem.update();
     if (warmedUp) updateSceneCulling(cameraSystem.camera.position); // the warm-up frame draws every chunk
+    if (cityGrid.terrain) cityGrid.terrain.update(cameraSystem.camera.position, elapsed);
 
     // Render frame via TSL RenderPipeline (SSR + Bloom)
     if (!warmedUp) {

@@ -1,14 +1,14 @@
 (function () {
 // js/sf-ground.js
-// San Francisco's ground, flat for now (phase 1): the bay, the land of the data box as one asphalt deck at y = 0 above a
-// stone bulkhead, every real curb island (DataSF curbs, js/city-config.js BLOCKS) as a raised sidewalk slab with parkland
+// San Francisco's ground: the bay at the terrain's water level, the terrain surface itself (js/terrain-mesh.js: roadway,
+// seawall & all), every real curb island (DataSF curbs, js/city-config.js BLOCKS) as a raised sidewalk slab with parkland
 // lawns on top, and the piers. Replaces city-grid.js's Manhattan ground; returns the same shape (sidewalks, footprints,
-// colliders, highwayLanes) for main.js. Phase 2 drapes all of this on the terrain.
+// colliders, highwayLanes) for main.js, plus the terrain.
 
 const { THREE } = window.NYC;
 const { mergeGeometries } = window.NYC.Addons;
 const { BLOCKS, LAND_RINGS, ISLAND_BOUNDS, WATERFRONT_PIERS, GEO } = window.NYC;
-const { createRoadSurfaceMaterial, createSidewalkMaterial, createWaterMaterial, createParkLawnMaterial } = window.NYC;
+const { createSidewalkMaterial, createWaterMaterial, createParkLawnMaterial, buildTerrainMesh, Terrain } = window.NYC;
 
 const shapeOf = (pts) => {
   const s = new THREE.Shape();
@@ -44,14 +44,12 @@ function buildSFGround(scene) {
 
   // 1. The bay
   const water = new THREE.Mesh(new THREE.PlaneGeometry(60000, 60000, 1, 1).rotateX(-Math.PI / 2), createWaterMaterial());
-  water.position.y = ISLAND_BOUNDS.waterLevel;
+  water.position.y = Terrain.waterLevel;
   water.name = 'SFBay';
   group.add(water);
 
-  // 2. Land: asphalt deck at y = 0 over a stone bulkhead down to the water
-  const stone = new THREE.MeshStandardNodeMaterial({ color: 0x6b675f, roughness: 0.85, metalness: 0.05 });
-  group.add(merged(LAND_RINGS.map((r) => prism(r, ISLAND_BOUNDS.waterLevel - 0.4, -0.02)), stone, 'SFBulkhead'));
-  group.add(merged(LAND_RINGS.map((r) => flat(r, 0)), createRoadSurfaceMaterial(), 'SFRoadDeck'));
+  // 2. Land: the terrain surface (its own group, outside the static culling: its tiles rebuild as the camera moves)
+  const terrain = buildTerrainMesh(scene);
 
   // 3. Curb islands: raised sidewalk slabs (medians & traffic islands too), lawns on the park blocks
   const slabs = [];
@@ -66,14 +64,16 @@ function buildSFGround(scene) {
   group.add(merged(slabs, createSidewalkMaterial(), 'SFCurbIslands'));
   if (lawns.length) group.add(merged(lawns, createParkLawnMaterial(false), 'SFParkLawns'));
 
-  // 4. Piers (OSM outlines): concrete decks on the bay
+  // 4. Piers (OSM outlines): concrete decks on the bay, level with the shore they leave from (the highest ground under
+  //    their outline)
   const deck = new THREE.MeshStandardNodeMaterial({ color: 0x8c8880, roughness: 0.8, metalness: 0.04 });
-  const piers = WATERFRONT_PIERS.filter((p) => p.ring && p.ring.length > 2).map((p) => prism(p.ring, ISLAND_BOUNDS.waterLevel - 0.3, 0.1));
+  const pierTop = (ring) => Math.max(...ring.map((p) => Terrain.groundAt(p.x, p.z))) + 0.1;
+  const piers = WATERFRONT_PIERS.filter((p) => p.ring && p.ring.length > 2).map((p) => prism(p.ring, Terrain.waterLevel - 0.3, pierTop(p.ring)));
   if (piers.length) group.add(merged(piers, deck, 'SFPiers', { cast: true }));
 
   scene.add(group);
   console.info(`[ground] ${BLOCKS.length} curb islands, ${LAND_RINGS.length} land polygons, ${piers.length} piers (box ${GEO.box.name})`);
-  return { group, sidewalks, footprints: [], colliders: [], highwayLanes: [] };
+  return { group, terrain, sidewalks, footprints: [], colliders: [], highwayLanes: [] };
 }
 
 Object.assign(window.NYC, { buildSFGround });

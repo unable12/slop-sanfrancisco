@@ -40,3 +40,11 @@ Samples are point values at those positions; interpolate bilinearly. Water cells
   - `ringStart`: index of the first vertex in the pool;
   - `ringCount`: number of vertices;
 - then the vertex pool of `vertexFloats` values, as `x, z` pairs in world metres. Rings have negative `ringArea()` (NYC convention).
+
+## `data/groundmask-<box>.bin`: ground classes (`format: "sf-groundmask"`, version 1)
+
+**Header fields:** `cell` (1 m), `originX`, `originZ` (world position of the corner of cell (0, 0)), `w`, `h`, `classes`
+(names by value: `asphalt, sidewalk, lawn, sand, rock, waterEdge`).
+
+**Payload.** Uint8, `w * h` values, row-major. Cell `(i, j)` covers x in `[originX + i * cell, originX + (i + 1) * cell)` and
+z likewise. Written by `tools/geo-groundmask.mjs`; sampled with nearest filtering by the terrain material (`js/terrain-mesh.js`).

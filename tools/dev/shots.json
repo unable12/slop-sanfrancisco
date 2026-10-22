@@ -1,10 +1,10 @@
 {
-  "_comment": "Named screenshot shots for tools/dev/probe.mjs --shots (query strings). cam=x,y,z,yawDeg,pitchDeg: yaw 0 looks north (-z), +90 west, -90 east. World origin: Market St & Montgomery St.",
+  "_comment": "Named screenshot shots for tools/dev/probe.mjs --shots (query strings). cam=x,y,z,yawDeg,pitchDeg (camGround=1: y above the ground): yaw 0 looks north (-z), +90 west, -90 east. World origin: Market St & Montgomery St.",
   "heli-slice": "mode=heli&cam=-300,450,700,20,-30&hud=0&freeze=1",
   "market-street": "teleport=market&mode=car&hud=0",
-  "california-at-powell": "cam=-640,1.7,-373,-92,1&hud=0&freeze=1",
-  "nob-hill-top": "cam=-950,1.7,-330,-95,2&hud=0&freeze=1",
+  "california-at-powell": "cam=-640,1.7,-373,-92,1&camGround=1&hud=0&freeze=1",
+  "nob-hill-top": "cam=-950,1.7,-330,-95,2&camGround=1&hud=0&freeze=1",
   "chinatown-grant": "teleport=chinatown&mode=person&hud=0",
-  "transamerica": "cam=-63,1.7,-465,0,18&hud=0&freeze=1",
-  "ferry-building": "cam=700,25,-560,-17,-6&hud=0&freeze=1"
+  "transamerica": "cam=-63,1.7,-465,0,18&camGround=1&hud=0&freeze=1",
+  "ferry-building": "cam=700,22,-560,-17,-6&camGround=1&hud=0&freeze=1"
 }
