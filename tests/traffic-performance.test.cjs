@@ -47,7 +47,7 @@ function sparkHarness(updates = 3) {
     instanceMatrix: attr,
     setMatrixAt(index, matrix) { writes.push({ index, matrix: JSON.parse(JSON.stringify(matrix)) }); }
   };
-  const context = { MAX_SPARKS: 120, sparks, sparkInst, dummy, zero, updates };
+  const context = { MAX_SPARKS: 120, sparks, sparkInst, dummy, zero, updates, groundAt: () => 0 };
   const flag = productionFunction('flagRange', {});
   context.flagRange = flag;
   return {

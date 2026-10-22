@@ -1,37 +1,66 @@
 (function () {
 // js/road-paint.js
 // Road markings generated from the drivable road network (js/road-network.js), so the paint matches where traffic
-// actually drives and stops: dashed lane lines, double yellow centre lines on two-way roads, stop bars at the stop
-// lines, continental crosswalks across every intersection approach and green bike lanes along wide one-way avenues.
+// actually drives and stops: dashed lane lines, double yellow centre lines on two-way roads, stop bars and continental
+// crosswalks (curb to curb, where traffic.js walks its pedestrians) at the junctions with signals or stop signs, and
+// green bike lanes along wide one-way roads. Every strip is a ribbon draped on the terrain (js/terrain.js), a vertex
+// pair every metre.
 
-const { THREE, CROSSWALK, createRoadPaintMaterial } = window.NYC;
+const { THREE, CROSSWALK, createRoadPaintMaterial, blockAt } = window.NYC;
 
 const WHITE = new THREE.Color(0xe6e2d6);
 const YELLOW = new THREE.Color(0xe8ad22);
 const GREEN = new THREE.Color(0x2a8a4e);
 const HEIGHT = 0.012; // above the asphalt
+const STEP = 1; // metres between the vertex pairs of a strip
 
 function buildRoadPaint(scene, network) {
   const position = [];
+  const normal = [];
   const side = [];
   const paint = [];
   const colors = [];
   const index = [];
+  const T = window.NYC.Terrain;
+  const loaded = T && T.loaded;
+  const n = { x: 0, y: 1, z: 0 };
 
-  // Flat strip w wide from a to b, with a dash pattern (period, duty cycle) running along it
+  // Strip w wide from a to b, with a dash pattern (period, duty cycle) running along it, on the ground
   function strip(ax, az, bx, bz, w, col, period = 1, duty = 1) {
     const len = Math.hypot(bx - ax, bz - az);
     if (len < 0.05) return;
     const sx = ((az - bz) / len) * w * 0.5;
     const sz = ((bx - ax) / len) * w * 0.5;
-    const i = position.length / 3;
-    for (const [x, z, s, u] of [[ax, az, -1, 0], [ax, az, 1, 0], [bx, bz, 1, len], [bx, bz, -1, len]]) {
-      position.push(x + sx * s, HEIGHT, z + sz * s);
-      side.push(sx * s, sz * s);
-      paint.push(u, period, duty);
-      colors.push(col.r, col.g, col.b);
+    const steps = Math.max(1, Math.ceil(len / STEP));
+    const i0 = position.length / 3;
+    for (let k = 0; k <= steps; k++) {
+      const u = (len * k) / steps;
+      const x = ax + ((bx - ax) * k) / steps;
+      const z = az + ((bz - az) * k) / steps;
+      for (const s of [-1, 1]) {
+        const px = x + sx * s, pz = z + sz * s;
+        position.push(px, (loaded ? T.groundAt(px, pz) : 0) + HEIGHT, pz);
+        if (loaded) T.normalAt(px, pz, n);
+        normal.push(n.x, n.y, n.z);
+        side.push(sx * s, sz * s);
+        paint.push(u, period, duty);
+        colors.push(col.r, col.g, col.b);
+      }
+      if (k > 0) {
+        const i = i0 + 2 * (k - 1);
+        index.push(i, i + 1, i + 3, i, i + 3, i + 2);
+      }
     }
-    index.push(i, i + 1, i + 2, i, i + 2, i + 3);
+  }
+  // How far the roadway reaches either side of the point s along edge e (to the first curb island), like the
+  // crosswalk tracks of traffic.js: [left, right]
+  function curbs(e, s) {
+    const x = e.sx + e.dx * s, z = e.sz + e.dz * s;
+    const reach = (dir) => {
+      for (let r = 0; r < e.half + 8; r += 0.25) if (blockAt(x + e.rx * r * dir, z + e.rz * r * dir)) return r;
+      return e.half;
+    };
+    return [reach(-1), reach(1)];
   }
 
   // Edges run between stop lines; s is measured from the start one and o to the right of the centre line
@@ -79,25 +108,28 @@ function buildRoadPaint(scene, network) {
       }
     }
 
-    // Stop bars across the lanes arriving at each stop line, from the centre line (or median) to the curb (none where a
-    // street merely bends: a shape node of the centreline streets)
+    // Stop bars across the lanes arriving at a signal or a stop sign, from the centre line (or median) to the curb
+    const controlled = (node, f) => node.signal || (f && f.stop);
     for (const f of back ? [e, back] : [e]) {
-      if (f.to.shape) continue;
+      if (!controlled(f.to, f)) continue;
       const left = back ? Math.max(0, f.lanes[0] - 1.8) : -f.half;
       across(f, f.len - 0.35, left + 0.1, f.half - 0.1, 0.45, WHITE);
     }
 
-    // Continental crosswalks curb to curb, between the stop lines and the intersections at both ends
-    if (!e.from.shape) across(e, -CROSSWALK / 2, -e.half, e.half, CROSSWALK - 0.3, WHITE, 1.2, 0.5);
-    if (!e.to.shape) across(e, e.len + CROSSWALK / 2, -e.half, e.half, CROSSWALK - 0.3, WHITE, 1.2, 0.5);
+    // Continental crosswalks curb to curb, between the stop lines and the junctions with signals or stop signs
+    if (e.from.signal || e.from.stop) {
+      const [l, r] = curbs(e, -CROSSWALK / 2);
+      across(e, -CROSSWALK / 2, -l, r, CROSSWALK - 0.3, WHITE, 1.2, 0.5);
+    }
+    if (e.to.signal || e.to.stop) {
+      const [l, r] = curbs(e, e.len + CROSSWALK / 2);
+      across(e, e.len + CROSSWALK / 2, -l, r, CROSSWALK - 0.3, WHITE, 1.2, 0.5);
+    }
   }
-
-  const normal = new Float32Array(position.length);
-  for (let i = 1; i < normal.length; i += 3) normal[i] = 1;
 
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute(position, 3));
-  geometry.setAttribute('normal', new THREE.BufferAttribute(normal, 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normal, 3));
   geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   geometry.setAttribute('side', new THREE.Float32BufferAttribute(side, 2));
   geometry.setAttribute('paint', new THREE.Float32BufferAttribute(paint, 3));

@@ -234,11 +234,14 @@ Flat quads at a constant HEIGHT (22-31) become ribbons subdivided every 1 m, wit
 ---------------------------------------------------------------------------------------------------------------------
 
 ## Gate (P2)
-- [ ] Ground audit: every A and S item fixed or explicitly deferred with an owner.
-- [ ] Tests green, including terrain, facade-base, controllers-slope, road-network and traffic-sim.
-- [ ] Probe: 0 errors. Benches meet PLAN §1 budgets (street ≥ 75, heli/hill ≥ 60, heap ≤ 1.2 GB, ready ≤ 25 s).
-- [ ] Gallery written. Known issues listed.
-- [ ] Progress log, decision log, handover. Re-estimate phases 3-7 from measured P1-P2 usage.
+- [x] Ground audit: every A and S item fixed or explicitly deferred with an owner.
+- [x] Tests green, including terrain, facade-base, controllers-slope, road-network and traffic-sim.
+- [x] Probe: 0 errors. Benches meet PLAN §1 budgets (street ≥ 75, heli/hill ≥ 60, heap ≤ 1.2 GB, ready ≤ 25 s).
+- [x] Gallery written. Known issues listed.
+- [x] Progress log, decision log, handover. Re-estimate phases 3-7 from measured P1-P2 usage.
+
+Passed 2026-10-22 (one session). Tests 126/126; benches street 435, car 370, heli 357, hill 323 fps, heap ≤ 283 MB,
+ready ≤ 3.7 s, 0 errors; gallery `docs/review/p2/index.md`.
 
 ## Risks and fallbacks
 | Risk | Fallback |

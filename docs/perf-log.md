@@ -16,3 +16,8 @@ Note: Chrome caches compiled shaders between runs (profiles are fresh, but the G
 | 2026-10-22 | P1 gate, `--bench car` | 2.6 | median 2.7 ms, p95 3.4 ms (370 fps) | 108 | 0 | |
 | 2026-10-22 | P1 gate, `--bench heli` | 2.5 | median 2.0 ms, p95 2.7 ms (500 fps) | 120 | 0 | |
 | 2026-10-22 | P1 gate, `--bench hill` | 2.5 | median 2.6 ms, p95 3.5 ms (385 fps) | 108 | 0 | Flat world: "hill" is a turn on the spot at Nob Hill |
+| 2026-10-22 | P2.2 terrain mesh, `--bench heli` | 3.0 | median 1.6 ms, p95 2.3 ms (625 fps) | 135 | 0 | 18 terrain tiles (≤ 40 draws) |
+| 2026-10-22 | P2 gate, slice on terrain with traffic & details, `--bench street` | 3.3 | median 2.3 ms, p95 2.8 ms (435 fps) | 205 | 0 | 60 cars, 6 buses, 340 pedestrians; 3,602 buildings as 11,852 masses; 338 signal masts, 107 stop signs, 1,381 lamps |
+| 2026-10-22 | P2 gate, `--bench car` | 3.4 | median 2.7 ms, p95 3.4 ms (370 fps) | 234 | 0 | |
+| 2026-10-22 | P2 gate, `--bench heli` | 3.6 | median 2.8 ms, p95 3.6 ms (357 fps) | 243 | 0 | |
+| 2026-10-22 | P2 gate, `--bench hill` | 3.7 | median 3.1 ms, p95 3.9 ms (323 fps) | 283 | 0 | A turn on the spot at Nob Hill, now 8 m above the real ground |

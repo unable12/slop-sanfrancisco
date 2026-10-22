@@ -170,6 +170,11 @@ Legend: ✅ verified (see `docs/research.md`), ❓ not verified (verify before r
 | 6 | Region, horizon, fog and atmosphere | 3 | Whole-city views within budget; fog states gallery |
 | 7 | UI, map, polish, release prep | 2 | Final success criteria; acceptance report |
 
+**Re-estimate after P2 (measured):** P1 took about one session against 2, P2 about one against 6. The engine carried over
+better than planned and the data pipeline did the heavy lifting. Remaining: P3 1–2, P4 2–3, P5 1–2, P6 1–2, P7 1, so
+about 6–10 sessions instead of 15. Still to come and less predictable: the core's bigger data (streaming, curb gaps in SoMa),
+SF's look (P4) and the landmark models (P5).
+
 *A session is one long working block (several hours, heavy tool use). Total ≈ 23 sessions, plausible range 16–32. Revision 1
 estimated 29: real curbs, signals, stop signs and heights remove most of the guessing, and the vertical slice cuts rework.
 
@@ -274,6 +279,8 @@ Everything else: decide, log the decision (section 10), continue. Visual reviews
 | P2-7 | 2026-10-22 | Facade floors count from each mass's own lowest ground (`boxBase.x`); where its ground drops more than 0.6 m the drop is a solid plinth (`boxBase.y`) and the floors start above it. The canyon AO measures height above the terrain (half-float height texture) | A building's floor datum must be on its own ground, not the footprint's lowest point (stepped masses on hills) |
 | P2-8 | 2026-10-22 | Player colliders are skipped only when the player is more than 3 m below the building's lowest ground (`minY`), not 0.5 m as P2.6.2 suggested | A road running a little below a building's terrace (common on the hills) must still stop the car; 3 m still lets tunnels (Broadway, Stockton) pass under buildings |
 | P2-9 | 2026-10-22 | Player vehicles: a car or bike left without throttle below 1 m/s holds on the brake instead of rolling down the grade; the walker sticks to the ground on step-downs under 0.4 m (it was leaving the slope for a few frames walking downhill) | Feel; the P2.6 slope test (feet within 2 cm for 600 frames) |
+| P2-10 | 2026-10-22 | Road network: the centreline graph is the only source (the Manhattan grid stages are gone); junctions merge under 8 m (not 14: the slice's 9–12 m links join distinct offset T-junctions, some stop-controlled); lanes from the data's lane count and width; a dead end (a street that stops, or leaves the data box) allows a U-turn; freeway, ramp and tunnel links are left out until they get decks and bores (P3+); the land test is the terrain's water level with a 1 m margin. Connectivity is measured over edges away from the data box's 60 m border band and wider than alleys (6 m): 95.2% of 726 | Streets cut by the box and dead-end alleys too narrow to turn in can't join a strongly connected network |
+| P2-11 | 2026-10-22 | Traffic on hills: a vehicle's body sits at the road height under its middle (not the mean of its axles, as P2.8.2 put it); wheels at their own axle heights, pitch from the axles. Uphill gravity never takes a driver below 0.3 m/s² of free acceleration; curves are driven at 2.5 m/s at least; a U-turn's curve keeps to the slope between its ends | The axle mean sank bodies into crests (up to 37 cm on a dead end's steep bank); buses (IDM a = 1.1) stalled on grades over 14%; kinked curves at oblique junctions held cars to 0.3 m/s; opposite end grades put a hump in U-turns |
 | K1 | 2026-10-22 | Sessions stop committing. Every 2–4 tasks they write ready-to-run, path-limited commit commands (Kamil's lowercase style, task ID in parentheses, no Claude attribution) to `docs/commits.md`; Kamil runs them. History up to P2.3 was regrouped by Kamil (the Phase 1 work is now 5 commits) | Kamil's request: he creates every commit himself |
 
 ---------------------------------------------------------------------------------------------------------------------
@@ -284,5 +291,6 @@ Everything else: decide, log the decision (section 10), continue. Visual reviews
 |---|---|---|---|---|---|---|
 | 2026-10-22 | plan r2 | Research done, plan revised, nothing built | NYC baseline 97/97 | NYC 92–98 fps | n/a | Ready for P1 |
 | 2026-10-22 | P1.1–P1.13 | Phase 1 done in one session. NYC engine imported and pinned; harness (URL params, benches, batch shots); fetcher; frame; terrain baker; curb islands; road graph; land/piers/parks/landmarks; buildings binary; engine boots on the flat SF slice | 107/107 | street 417, car 370, heli 500, hill 385 fps; heap ≤ 120 MB; ready 2.5 s; 0 errors | Plan 5-hour window 6%, weekly 4% (planning + P1 together); context 64% of 1M | P1 estimate was 2 sessions, took ~1 |
+| 2026-10-22 | P2.0–P2.12 | Phase 2 done in one session (gate passed). Terrain mesh + ground mask, draped curb islands, buildings v1 on slopes (rect covers, floors from each mass's ground), player/cameras on terrain, road network from the centreline graph with height profiles and real control, traffic and pedestrians on hills (stop-sign protocol, per-junction signal offsets, crosswalks at signals and stops), signal masts/stop signs/lamps/hydrants, draped road paint; `city-grid.js` dropped. P2.4–P2.6 were committed by the session before it saw K1; P2.7–P2.12 wait as one command in `docs/commits.md` | 126/126 | street 435, car 370, heli 357, hill 323 fps; heap ≤ 283 MB; ready ≤ 3.7 s; 0 errors | 5-hour window 12%, weekly 5% (account-wide); context 75% of 1M | P2 estimate was 6 sessions, took ~1.3 hours |
 
-- [x] P1 · [ ] P2 · [ ] P3 · [ ] P4 · [ ] P5 · [ ] P6 · [ ] P7
+- [x] P1 · [x] P2 · [ ] P3 · [ ] P4 · [ ] P5 · [ ] P6 · [ ] P7

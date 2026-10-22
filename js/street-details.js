@@ -13,6 +13,7 @@ const {
   Fn,
   float,
   color,
+  attribute,
   positionWorld,
   uniform,
   mod,
@@ -51,30 +52,34 @@ function createStreetSignBladeTexture(label) {
 }
 
 /**
- * TSL 3-Aspect Traffic Signal Lens Material (Red y=5.78, Amber y=5.42, Green y=5.06)
+ * TSL 3-Aspect Traffic Signal Lens Material (Red y=5.78, Amber y=5.42, Green y=5.06 above the ground the mast stands on)
  * Driven by the shared signal clock and SIGNAL_TIMING (city-config.js), which js/traffic.js obeys.
+ * `perInstance` (San Francisco, js/sf-street-details.js): the per-instance `signalBase` attribute holds the mast's
+ * ground y, the junction's offset in the cycle (road-network.js signalOffset) and 1 for a group-0 (first phase) head,
+ * else 0; `isAvenueHead` is then ignored.
  */
-function createTrafficSignalLensMaterial(isAvenueHead, clock) {
+function createTrafficSignalLensMaterial(isAvenueHead, clock, perInstance = false) {
   const { cycle, avenueAmber, avenueRed, streetAmber } = SIGNAL_TIMING;
   const mat = new THREE.MeshBasicNodeMaterial();
   mat.colorNode = Fn(() => {
-    const t = mod(clock, cycle);
-    const wy = positionWorld.y;
+    const base = perInstance ? attribute('signalBase', 'vec3') : null;
+    const t = mod(perInstance ? clock.add(base.y) : clock, cycle);
+    const wy = perInstance ? positionWorld.y.sub(base.x) : positionWorld.y;
     const isTopRed = step(5.60, wy);
     const isBottomGreen = float(1.0).sub(step(5.24, wy));
     const isMidAmber = float(1.0).sub(isTopRed).mul(float(1.0).sub(isBottomGreen));
 
     // Avenue phase: Green, then Amber from avenueAmber, Red from avenueRed
     // Street phase: Red until avenueRed, then Green, Amber from streetAmber
-    const greenActive = isAvenueHead
-      ? float(1.0).sub(step(avenueAmber, t))
-      : step(avenueRed, t).mul(float(1.0).sub(step(streetAmber, t)));
-    const amberActive = isAvenueHead
-      ? step(avenueAmber, t).mul(float(1.0).sub(step(avenueRed, t)))
-      : step(streetAmber, t);
-    const redActive = isAvenueHead
-      ? step(avenueRed, t)
-      : float(1.0).sub(step(avenueRed, t));
+    const aveGreen = float(1.0).sub(step(avenueAmber, t));
+    const stGreen = step(avenueRed, t).mul(float(1.0).sub(step(streetAmber, t)));
+    const aveAmber = step(avenueAmber, t).mul(float(1.0).sub(step(avenueRed, t)));
+    const stAmber = step(streetAmber, t);
+    const aveRed = step(avenueRed, t);
+    const stRed = float(1.0).sub(step(avenueRed, t));
+    const greenActive = perInstance ? mix(stGreen, aveGreen, base.z) : isAvenueHead ? aveGreen : stGreen;
+    const amberActive = perInstance ? mix(stAmber, aveAmber, base.z) : isAvenueHead ? aveAmber : stAmber;
+    const redActive = perInstance ? mix(stRed, aveRed, base.z) : isAvenueHead ? aveRed : stRed;
 
     const activeMask = isTopRed.mul(redActive)
       .add(isMidAmber.mul(amberActive))
@@ -1208,5 +1213,5 @@ function buildStreetDetails(scene) {
   return { group, footprints, signalClock, update };
 }
 
-Object.assign(window.NYC, { buildStreetDetails });
+Object.assign(window.NYC, { createTrafficSignalLensMaterial, buildStreetDetails });
 })();

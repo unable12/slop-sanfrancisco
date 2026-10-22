@@ -20,7 +20,7 @@ The internal namespace `window.NYC` / `__NYC_APP` stays (D2).
 | `buildings.js` | 2636 | Modify heavily | New v1 path: footprint masses → `commit()` → facade boxes; `minY` colliders; quadtree over data bounds; NYC recipes, avenue/district tables and landmark reserves removed once v1 passes | 2, 4 |
 | `cameras.js` | 352 | Modify lightly | y ≥ ground + 0.55; terrain-aware boom | 2 |
 | `city-config.js` | 809 | Rewrite internals, keep exports | Generic functions kept; NYC tables replaced by SF data or emptied; `ISLAND_BOUNDS` / `getIslandBoundsAtZ` become land-polygon based (same names) | 1 |
-| `city-grid.js` | 3515 | Superseded by `sf-ground.js` (decision P1-1); keep for its helpers until P2 has moved what it needs | Flat road slab → terrain; curb islands draped; Manhattan seawall/Central Park/stone bridges/shore belt removed; piers builder kept for the Embarcadero | 2 |
+| `city-grid.js` | 3515 | **Dropped in P2.12** | Superseded by `sf-ground.js` + `terrain-mesh.js` + `drape.js` (decision P1-1); its globals' readers (`buildings.js`, `street-details.js`, `cameras.js`, `landmarks.js`) fall back without them | 2 |
 | `controllers.js` | 1175 | Modify | `getGroundHeight` → terrain; real `yHeight`; `minY`; car/cyclist pitch and roll; grade physics; heli clearance | 2 |
 | `landmarks.js` | 1076 | Rewrite content | SF landmarks; keep `fitToSite` | 5 |
 | `lighting.js` | 308 | Modify | Shadow far relative to ground (P2); marine layer extends the existing `fogNode` (P6). No sun lat/lon work (presets) | 2, 6 |

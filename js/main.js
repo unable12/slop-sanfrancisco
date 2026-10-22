@@ -19,7 +19,6 @@ const { createPostProcessing } = window.NYC;
 const { ClusteredLighting } = window.NYC.Addons;
 
 const { getLocationLabel, isTypingInField } = window.NYC;
-const { buildCityGrid } = window.NYC;
 const { buildBoroughs } = window.NYC;
 const { buildLandmarks } = window.NYC;
 const { buildCityBlocks } = window.NYC;
@@ -32,18 +31,18 @@ const { CameraSystem, CAMERA_PRESETS } = window.NYC;
 const { LightingSystem } = window.NYC;
 const { NYCMapSystem } = window.NYC;
 const { setupSceneCulling, updateSceneCulling } = window.NYC;
-const { loadCityData, buildSFGround, buildSFBuildingsV0 } = window.NYC;
+const { loadCityData, buildSFGround, buildSFBuildingsV0, buildRoadNetwork, buildSFStreetDetails } = window.NYC;
 
 // Subsystems on / off while San Francisco replaces the New York city builders phase by phase (PLAN.md, docs/phases):
 // the NYC builders still exist but expect Manhattan's tables, which are empty here (city-config.js)
 const FEATURES = {
-  ground: 'sf', // 'sf' (sf-ground.js on js/terrain-mesh.js) | 'nyc' (city-grid.js)
+  ground: 'sf', // sf-ground.js on js/terrain-mesh.js (New York's city-grid.js was dropped in P2.12)
   buildings: 'v1', // 'v1' (buildings.js on the real footprints) | 'v0' (sf-buildings.js extrusions) | 'nyc' (buildings.js)
   waterTowers: false, // New York's rooftop water towers (the v1 path never builds them)
   boroughs: false,
   landmarks: false,
-  details: false,
-  traffic: false,
+  details: 'sf', // 'sf' (sf-street-details.js, on the road network) | true (street-details.js, New York's) | false
+  traffic: true,
   highway: false
 };
 
@@ -127,7 +126,7 @@ async function initApp() {
   }
 
   // 3. Build the city: ground & curb islands, buildings, street details & traffic (FEATURES above)
-  const cityGrid = FEATURES.ground === 'nyc' ? buildCityGrid(scene) : buildSFGround(scene);
+  const cityGrid = buildSFGround(scene);
   markInit('cityGrid');
   const boroughs = FEATURES.boroughs ? buildBoroughs(scene, { sidewalks: cityGrid.sidewalks }) : { colliders: [] };
   markInit('boroughs');
@@ -137,19 +136,26 @@ async function initApp() {
   markInit('blocks');
   const allColliders = [...landmarkColliders, ...cityBlocks.colliders, ...boroughs.colliders, ...(cityGrid.colliders || [])];
 
-  const streetDetails = FEATURES.details ? buildStreetDetails(scene) : { footprints: [], signalClock: { value: 0 } };
+  // The road network (road-network.js), for the street furniture & the traffic built on it. Buildings turned along
+  // non-grid streets have oriented colliders whose world bounds reach past their lots: they stay inside the property
+  // line anyway, so the network (lanes & sidewalks) doesn't need them
+  const roadNetwork = FEATURES.traffic || FEATURES.details === 'sf'
+    ? buildRoadNetwork(cityGrid.sidewalks, [...cityGrid.footprints, ...allColliders.filter((c) => !c.obb)])
+    : null;
+  markInit('roads');
+  const streetDetails = FEATURES.details === 'sf'
+    ? buildSFStreetDetails(scene, roadNetwork)
+    : FEATURES.details ? buildStreetDetails(scene) : { footprints: [], signalClock: { value: 0 } };
   markInit('streetDetails');
-  // Buildings turned along non-grid streets have oriented colliders whose world bounds reach past their lots: they stay
-  // inside the property line anyway, so the road network (lanes & sidewalks) doesn't need them
   const trafficSystem = FEATURES.traffic
-    ? createTrafficSystem(scene, cityGrid.sidewalks, [
-      ...cityGrid.footprints,
-      ...streetDetails.footprints,
-      ...allColliders.filter((c) => !c.obb)
-    ])
+    ? createTrafficSystem(scene, cityGrid.sidewalks, [], { network: roadNetwork })
     : { update() {}, network: null, cars: [] };
   markInit('traffic');
   const highwayTraffic = FEATURES.highway ? createHighwayTraffic(scene, cityGrid.highwayLanes) : { update() {} };
+  // ?debug=roads: the road network's lanes, junction curves, arms & control drawn over the ground (road-network.js)
+  if (new URLSearchParams(location.search).get('debug') === 'roads') {
+    scene.add(window.NYC.buildRoadDebug(roadNetwork || buildRoadNetwork(cityGrid.sidewalks, [])));
+  }
   if (trafficSystem.network) buildRoadPaint(scene, trafficSystem.network);
   markInit('roadPaint');
 
@@ -161,7 +167,7 @@ async function initApp() {
 
   // Island-wide static geometry: chunk & distance-cull the small props, shadow stand-ins for the big casters
   // (scene-culling.js)
-  const cullingRoots = ['ManhattanCityGrid', 'ManhattanCityBlocks', 'ManhattanStreetDetails', 'ManhattanLandmarks', 'Boroughs', 'SFGround', 'SFBuildings']
+  const cullingRoots = ['ManhattanCityGrid', 'ManhattanCityBlocks', 'ManhattanStreetDetails', 'ManhattanLandmarks', 'Boroughs', 'SFGround', 'SFBuildings', 'SFStreetDetails']
     .map((name) => scene.getObjectByName(name))
     .filter(Boolean);
   const cullingStats = setupSceneCulling(scene, cullingRoots, lightingSystem.sunLight.shadow);

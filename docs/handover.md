@@ -1,43 +1,62 @@
-# Handover (2026-10-22, end of phase 1)
+# Handover (2026-10-22, end of phase 2)
 
 ## State
 
-**Phase 1 is complete; the gate passed.**
-- Tests: 107/107.
-- Probe: 0 errors.
-- Gallery: `docs/review/p1/index.md`.
-- Perf: `docs/perf-log.md`.
+**Phase 2 is complete; the gate passed** (`docs/phases/phase-2-vertical-slice.md`, Gate).
+- Tests: 126/126 (`node --test tests/*.test.cjs tests/*.test.mjs`).
+- Probe benches: street 435, car 370, heli 357, hill 323 fps; heap ≤ 283 MB; ready ≤ 3.7 s; 0 console errors.
+- Gallery: `docs/review/p2/index.md`. Perf: `docs/perf-log.md`. Ground audit: `docs/ground-audit.md` (every A/S item
+  fixed or deferred with an owner).
 
-The engine boots on the flat San Francisco slice:
-- curb islands come from DataSF curbs;
-- buildings are extruded from the real footprints and lidar heights;
-- teleports cover the Ferry Building, Market, Transamerica, Chinatown, Powell and Nob Hill.
+**Commits.** Kamil commits (decision K1, `docs/RUNBOOK.md` §8). P2.0–P2.6 are in `git log` (P2.4–P2.6 were committed by
+this session before it read K1, in its old `P2.n:` style; regroup or reword them if you like). **P2.7–P2.12 and this
+handover are uncommitted**: one ready-to-run command at the end of `docs/commits.md` (the P2.7–P2.8 and P2.7–P2.11
+batches above it are superseded).
 
-## Next session: start phase 2 (`docs/phases/phase-2-vertical-slice.md`)
+## What the slice now has
 
-1. **Start the dev server in the background:** `node tools/serve.mjs 8080`. Probe with `node tools/dev/probe.mjs ...`.
-2. **P2.0 ground audit first.** The research list (`docs/research.md` §3) is accurate. New modules exist since then:
-   - `js/sf-ground.js`: the flat ground, curb islands, piers;
-   - `js/sf-buildings.js`: v0 extrusions;
-   - `js/data-loader.js`: `window.NYC.DATA.terrain` and `.buildings` are already loaded at startup.
+- `js/terrain.js` (height API), `js/terrain-mesh.js` (64 m LOD chunks drawn per 512 m tile, seawall = terrain dropped
+  under the bay, back-face 8 m shadow stand-in), ground mask `data/groundmask-slice.bin` (`tools/geo-groundmask.mjs`).
+- `js/drape.js`: curb island tops CURB_H (0.15 m) over the terrain, curb faces, lawns; merged per 512 m cell.
+- Buildings v1 (`buildings.js` `buildSFMasses`): rectangle covers baked into `data/buildings-slice.bin` v2
+  (`tools/rect-cover.mjs`, clipped out of the road corridor by `tools/road-corridor.mjs`); facades count floors from
+  each mass's ground (`boxBase` attribute, plinth); per-mass `minY` colliders.
+- Player, cameras, lighting, map radar on the terrain (`controllers.js`, `cameras.js`).
+- `road-network.js`: centreline graph only, height profiles (`edgeY`, `edgeGrade`, `curveY`), signals and stop signs
+  from DataSF, U-turns at dead ends, `?debug=roads` overlay.
+- `traffic.js`: vehicles posed on the road (axle heights, grade pitch, camber roll), grade-aware IDM, stop-sign protocol,
+  per-junction signal offsets, crosswalks at every signal and stop junction at any angle, slope-aware pedestrians;
+  `opts.headless` for the vm sim (`tests/helpers/traffic-harness.cjs`).
+- `js/sf-street-details.js`: signal masts (lens phase per junction), stop signs, lamps, hydrants.
+- `road-paint.js`: ribbons draped every metre; crosswalks and stop bars at signals and stops only.
+- `js/city-grid.js` deleted (its readers fall back without it).
 
-   These are the places to put terrain first. `city-grid.js` is no longer used (`FEATURES.ground = 'sf-flat'`).
-3. **`window.NYC.DATA.terrain` = `{ header, q }`.** Heights are in NAVD88 metres, in the format of `docs/formats.md`.
-   - `js/terrain.js` (P2.1) should wrap it.
-   - Water level: −1.07 m.
-   - The flat P1 world uses y = 0 for land and `ISLAND_BOUNDS.waterLevel = −2.2` for water. In P2 world y becomes NAVD88: make `waterLevel` = `GEO.data.terrain.waterLevel`.
-4. **Bench paths in `js/main.js` (`BENCH_PATHS`)** have fixed y. In P2 make y relative to the ground (`heightAt(x, z) + y`), or the street bench will run underground.
-5. **Shots** in `tools/dev/shots.json` use `cam=` with absolute y. They need the same treatment (P1.4 harness: add `camGround=1`, meaning y above ground).
+## Next session: start phase 3 (`docs/phases/phase-3-core-scale.md`)
 
-## Half-done or deferred
+1. Read `docs/commits.md`: if the P2.7–P2.12 command is still pending, leave it; don't redo the work.
+2. Start the dev server in the background (`node tools/serve.mjs 8080`); probe with `node tools/dev/probe.mjs`.
+   `--eval '<expr>'` (new) prints a value from the page once it is ready.
+3. The core box is a data rebuild (`tools/build-geodata.mjs core`); everything downstream is box-agnostic, but check:
+   - the drape takes 0.36 s for the slice in Chrome (`cityGrid` in `[init]`); the core is ~3× the area;
+   - curb gaps in SoMa/Transbay (P1-3): the road corridor (P2-6) leaves 46 slice footprints unclipped there;
+   - `tests/road-network.test.cjs` measures connectivity away from the box border; the core's border moves.
 
-- `docs/data-sources.md` license row for USGS 3DEP still says "confirm on the product page". Not confirmed in P1.
-- OSM cable car lines are not identified yet (P4.6).
-- Curb gaps: about 2.2% of curb length is dropped, in SoMa / Transbay and the north Embarcadero. Revisit when the core is built (P3), where more such blocks appear.
-- The NYC `buildings.js`, `street-details.js`, `landmarks.js` and traffic modules still load (they define functions only), but nothing calls them. The NYC `boroughs.js` is not loaded.
+## Open questions / risks
 
-## Risks noticed
+- **Freeways, ramps and tunnels are out of the road network** (P2-10). The core has the Bay Bridge approaches, the
+  Embarcadero ramps, the Broadway and Stockton tunnels: they need decks/bores (elevated profiles) before they can come in.
+- **Market St near Montgomery** loses a few edges (junction curves graze the Market/Post/Montgomery curb islands). Look
+  with `?debug=roads&cam=20,160,60,0,-70`.
+- **Three-group junctions** (five-way) run on the two-phase cycle; the box logic keeps them collision-free but the
+  phasing is not realistic (P4 or later).
+- **Rooftop bulkheads are oversized** and every building gets one (P4 SF look).
+- **Hill shadows:** wired (shadow stand-in on layer 3) but rarely visible at the golden-hour sun angle (~20°) on the
+  slice's slopes; steeper ground (Telegraph and Russian Hill in the core) should show them.
+- `docs/data-sources.md` still has the USGS 3DEP license row as "confirm on the product page" (from P1).
 
-- **Context:** this session reached about 64% of a 1M-token context in planning plus P1. Phase 2 is bigger: start it in a fresh session (this handover plus PLAN are enough).
-- **Headless Chrome:** caps at the display rate unless the probe's flags (`--disable-gpu-vsync --disable-frame-rate-limit`) are kept.
-- **Heap in shots mode** accumulates across navigations; take heap numbers from bench or single-page mode only.
+## Decisions made this phase
+
+P2-1 … P2-11 in `PLAN.md` §10: terrain tiles, seawall from terrain, back-face hill shadows, no road conforming (D5),
+512 m merge cells, road-corridor clipping of masses, floors from each mass's ground, 3 m `minY` margin for colliders,
+player feel (brake hold, ground stick), the road network's SF rules and its connectivity measure, and traffic on hills
+(body at the road under its middle, uphill crawl floor, curve speed floor, flat U-turns).
