@@ -10,7 +10,7 @@
   <script>
     // Download the city scripts while Three.js loads; execute them only after its imports are ready below.
     const nycAppScripts = (() => {
-      const assetVersion = '20261022-sf-p2';
+      const assetVersion = '20261022-sf-p3';
       return [
         './js/sf-geodata.js',
         './js/city-config.js',
@@ -32,6 +32,7 @@
         './js/sf-street-details.js',
         './js/road-network.js',
         './js/road-paint.js',
+        './js/grade-separation.js',
         './js/traffic.js',
         './js/controllers.js',
         './js/touch-controls.js',
@@ -160,9 +161,15 @@
     <button id="tp-ferry" class="pop-item tp-btn" data-teleport="ferry" type="button"><span class="pop-name">Ferry Building</span><span class="pop-sub">The Embarcadero · Embarcadero</span></button>
     <button id="tp-market" class="pop-item tp-btn" data-teleport="market" type="button"><span class="pop-name">Market &amp; Montgomery</span><span class="pop-sub">Market St · Financial District</span></button>
     <button id="tp-transamerica" class="pop-item tp-btn" data-teleport="transamerica" type="button"><span class="pop-name">Transamerica Pyramid</span><span class="pop-sub">Montgomery St · Financial District</span></button>
-    <button id="tp-chinatown" class="pop-item tp-btn" data-teleport="chinatown" type="button"><span class="pop-name">Chinatown</span><span class="pop-sub">Grant Ave · Chinatown</span></button>
+    <button id="tp-chinatown" class="pop-item tp-btn" data-teleport="chinatown" type="button"><span class="pop-name">Chinatown Gate</span><span class="pop-sub">Grant Ave · Chinatown</span></button>
+    <button id="tp-unionsquare" class="pop-item tp-btn" data-teleport="unionsquare" type="button"><span class="pop-name">Union Square</span><span class="pop-sub">Stockton St · Union Square</span></button>
     <button id="tp-powell" class="pop-item tp-btn" data-teleport="powell" type="button"><span class="pop-name">California &amp; Powell</span><span class="pop-sub">California St · Nob Hill</span></button>
-    <button id="tp-nobhill" class="pop-item tp-btn" data-teleport="nobhill" type="button"><span class="pop-name">Nob Hill</span><span class="pop-sub">California St · Nob Hill</span></button>
+    <button id="tp-nobhill" class="pop-item tp-btn" data-teleport="nobhill" type="button"><span class="pop-name">Nob Hill</span><span class="pop-sub">Grace Cathedral · Nob Hill</span></button>
+    <button id="tp-coit" class="pop-item tp-btn" data-teleport="coit" type="button"><span class="pop-name">Coit Tower</span><span class="pop-sub">Telegraph Hill Blvd · Telegraph Hill</span></button>
+    <button id="tp-lombard" class="pop-item tp-btn" data-teleport="lombard" type="button"><span class="pop-name">Lombard Street</span><span class="pop-sub">Lombard &amp; Hyde · Russian Hill</span></button>
+    <button id="tp-wharf" class="pop-item tp-btn" data-teleport="wharf" type="button"><span class="pop-name">Fisherman's Wharf</span><span class="pop-sub">Jefferson St · North Beach</span></button>
+    <button id="tp-civiccenter" class="pop-item tp-btn" data-teleport="civiccenter" type="button"><span class="pop-name">Civic Center</span><span class="pop-sub">City Hall · Civic Center</span></button>
+    <button id="tp-oraclepark" class="pop-item tp-btn" data-teleport="oraclepark" type="button"><span class="pop-name">Oracle Park</span><span class="pop-sub">King St · South Beach</span></button>
   </div>
 
   <!-- Bottom-Left: Street-Name Signs & Live GPS Radar Minimap -->

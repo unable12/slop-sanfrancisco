@@ -1,5 +1,6 @@
-// js/drape.js on the real slice: every curb island draped on the terrain (P2.4) — the curb tops stand CURB_H above the
-// ground at the outline, the sidewalk surface follows the grade between its vertices, and the build is fast enough.
+// js/drape.js on the real curbs (tests/helpers/geo-box.cjs): every curb island draped on the terrain (P2.4) — the curb
+// tops stand CURB_H above the ground at the outline, the sidewalk surface follows the grade between its vertices, and the
+// build is fast enough.
 const assert = require('node:assert/strict');
 const { readFileSync, existsSync } = require('node:fs');
 const { join } = require('node:path');
@@ -7,7 +8,8 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const root = join(__dirname, '..');
-const terrainFile = join(root, 'data/terrain-slice.bin');
+const { BOX } = require('./helpers/geo-box.cjs');
+const terrainFile = join(root, `data/terrain-${BOX}.bin`);
 const CURB_H = 0.15; // js/city-config.js
 
 function setup() {
@@ -61,8 +63,17 @@ test('curb islands drape on the terrain: outline tops at ground + CURB_H, surfac
   for (let k = 0; k < top.pos.length; k += 3) {
     assert.ok(Math.abs(top.pos[k + 1] - ground(top.pos[k], top.pos[k + 2]) - CURB_H) < 0.01);
   }
-  // triangle centroids within the drape tolerance of the grade; on retaining walls (slope > 1) the smallest leaves
-  // (2 m, the 1.5 m minimum edge of P2.4) can't follow the ground, so those only count towards the percentiles
+  // triangle centroids within the drape tolerance of the grade, except where the smallest leaves (2 m, the data's own
+  // spacing: two triangles) can't follow the ground (PLAN.md P3-1): on retaining walls (slope > 1), in height-field
+  // cells creased more than the tolerance (twist |h00 - h10 - h01 + h11| / 4 > TOL: terrace edges on the core's
+  // waterfront) and in cells the waterline crosses (the ground is the height clamped at the water: a curved crease along
+  // the seawall's top edge). Those only count towards the percentiles
+  const creased = (x, z) => {
+    const i = Math.floor((x - T.originX) / T.cell), j = Math.floor((z - T.originZ) / T.cell), k = j * T.w + i;
+    const c = [k, k + 1, k + T.w, k + T.w + 1].map((n) => T.heights[n]);
+    const wet = c.filter((h) => h <= T.waterLevel).length;
+    return (wet > 0 && wet < 4) || Math.abs(c[0] - c[1] - c[2] + c[3]) / 4 > Drape.TOL;
+  };
   const devs = [];
   let worst = 0;
   for (let t = 0; t < top.idx.length; t += 3) {
@@ -73,7 +84,7 @@ test('curb islands drape on the terrain: outline tops at ground + CURB_H, surfac
     }
     const d = Math.abs(y - ground(x, z) - CURB_H);
     devs.push(d);
-    if (T.slopeAt(x, z) < 1) worst = Math.max(worst, d);
+    if (T.slopeAt(x, z) < 1 && !creased(x, z)) worst = Math.max(worst, d);
   }
   devs.sort((a, b) => a - b);
   assert.ok(devs[Math.floor(devs.length * 0.99)] <= Drape.TOL, `p99 ${devs[Math.floor(devs.length * 0.99)]}`);

@@ -1162,6 +1162,9 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
     v.grade = (v.yFront - v.yRear) / (2 * v.axle);
     v.gradePitch = Math.atan(v.grade);
     v.gradeV0 = Math.max(0.5, 1 - Math.max(0, Math.abs(v.grade) - GRADE_SLOW) * 2.5);
+    // a street's own limit (Lombard's crooked block, road-network.js), on it and on the curves into and out of it
+    const cap = Math.min(v.edge.speedCap ?? Infinity, v.conn && v.move ? v.move.to.speedCap ?? Infinity : Infinity);
+    if (cap < Infinity) v.gradeV0 = Math.min(v.gradeV0, cap / v.v0);
     const l = Math.hypot(front.x - rear.x, front.z - rear.z) || 1;
     v.tx = (front.x - rear.x) / l;
     v.tz = (front.z - rear.z) / l;
@@ -1196,8 +1199,10 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
     else if (turn !== 'S' && (v.conn || v.edge.len - v.s < 35)) v.blink = turn === 'R' ? 1 : -1;
     else v.blink = 0;
 
-    // roll from the slope across the road (the ground's normal, within 4 degrees: a road's camber, not the hillside)
-    if (window.NYC.Terrain && window.NYC.Terrain.loaded) {
+    // roll from the slope across the road (the ground's normal, within 4 degrees: a road's camber, not the hillside;
+    // none in a tunnel, under the hill, or on a bridge, over the water)
+    if (v.edge.bore && !v.conn) v.gradeRoll = 0;
+    else if (window.NYC.Terrain && window.NYC.Terrain.loaded) {
       window.NYC.Terrain.normalAt(v.x, v.z, _normal);
       const across = (_normal.x * v.tz - _normal.z * v.tx) / Math.max(_normal.y, 0.2); // rise to the left, per metre
       v.gradeRoll = clamp(Math.atan(across), -0.07, 0.07);
@@ -1316,6 +1321,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
     const relX = pe.position.x - v.x;
     const relZ = pe.position.z - v.z;
     if (Math.abs(relX) > halfL + 3 || Math.abs(relZ) > halfL + 3) return;
+    if (Math.abs(pe.position.y - v.y) > 3) return; // one in a tunnel, the other on the street above
     const hit = overlapWithPlayer(relX, relZ, rotY, halfW, halfL, pe.heading || 0, player.halfW, player.halfL);
     if (!hit) return;
     const { nx, nz, pen, localX, localZ, pSin, pCos } = hit;
@@ -1445,6 +1451,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
   // (city-config.js blockAt) and clear of obstacles
   const { blockAt } = window.NYC;
   function sidewalkTrack(e) {
+    if (e.noWalk || e.bore) return false; // stairs (Lombard's crooked block), tunnels and bridges
     const off = (Math.random() < 0.5 ? 1 : -1) * (e.half + 1.4 + Math.random() * 2.6);
     const ax = e.sx + e.rx * off;
     const az = e.sz + e.rz * off;
@@ -1452,7 +1459,8 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
       const t = Math.min(s, e.len);
       const x = ax + e.dx * t;
       const z = az + e.dz * t;
-      if (!walkable(x - 0.4, x + 0.4, z - 0.4, z + 0.4) || !blockAt(x, z)) return false;
+      const b = blockAt(x, z);
+      if (!walkable(x - 0.4, x + 0.4, z - 0.4, z + 0.4) || !b || b.rail) return false; // (not on the rail medians)
     }
     Object.assign(track, { ax, az, ux: e.dx, uz: e.dz, len: e.len, node: null, side: 0, line: 0 });
     return true;

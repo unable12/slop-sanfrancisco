@@ -22,6 +22,25 @@ test('every teleport button has a destination on a real roadway inside the detai
   }
 });
 
+test('the core\'s landmark arrivals: a street junction near each OSM landmark, facing it; Lombard\'s at its top', () => {
+  const names = {
+    ferry: 'San Francisco Ferry Building', transamerica: 'Transamerica Pyramid', coit: 'Coit Tower', lombard: 'Lombard Street',
+    wharf: "Fisherman's Wharf", unionsquare: 'Union Square', chinatown: 'Dragon Gate', civiccenter: 'San Francisco City Hall',
+    oraclepark: 'Oracle Park', nobhill: 'Grace Cathedral'
+  };
+  for (const [key, name] of Object.entries(names)) {
+    const point = TELEPORT_LOCATIONS[key];
+    const lm = LANDMARK_SITES[name];
+    assert.ok(point && lm, `${key}: ${name}`);
+    assert.equal(point.landmark, name);
+    const d = Math.hypot(lm.x - point.x, lm.z - point.z);
+    assert.ok(d < 160, `${key}: ${d.toFixed(0)} m from ${name}`);
+    assert.ok(Math.abs(Math.atan2(lm.x - point.x, lm.z - point.z) - point.heading) < 1e-9, `${key} faces ${name}`);
+  }
+  const top = nearestRoads(TELEPORT_LOCATIONS.lombard.x, TELEPORT_LOCATIONS.lombard.z, 5).map(({ road }) => road.name);
+  assert.ok(top.includes('Hyde St') && top.includes('Lombard St'), top.join(', '));
+});
+
 test('the Transamerica arrival is on Montgomery St, near the pyramid', () => {
   const point = TELEPORT_LOCATIONS.transamerica;
   const tower = LANDMARK_SITES['Transamerica Pyramid'];

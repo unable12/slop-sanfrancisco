@@ -1,62 +1,57 @@
-# Handover (2026-10-22, end of phase 2)
+# Handover (2026-10-22, end of phase 3)
 
 ## State
 
-**Phase 2 is complete; the gate passed** (`docs/phases/phase-2-vertical-slice.md`, Gate).
-- Tests: 126/126 (`node --test tests/*.test.cjs tests/*.test.mjs`).
-- Probe benches: street 435, car 370, heli 357, hill 323 fps; heap ≤ 283 MB; ready ≤ 3.7 s; 0 console errors.
-- Gallery: `docs/review/p2/index.md`. Perf: `docs/perf-log.md`. Ground audit: `docs/ground-audit.md` (every A/S item
-  fixed or deferred with an owner).
+**Phase 3 is complete; the gate passed** (`docs/phases/phase-3-core-scale.md`, Gate and Results).
+- Tests: 130/130 (`node --test tests/*.test.cjs tests/*.test.mjs`), all on the core data.
+- Probe benches: street 244, car 238, heli 204, hill 208, russian-hill-view 208 fps; heap ≤ 809 MB; ready ≤ 5.3 s;
+  0 console errors.
+- Gallery: `docs/review/p3/index.md`. Perf: `docs/perf-log.md`. Decisions P3-1 … P3-7 in `PLAN.md` §10.
 
-**Commits.** Kamil commits (decision K1, `docs/RUNBOOK.md` §8). P2.0–P2.6 are in `git log` (P2.4–P2.6 were committed by
-this session before it read K1, in its old `P2.n:` style; regroup or reword them if you like). **P2.7–P2.12 and this
-handover are uncommitted**: one ready-to-run command at the end of `docs/commits.md` (the P2.7–P2.8 and P2.7–P2.11
-batches above it are superseded).
+**Commits.** Kamil commits (K1). Nothing of phase 3 is committed yet: **one ready-to-run command** at the end of
+`docs/commits.md` (the earlier P3.1–P3.5 batch above it is superseded). It also removes the slice's three binaries from
+git (`git rm --cached`; they are already deleted on disk).
 
-## What the slice now has
+## What the core now has
 
-- `js/terrain.js` (height API), `js/terrain-mesh.js` (64 m LOD chunks drawn per 512 m tile, seawall = terrain dropped
-  under the bay, back-face 8 m shadow stand-in), ground mask `data/groundmask-slice.bin` (`tools/geo-groundmask.mjs`).
-- `js/drape.js`: curb island tops CURB_H (0.15 m) over the terrain, curb faces, lawns; merged per 512 m cell.
-- Buildings v1 (`buildings.js` `buildSFMasses`): rectangle covers baked into `data/buildings-slice.bin` v2
-  (`tools/rect-cover.mjs`, clipped out of the road corridor by `tools/road-corridor.mjs`); facades count floors from
-  each mass's ground (`boxBase` attribute, plinth); per-mass `minY` colliders.
-- Player, cameras, lighting, map radar on the terrain (`controllers.js`, `cameras.js`).
-- `road-network.js`: centreline graph only, height profiles (`edgeY`, `edgeGrade`, `curveY`), signals and stop signs
-  from DataSF, U-turns at dead ends, `?debug=roads` overlay.
-- `traffic.js`: vehicles posed on the road (axle heights, grade pitch, camber roll), grade-aware IDM, stop-sign protocol,
-  per-junction signal offsets, crosswalks at every signal and stop junction at any angle, slope-aware pedestrians;
-  `opts.headless` for the vm sim (`tests/helpers/traffic-harness.cjs`).
-- `js/sf-street-details.js`: signal masts (lens phase per junction), stop signs, lamps, hydrants.
-- `road-paint.js`: ribbons draped every metre; crosswalks and stop bars at signals and stops only.
-- `js/city-grid.js` deleted (its readers fall back without it).
+- Data for the core box (`tools/boxes.json` `core`, 4.03 × 5.35 km); `js/sf-geodata.js` and `data/*-core.bin` are the
+  game's data. Tests follow the box the geodata was built for (`tests/helpers/geo-box.cjs`).
+- `js/grade-separation.js`: tunnel bores and portals, bridge decks, freeway decks on columns, `floorAt` / `roofAt` /
+  `carveAt` for the player, cameras and the terrain mesh; highway traffic on the freeway main lines (`FEATURES.highway`).
+- `road-network.js`: `spans()` (tunnels and bridges), edges' `bore`, `speedCap`, `noWalk`; the P3-4 network rules; the
+  40% grade cut (P3-5).
+- `GEO.roadGraph.decks` (OSM deck layers), `GEO.rail` (surface rail), point landmarks; flag 64 `crooked`.
+- `city-config.js`: rail medians (`block.rail`), landmark teleports (`TELEPORT_LOCATIONS[*].landmark`), labels.
+- `stats().gpuMB`; bench `russian-hill-view`.
 
-## Next session: start phase 3 (`docs/phases/phase-3-core-scale.md`)
+## Next session: start phase 4 (`docs/phases/phase-4-sf-look.md`)
 
-1. Read `docs/commits.md`: if the P2.7–P2.12 command is still pending, leave it; don't redo the work.
+1. Read `docs/commits.md`: if the phase 3 command is still pending, leave it; don't redo the work.
 2. Start the dev server in the background (`node tools/serve.mjs 8080`); probe with `node tools/dev/probe.mjs`.
-   `--eval '<expr>'` (new) prints a value from the page once it is ready.
-3. The core box is a data rebuild (`tools/build-geodata.mjs core`); everything downstream is box-agnostic, but check:
-   - the drape takes 0.36 s for the slice in Chrome (`cityGrid` in `[init]`); the core is ~3× the area;
-   - curb gaps in SoMa/Transbay (P1-3): the road corridor (P2-6) leaves 46 slice footprints unclipped there;
-   - `tests/road-network.test.cjs` measures connectivity away from the box border; the core's border moves.
+3. P4 owns several things this phase left visible (gallery known issues): curb gaps in Mission Bay and SoMa (94.0% of
+   footprints in a curb island; buildings there stand on asphalt), stairs drawn as streets (Kearny, Greenwich,
+   Montgomery on Telegraph Hill, Macondray Ln), Lombard's flower beds, Union Square's paving, trams on `GEO.rail`
+   (the cable-car lines on Powell, Hyde and California are in it too).
+4. Phases 4 and 5 could run in parallel worktrees (RUNBOOK §6) only if Kamil says so.
 
 ## Open questions / risks
 
-- **Freeways, ramps and tunnels are out of the road network** (P2-10). The core has the Bay Bridge approaches, the
-  Embarcadero ramps, the Broadway and Stockton tunnels: they need decks/bores (elevated profiles) before they can come in.
-- **Market St near Montgomery** loses a few edges (junction curves graze the Market/Post/Montgomery curb islands). Look
-  with `?debug=roads&cam=20,160,60,0,-70`.
-- **Three-group junctions** (five-way) run on the two-phase cycle; the box logic keeps them collision-free but the
-  phasing is not realistic (P4 or later).
-- **Rooftop bulkheads are oversized** and every building gets one (P4 SF look).
-- **Hill shadows:** wired (shadow stand-in on layer 3) but rarely visible at the golden-hour sun angle (~20°) on the
-  slice's slopes; steeper ground (Telegraph and Russian Hill in the core) should show them.
+- **Heap is climbing:** P2 ≤ 283 MB, P3 ≤ 809 MB on the benches (budget 1.2 GB), and P4–P6 add trees, row houses and
+  the region. The grade-separation build arrays were being kept alive by its lookup closures (fixed: 922 → 677 MB on
+  the street bench); look for the same pattern in `sf-ground.js` (drape cells) and `buildings.js` before streaming.
+- **Freeway heights are estimates** (P3-3: 8 / 15 / 22 m by OSM layer). The I-80 main lines end at the box's
+  waterfront where the Bay Bridge starts (P5); highway cars dip and reappear at lane ends.
+- **Broadway Tunnel** is two one-way links ~3 m apart in the data; its bore is drawn per edge pair. Look at it from
+  inside (`?cam=` near (-1200, y, -880)) when the look pass touches tunnels.
+- **Road network on the core:** 95.4% connected, just above the 95% bar. The rest is mostly Mission Bay's new streets
+  (2016 curbs), Terry A Francois Blvd's one-way loop, and the Telegraph Hill stairs streets.
+- **Some pier decks show as flat white slabs on the water** off the Embarcadero (not looked into; P5 piers).
+- **`build in under 2 s`** in `tests/road-network.test.cjs` runs at 1.2–1.7 s on the core in vm: tight if the network
+  grows (P6 region has no traffic, so it shouldn't).
 - `docs/data-sources.md` still has the USGS 3DEP license row as "confirm on the product page" (from P1).
 
 ## Decisions made this phase
 
-P2-1 … P2-11 in `PLAN.md` §10: terrain tiles, seawall from terrain, back-face hill shadows, no road conforming (D5),
-512 m merge cells, road-corridor clipping of masses, floors from each mass's ground, 3 m `minY` margin for colliders,
-player feel (brake hold, ground stick), the road network's SF rules and its connectivity measure, and traffic on hills
-(body at the road under its middle, uphill crawl floor, curve speed floor, flat U-turns).
+P3-1 … P3-7 in `PLAN.md` §10: the core box and the tests' recalibrated bounds, no streaming, grade separation
+(tunnels, bridges, estimated freeway decks), the core's road-network rules, the 40% grade cut, Lombard's crooked
+block and the rail medians, landmark teleports and the landmarks query fix.

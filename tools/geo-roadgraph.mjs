@@ -3,19 +3,21 @@
 //   - curb-to-curb width measured from the curb islands (rays from the centreline to the nearest block on each side),
 //   - sidewalk widths (DataSF Sidewalk Widths 4g86-grxu), lanes (OSM `lanes`, else from the width),
 //   - direction of travel (oneway F: along the segment's geometry, T: against it, B: both; checked against OSM),
-//   - flags (freeway, tunnel, ramp, pedestrian-only, private) and intersection control from DataSF Traffic Signals
-//     (ybh5-27n2) and Stop Signs (4542-gpa3).
+//   - flags (freeway, tunnel, ramp, pedestrian-only, private, alley, crooked) and intersection control from DataSF
+//     Traffic Signals (ybh5-27n2) and Stop Signs (4542-gpa3).
 // Output (GEO.roadGraph), compatible with road-network.js centrelineStreets():
 //   nodes: [x, z, ...]   names: [...]   links: [a, b, nameIdx, width, lanes, dir, inner [x, z, ...], flags, swLeft, swRight]
 //   control: per node 0 none, 1 signal, 2 all-way stop, 3 stop on some approaches;  stopMask: per node, bit i set when
 //   the node's i-th incident link (in links order) has a stop sign facing traffic arriving on it
 //   nhoods: neighbourhood names (DataSF analysis_neighborhood);  linkNhood: per link, index into nhoods
+//   decks: [link, [layer per point]] for freeways & ramps: OSM bridge layer (0 at grade, -1 unmatched) at the link's
+//   start, inner points and end
 import fs from 'node:fs';
 import path from 'node:path';
 import { datasf, osm, worldLines, rdp, log, ROOT, BOX, toWorld, boxWorld } from './geo-base.mjs';
 import { buildCurbIslands } from './geo-curbs.mjs';
 
-export const FLAGS = { freeway: 1, tunnel: 2, ramp: 4, pedestrian: 8, private: 16, alley: 32 };
+export const FLAGS = { freeway: 1, tunnel: 2, ramp: 4, pedestrian: 8, private: 16, alley: 32, crooked: 64 };
 const FT = 0.3048;
 
 export function buildRoadGraph(box = BOX, curbs = buildCurbIslands(box)) {
@@ -87,6 +89,25 @@ export function buildRoadGraph(box = BOX, curbs = buildCurbIslands(box)) {
   const names = [];
   const nameIdx = new Map();
   const nameOf = (n) => { if (!nameIdx.has(n)) { nameIdx.set(n, names.length); names.push(n); } return nameIdx.get(n); };
+  // OSM motorways and their ramps with their deck: OSM `layer` where tagged bridge=yes (1-3; 0 at grade). The deck's
+  // height isn't in any of the data (no DSM over SF in 3DEP): road-network.js estimates it per layer
+  const motorways = [];
+  for (const e of osm('roads-tags', box)) {
+    if (e.type !== 'way' || !e.geometry || !/^motorway/.test(e.tags?.highway || '')) continue;
+    const t = e.tags;
+    motorways.push({ layer: t.bridge && t.bridge !== 'no' ? Math.max(1, Number(t.layer) || 1) : 0, pts: e.geometry.map((g) => toWorld(g.lon, g.lat)) });
+  }
+  // deck layer at a freeway point: the nearest motorway segment within 12 m running the same way (stacked decks cross)
+  const deckAt = (p, dir) => {
+    let best = null;
+    for (const w of motorways) {
+      for (let i = 0; i + 1 < w.pts.length; i++) {
+        const r = segDist(p, w.pts[i], w.pts[i + 1]);
+        if (r.d < 12 && Math.abs(r.dx * dir[0] + r.dz * dir[1]) > 0.8 && (!best || r.d < best.d)) best = { d: r.d, layer: w.layer };
+      }
+    }
+    return best ? best.layer : -1;
+  };
   const nhoods = [];
   const nhoodIdx = new Map();
   const nhoodOf = (n) => { n = n || ''; if (!nhoodIdx.has(n)) { nhoodIdx.set(n, nhoods.length); nhoods.push(n); } return nhoodIdx.get(n); };
@@ -157,8 +178,22 @@ export function buildRoadGraph(box = BOX, curbs = buildCurbIslands(box)) {
     }
     const sw = sidewalkByCnn.get(String(p.cnn)) || {};
     const swBoth = sw.Both || 0;
-    const inner = rdp(pts, 0.4).slice(1, -1);
-    links.push({ a, b, ni: nameOf(name), nh: nhoodOf(p.analysis_neighborhood), w, lanes, dir, inner, flags, swL: sw.W || sw.N || sw.NW || swBoth || 0, swR: sw.E || sw.S || sw.SE || swBoth || 0, cls });
+    // Lombard St's crooked block (Hyde St -> Leavenworth St, by way of Montclair Ter: its eight hairpins) keeps its
+    // curves to 0.25 m; it is driven at 8 km/h (road-network.js) and its sidewalks are stairs (no pedestrians)
+    const CROOKED_ENDS = ['HYDE ST', 'MONTCLAIR TER', 'LEAVENWORTH ST'];
+    if (name === 'LOMBARD ST' && CROOKED_ENDS.includes(p.f_st) && CROOKED_ENDS.includes(p.t_st)) flags |= FLAGS.crooked;
+    const inner = rdp(pts, flags & FLAGS.crooked ? 0.25 : 0.4).slice(1, -1);
+    // freeways & ramps: the deck layer at each of their points (start, inner points, end; -1 where no OSM way matches)
+    let deck = null;
+    if (flags & FLAGS.freeway) {
+      const all = [pts[0], ...inner, pts[pts.length - 1]];
+      deck = all.map((q, k) => {
+        const u = all[Math.min(all.length - 1, k + 1)], v = all[Math.max(0, k - 1)];
+        const L = Math.hypot(u[0] - v[0], u[1] - v[1]) || 1;
+        return deckAt(q, [(u[0] - v[0]) / L, (u[1] - v[1]) / L]);
+      });
+    }
+    links.push({ a, b, ni: nameOf(name), nh: nhoodOf(p.analysis_neighborhood), w, lanes, dir, inner, flags, swL: sw.W || sw.N || sw.NW || swBoth || 0, swR: sw.E || sw.S || sw.SE || swBoth || 0, cls, deck });
     stats.links++;
   }
   const nodes = nodeSum.map((s) => [s.x / s.n, s.z / s.n]);
@@ -203,7 +238,9 @@ export function buildRoadGraph(box = BOX, curbs = buildCurbIslands(box)) {
     control,
     stopMask,
     nhoods,
-    linkNhood: links.map((l) => l.nh)
+    linkNhood: links.map((l) => l.nh),
+    // per freeway / ramp link: [link index, deck layer at each of its points]
+    decks: links.flatMap((l, i) => (l.deck ? [[i, l.deck]] : []))
   };
 
   // --- report -----------------------------------------------------------------------------------------------------------

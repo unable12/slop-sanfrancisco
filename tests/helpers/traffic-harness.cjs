@@ -6,7 +6,8 @@ const { join } = require('node:path');
 const vm = require('node:vm');
 
 const root = join(__dirname, '../..');
-const terrainFile = join(root, 'data/terrain-slice.bin');
+const { BOX } = require('./geo-box.cjs');
+const terrainFile = join(root, `data/terrain-${BOX}.bin`);
 
 function stub() {
   const store = new Map();

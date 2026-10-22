@@ -49,6 +49,7 @@ const GEO = {
   parks: extra.parks.map((p) => ({ ...p, rings: p.rings.map(flat) })),
   piers: extra.piers.map((p) => ({ name: p.name, cx: q(p.cx), cz: q(p.cz), len: q(p.len), wid: q(p.wid), ang: Math.round(p.ang * 1e4) / 1e4, ring: flat(p.ring) })),
   water: extra.water.map((w) => ({ name: w.name, ring: flat(w.ring) })),
+  rail: extra.rail.map((r) => ({ kind: r.kind, pts: flat(r.pts) })),
   landmarks: Object.fromEntries(Object.entries(extra.landmarks).map(([k, v]) => [k, { ...v, x: q(v.x), z: q(v.z), w: q(v.w), d: q(v.d), ring: flat(v.ring) }]))
 };
 

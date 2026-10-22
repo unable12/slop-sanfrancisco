@@ -7,7 +7,8 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const root = join(__dirname, '..');
-const terrainFile = join(root, 'data/terrain-slice.bin');
+const { BOX } = require('./helpers/geo-box.cjs');
+const terrainFile = join(root, `data/terrain-${BOX}.bin`);
 const skip = !existsSync(terrainFile) && 'no terrain';
 
 function build({ keepCreated = false } = {}) {
@@ -48,7 +49,10 @@ test('every edge has a finite height profile on the terrain; curves are under tw
     assert.ok(e.prof.length >= 2 && e.prof.every(Number.isFinite), `edge ${e.id}`);
     assert.equal(e.laneProf.length, e.lanes.length);
     const mid = e.len / 2;
-    const g = NYC.Terrain.groundAt(e.sx + e.dx * mid, e.sz + e.dz * mid);
+    // on the ground, or in a tunnel or on a bridge between its ends on the straight line from one end's ground to the
+    // other's
+    const bore = e.bore && NYC.boreY(e.bore, NYC.edgeArc(e, mid));
+    const g = bore != null ? bore : NYC.Terrain.groundAt(e.sx + e.dx * mid, e.sz + e.dz * mid);
     assert.ok(Math.abs(net.edgeY(e, mid) - g) < 0.3, `edge ${e.id}: ${net.edgeY(e, mid)} vs ${g}`);
     assert.ok(e.len3[e.len3.length - 1] >= e.len - 1e-3);
     for (const m of e.moves) {

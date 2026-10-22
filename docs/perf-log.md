@@ -21,3 +21,10 @@ Note: Chrome caches compiled shaders between runs (profiles are fresh, but the G
 | 2026-10-22 | P2 gate, `--bench car` | 3.4 | median 2.7 ms, p95 3.4 ms (370 fps) | 234 | 0 | |
 | 2026-10-22 | P2 gate, `--bench heli` | 3.6 | median 2.8 ms, p95 3.6 ms (357 fps) | 243 | 0 | |
 | 2026-10-22 | P2 gate, `--bench hill` | 3.7 | median 3.1 ms, p95 3.9 ms (323 fps) | 283 | 0 | A turn on the spot at Nob Hill, now 8 m above the real ground |
+| 2026-10-22 | P3.2 core (4.03 × 5.35 km), all eager, before grade separation, `--bench street` | 5.0 | median 3.5 ms, p95 4.6 ms (286 fps) | 619 | 0 | Measure-first: within budget, so no streaming (PLAN.md P3-2). 15,735 buildings as 52,789 masses, 1,342 curb islands, 84 terrain tiles. `stats().gpuMB` (geometry + instance buffers, new) 178 MB |
+| 2026-10-22 | P3.2, `--bench car` / `heli` / `hill` | 3.9–5.4 | 270 / 217 / 256 fps (p95 5.2 / 6.9 / 4.9 ms) | 492–771 | 0 | |
+| 2026-10-22 | P3 gate, core with tunnels, bridges, freeway decks + highway traffic, `--bench street` | 5.2 | median 4.1 ms, p95 4.7 ms (244 fps) | 561 | 0 | Grade-separation build arrays released after meshing (they stayed alive in the floor lookups' scope: street bench heap 922 → 677 MB) |
+| 2026-10-22 | P3 gate, `--bench car` | 5.2 | median 4.2 ms, p95 5.2 ms (238 fps) | 809 | 0 | |
+| 2026-10-22 | P3 gate, `--bench heli` | 5.3 | median 4.9 ms, p95 7.2 ms (204 fps) | 566 | 0 | Still the slice loop; the core overview shot (`p3-heli-core`) runs at 143–152 fps |
+| 2026-10-22 | P3 gate, `--bench hill` | 5.2 | median 4.8 ms, p95 5.8 ms (208 fps) | 552 | 0 | |
+| 2026-10-22 | P3 gate, `--bench russian-hill-view` (new) | 5.2 | median 4.8 ms, p95 6.0 ms (208 fps) | 561 | 0 | A 360° turn on Russian Hill's summit (110 m), 8 m above the ground |

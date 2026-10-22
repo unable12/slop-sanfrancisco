@@ -6,9 +6,10 @@ import fs from 'node:fs';
 import test from 'node:test';
 import vm from 'node:vm';
 import { roadCorridor, NEAR } from '../tools/road-corridor.mjs';
+import geoBox from './helpers/geo-box.cjs';
 
 const root = new URL('../', import.meta.url);
-const binFile = new URL('data/buildings-slice.bin', root);
+const binFile = new URL(`data/buildings-${geoBox.BOX}.bin`, root);
 const skip = !fs.existsSync(binFile) && 'no buildings data';
 
 function load() {

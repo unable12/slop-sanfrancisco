@@ -132,7 +132,7 @@ const WATERFRONT_PIERS = GEO.piers.map((p) => ({ side: 'east', name: p.name || '
 // Roads: one entry per centreline link of the road graph (maps, labels, nearest-road lookups)
 // ---------------------------------------------------------------------------------------------------------------------
 const RG = GEO.roadGraph;
-const RG_FLAGS = { freeway: 1, tunnel: 2, ramp: 4, pedestrian: 8, private: 16, alley: 32 };
+const RG_FLAGS = { freeway: 1, tunnel: 2, ramp: 4, pedestrian: 8, private: 16, alley: 32, crooked: 64 };
 const nodePt = (i) => ({ x: RG.nodes[2 * i], z: RG.nodes[2 * i + 1] });
 const ROADS = RG.links.map(([a, b, ni, w, lanes, dir, inner, flags], i) => ({
   name: prettyName(RG.names[ni]),
@@ -239,6 +239,21 @@ function blockAt(x, z) {
   }
   return null;
 }
+
+// Rail medians (P3.4): median islands a surface rail line (GEO.rail: the Embarcadero's F & E lines, the T on 3rd St)
+// runs along for 20 m or more are track beds, not sidewalks: painted with rails (road-paint.js), not walked (traffic.js)
+for (const r of GEO.rail || []) {
+  const run = new Map();
+  for (let i = 2; i < r.pts.length; i += 2) {
+    const ax = r.pts[i - 2], az = r.pts[i - 1], bx = r.pts[i], bz = r.pts[i + 1];
+    const n = Math.ceil(Math.hypot(bx - ax, bz - az) / 2);
+    for (let k = 0; k < n; k++) {
+      const b = blockAt(ax + ((bx - ax) * k) / n, az + ((bz - az) * k) / n);
+      if (b) run.set(b, (run.get(b) || 0) + Math.hypot(bx - ax, bz - az) / n);
+    }
+  }
+  for (const [b, m] of run) if (m >= 20 && b.median) b.rail = true;
+}
 /** Blocks whose bounds overlap a rectangle */
 function blocksInRect(minX, maxX, minZ, maxZ) {
   const out = new Set();
@@ -296,11 +311,7 @@ function arrival(at, along, toward, back = 0) {
   return null;
 }
 const TELEPORT_DEFS = {
-  ferry: ['DON CHEE WAY', 'THE EMBARCADERO', 'WASHINGTON ST'],
-  nobhill: ['TAYLOR ST', 'CALIFORNIA ST', 'MASON ST'],
   powell: ['POWELL ST', 'CALIFORNIA ST', 'STOCKTON ST'],
-  chinatown: ['WASHINGTON ST', 'GRANT AVE', 'JACKSON ST'],
-  transamerica: ['CLAY ST', 'MONTGOMERY ST', 'WASHINGTON ST'],
   market: ['MONTGOMERY ST', 'MARKET ST', 'SUTTER ST']
 };
 const TELEPORT_LOCATIONS = {};
@@ -308,11 +319,60 @@ for (const [key, [at, along, toward]] of Object.entries(TELEPORT_DEFS)) {
   const p = arrival(at, along, toward);
   if (p) TELEPORT_LOCATIONS[key] = p;
 }
+// Landmark arrivals (P3.5): the junction of drivable streets (three or more of them meet there) nearest an OSM landmark's
+// centroid (GEO.landmarks: a named footprint or point), facing the landmark. Lombard's arrival is the top of its crooked
+// block instead: where its one-way traffic enters it (Hyde St)
+const LANDMARK_TELEPORTS = {
+  ferry: 'San Francisco Ferry Building',
+  transamerica: 'Transamerica Pyramid',
+  coit: 'Coit Tower',
+  lombard: 'Lombard Street',
+  wharf: "Fisherman's Wharf",
+  unionsquare: 'Union Square',
+  chinatown: 'Dragon Gate',
+  civiccenter: 'San Francisco City Hall',
+  oraclepark: 'Oracle Park',
+  nobhill: 'Grace Cathedral'
+};
+const NOT_DRIVEN = RG_FLAGS.freeway | RG_FLAGS.ramp | RG_FLAGS.pedestrian | RG_FLAGS.tunnel;
+const streetDegree = new Map();
+RG.links.forEach(([a, b, , , , , , flags]) => {
+  if (flags & NOT_DRIVEN) return;
+  for (const i of [a, b]) streetDegree.set(i, (streetDegree.get(i) || 0) + 1);
+});
+function crookedTop() {
+  const crooked = RG.links.filter((l) => l[7] & RG_FLAGS.crooked);
+  const entry = (l) => (l[5] < 0 ? l[1] : l[0]); // one-way: travel against the drawing (T) enters at its end
+  const exits = new Set(crooked.map((l) => (l[5] < 0 ? l[0] : l[1])));
+  const top = crooked.map(entry).find((i) => !exits.has(i));
+  return top === undefined ? null : nodePt(top);
+}
+for (const [key, name] of Object.entries(LANDMARK_TELEPORTS)) {
+  const lm = GEO.landmarks[name];
+  if (!lm) continue;
+  let at = key === 'lombard' ? crookedTop() : null;
+  if (!at) {
+    let best = Infinity;
+    for (const [i, deg] of streetDegree) {
+      if (deg < 2) continue;
+      const p = nodePt(i), d = Math.hypot(p.x - lm.x, p.z - lm.z);
+      if (d < best) { best = d; at = p; }
+    }
+  }
+  if (at) TELEPORT_LOCATIONS[key] = { x: at.x, z: at.z, heading: Math.atan2(lm.x - at.x, lm.z - at.z), landmark: name };
+}
 // Named places for labels & the map search: [id, display, short, OSM name, district]
 const NYC_LANDMARKS = [
   ['transamerica', 'Transamerica Pyramid', 'Transamerica', 'Transamerica Pyramid', 'Financial District'],
   ['ferrybuilding', 'Ferry Building', 'Ferry Building', 'San Francisco Ferry Building', 'Embarcadero'],
-  ['gracecathedral', 'Grace Cathedral', 'Grace Cathedral', 'Grace Cathedral', 'Nob Hill']
+  ['gracecathedral', 'Grace Cathedral', 'Grace Cathedral', 'Grace Cathedral', 'Nob Hill'],
+  ['coittower', 'Coit Tower', 'Coit Tower', 'Coit Tower', 'Telegraph Hill'],
+  ['lombard', 'Lombard Street', 'Lombard St', 'Lombard Street', 'Russian Hill'],
+  ['wharf', "Fisherman's Wharf", "Fisherman's Wharf", "Fisherman's Wharf", 'North Beach'],
+  ['unionsquare', 'Union Square', 'Union Square', 'Union Square', 'Union Square'],
+  ['dragongate', 'Dragon Gate', 'Dragon Gate', 'Dragon Gate', 'Chinatown'],
+  ['cityhall', 'City Hall', 'City Hall', 'San Francisco City Hall', 'Civic Center'],
+  ['oraclepark', 'Oracle Park', 'Oracle Park', 'Oracle Park', 'South Beach']
 ]
   .filter(([, , , osm]) => LANDMARK_SITES[osm])
   .map(([id, name, short, osm, district]) => ({ id, name, short, x: LANDMARK_SITES[osm].x, z: LANDMARK_SITES[osm].z, district }));

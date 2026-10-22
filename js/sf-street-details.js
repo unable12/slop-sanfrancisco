@@ -103,7 +103,7 @@ function buildSFStreetDetails(scene, network) {
   let lamps = 0;
   for (const e of network.edges) {
     const key = Math.min(e.from.id, e.to.id) + ':' + Math.max(e.from.id, e.to.id);
-    if (seen.has(key)) continue;
+    if (seen.has(key) || e.bore) continue; // (not in tunnels, lit inside, or on bridges: grade-separation.js)
     seen.add(key);
     for (let s = LAMP_STEP / 2, k = 0; s < e.len; s += LAMP_STEP, k++) {
       const side = k % 2 === 0 ? 1 : -1;

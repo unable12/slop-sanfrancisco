@@ -30,14 +30,23 @@ const { PersonCrowd, PersonRig } = window.NYC;
 const { HEADLIGHTS, createVehicleHeadlight, placeVehicleHeadlight } = window.NYC;
 // Walking surface for the player's pedestrian (its rig samples it around its feet)
 const personGround = (controllers, x, z) => controllers.getGroundHeight(x, z, 'person');
-// The ground (js/terrain.js, metres NAVD88) once the terrain is loaded, else the flat y = 0 world; the bay
+// The ground (js/terrain.js, metres NAVD88) once the terrain is loaded, else the flat y = 0 world; the bay. Where a
+// road leaves the ground (grade-separation.js) the active entity's height (`level`, set every update) says whether it
+// is in the tunnel or on the hill above, on the bridge or under it
+const level = { y: null };
+const deckY = (x, z) => {
+  const G = window.NYC.GradeSeparation;
+  return G && level.y !== null ? G.floorAt(x, z, level.y) : null;
+};
 const terrainY = (x, z) => {
   const T = window.NYC.Terrain;
-  return T && T.loaded ? T.groundAt(x, z) : 0;
+  if (!(T && T.loaded)) return 0;
+  const d = deckY(x, z);
+  return d !== null ? d : T.groundAt(x, z);
 };
 const inBay = (x, z) => {
   const T = window.NYC.Terrain;
-  return !!(T && T.loaded) && T.heightAt(x, z) <= T.waterLevel + 0.05;
+  return !!(T && T.loaded) && T.heightAt(x, z) <= T.waterLevel + 0.05 && deckY(x, z) === null;
 };
 // Terrain pose of the car & the bike: critically damped towards the ground's pitch & roll (time constant TERRAIN_TAU)
 const TERRAIN_TAU = 0.1;
@@ -187,6 +196,7 @@ class ThirdPersonControllerManager {
   teleportActiveTo(x, z, heading = Math.PI) {
     const ent = this.getActiveEntity();
     this.resetInput();
+    level.y = null; // arrivals are on the ground
     // No heading given: face along the nearest street
     if (!Number.isFinite(heading)) heading = this.roadHeading(x, z, ent.heading);
     const heli = this.activeMode === 'helicopter';
@@ -966,6 +976,7 @@ class ThirdPersonControllerManager {
   }
 
   update(dt, elapsed) {
+    level.y = this.getActiveEntity().position.y;
     const heli = this.entities.helicopter;
     heli.mainRotorPivot.rotation.y += dt * 24.0;
     heli.tailRotorPivot.rotation.x += dt * 32.0;

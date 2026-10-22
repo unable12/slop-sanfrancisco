@@ -9,5 +9,14 @@
   "ferry-building": "cam=640,14,-680,-58,-4&camGround=1&hud=0&time=midday",
   "golden-hour-hill-shadow": "cam=-250,70,-380,95,-14&camGround=1&hud=0&time=golden&freeze=1",
   "all-way-stop": "cam=-768,3,-433,52,-9&camGround=1&hud=0&time=midday",
-  "signal-crossing": "cam=-348,5,-619,82,-8&camGround=1&hud=0&time=midday"
+  "signal-crossing": "cam=-348,5,-619,82,-8&camGround=1&hud=0&time=midday",
+  "p3-heli-core": "mode=heli&cam=900,650,3300,10,-20&hud=0&freeze=1&time=midday",
+  "p3-lombard": "cam=-1475,45,-1385,0,-32&camGround=1&hud=0&time=midday",
+  "p3-telegraph-hill": "cam=150,70,-1560,92,-4&hud=0&time=midday",
+  "p3-union-square": "cam=-460,170,330,0,-52&camGround=1&hud=0&time=midday",
+  "p3-soma-freeway": "mode=heli&cam=500,120,900,40,-20&hud=0&freeze=1&time=midday",
+  "p3-civic-center": "cam=-1280,75,1160,64,-16&camGround=1&hud=0&time=midday",
+  "p3-embarcadero": "cam=900,70,-450,24,-25&camGround=1&hud=0&time=midday",
+  "p3-stockton-tunnel": "cam=-441,3,-138,9,2&camGround=1&hud=0&time=midday",
+  "p3-mission-creek-bridge": "cam=1110,22,1235,115,-9&camGround=1&hud=0&time=midday"
 }

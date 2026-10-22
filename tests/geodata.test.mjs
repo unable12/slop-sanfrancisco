@@ -10,7 +10,7 @@ const root = new URL('../', import.meta.url);
 const ctx = vm.createContext({ window: { NYC: {} } });
 vm.runInContext(fs.readFileSync(new URL('js/sf-geodata.js', root), 'utf8'), ctx);
 const GEO = ctx.window.NYC.GEO;
-const FLAGS = { freeway: 1, tunnel: 2, ramp: 4, pedestrian: 8, private: 16, alley: 32 };
+const FLAGS = { freeway: 1, tunnel: 2, ramp: 4, pedestrian: 8, private: 16, alley: 32, crooked: 64 };
 const ringArea = (f) => {
   let a = 0;
   for (let i = 0, j = f.length - 2; i < f.length; j = i, i += 2) a += f[j] * f[i + 1] - f[i] * f[j + 1];
@@ -103,5 +103,6 @@ test('land, piers, parks and landmarks parse', () => {
   assert.ok(GEO.land.length >= 1 && GEO.land.every((r) => r.length >= 6));
   for (const p of GEO.piers) assert.ok(p.len > 0 && p.wid > 0 && p.ring.length >= 6);
   for (const p of GEO.parks) assert.ok(p.rings.length && p.rings.every((r) => r.length >= 6));
-  for (const [name, l] of Object.entries(GEO.landmarks)) assert.ok(name && Number.isFinite(l.x) && l.ring.length >= 6);
+  // footprints, or named points (attractions, monuments, neighbourhoods: no footprint)
+  for (const [name, l] of Object.entries(GEO.landmarks)) assert.ok(name && Number.isFinite(l.x) && (l.ring.length >= 6 || (l.area === 0 && !l.ring.length)));
 });

@@ -7,5 +7,8 @@
   way["leisure"="stadium"]({{bbox}});
   relation["leisure"="stadium"]({{bbox}});
   way["tourism"~"^(attraction|museum)$"]["name"]({{bbox}});
+  node["tourism"="attraction"]["name"]({{bbox}});
+  node["historic"]["name"]({{bbox}});
+  node["place"~"^(neighbourhood|quarter)$"]["name"]({{bbox}});
 );
-out geom tags;
+out geom;

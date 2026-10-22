@@ -3,14 +3,17 @@
 // Road markings generated from the drivable road network (js/road-network.js), so the paint matches where traffic
 // actually drives and stops: dashed lane lines, double yellow centre lines on two-way roads, stop bars and continental
 // crosswalks (curb to curb, where traffic.js walks its pedestrians) at the junctions with signals or stop signs, and
-// green bike lanes along wide one-way roads. Every strip is a ribbon draped on the terrain (js/terrain.js), a vertex
-// pair every metre.
+// green bike lanes along wide one-way roads; and the track beds and rails of the surface rail lines. Every strip is a
+// ribbon draped on the terrain (js/terrain.js), a vertex pair every metre.
 
 const { THREE, CROSSWALK, createRoadPaintMaterial, blockAt } = window.NYC;
 
 const WHITE = new THREE.Color(0xe6e2d6);
 const YELLOW = new THREE.Color(0xe8ad22);
 const GREEN = new THREE.Color(0x2a8a4e);
+const STEEL = new THREE.Color(0x8d8f91);
+const TRACK_BED = new THREE.Color(0x4d4a45);
+const GAUGE = 1.435; // standard gauge, between the rails' centres (near enough)
 const HEIGHT = 0.012; // above the asphalt
 const STEP = 1; // metres between the vertex pairs of a strip
 
@@ -25,8 +28,9 @@ function buildRoadPaint(scene, network) {
   const loaded = T && T.loaded;
   const n = { x: 0, y: 1, z: 0 };
 
-  // Strip w wide from a to b, with a dash pattern (period, duty cycle) running along it, on the ground
-  function strip(ax, az, bx, bz, w, col, period = 1, duty = 1) {
+  // Strip w wide from a to b, with a dash pattern (period, duty cycle) running along it, on the ground (and on the curb
+  // islands' tops, `onIslands`)
+  function strip(ax, az, bx, bz, w, col, period = 1, duty = 1, onIslands = false, lift = 0) {
     const len = Math.hypot(bx - ax, bz - az);
     if (len < 0.05) return;
     const sx = ((az - bz) / len) * w * 0.5;
@@ -39,7 +43,8 @@ function buildRoadPaint(scene, network) {
       const z = az + ((bz - az) * k) / steps;
       for (const s of [-1, 1]) {
         const px = x + sx * s, pz = z + sz * s;
-        position.push(px, (loaded ? T.groundAt(px, pz) : 0) + HEIGHT, pz);
+        const island = onIslands && blockAt(px, pz) ? window.NYC.CURB_H : 0;
+        position.push(px, (loaded ? T.groundAt(px, pz) : 0) + island + HEIGHT + lift, pz);
         if (loaded) T.normalAt(px, pz, n);
         normal.push(n.x, n.y, n.z);
         side.push(sx * s, sz * s);
@@ -71,6 +76,7 @@ function buildRoadPaint(scene, network) {
   // The one or two directed edges of each road between a pair of intersections
   const roads = new Map();
   for (const e of network.edges) {
+    if (e.bore) continue; // paint is draped on the terrain: tunnels and bridges have their own (grade-separation.js)
     const key = Math.min(e.from.id, e.to.id) * 65536 + Math.max(e.from.id, e.to.id);
     if (roads.has(key)) roads.get(key).push(e);
     else roads.set(key, [e]);
@@ -124,6 +130,16 @@ function buildRoadPaint(scene, network) {
     if (e.to.signal || e.to.stop) {
       const [l, r] = curbs(e, e.len + CROSSWALK / 2);
       across(e, e.len + CROSSWALK / 2, -l, r, CROSSWALK - 0.3, WHITE, 1.2, 0.5);
+    }
+  }
+
+  // Surface rail (GEO.rail, P3.4): a track bed and two rails along each line, on the street or its rail median
+  for (const r of window.NYC.GEO.rail || []) {
+    for (let i = 2; i < r.pts.length; i += 2) {
+      const [ax, az, bx, bz] = [r.pts[i - 2], r.pts[i - 1], r.pts[i], r.pts[i + 1]];
+      const L = Math.hypot(bx - ax, bz - az) || 1, ox = (az - bz) / L, oz = (bx - ax) / L;
+      strip(ax, az, bx, bz, 2.6, TRACK_BED, 1, 1, true);
+      for (const s of [-GAUGE / 2, GAUGE / 2]) strip(ax + ox * s, az + oz * s, bx + ox * s, bz + oz * s, 0.08, STEEL, 1, 1, true, 0.004);
     }
   }
 

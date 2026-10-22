@@ -70,7 +70,28 @@ SF's core has tunnels (Broadway and Stockton tunnels), freeways (the I-80 approa
 ---------------------------------------------------------------------------------------------------------------------
 
 ## Gate (P3)
-- [ ] Core loads, ready ≤ 25 s; budgets met on all benches.
-- [ ] Tests green (geodata and teleports on core data).
-- [ ] Tunnels work; freeways at least visual.
-- [ ] Gallery, perf log, progress log, handover.
+- [x] Core loads, ready ≤ 25 s; budgets met on all benches. (Ready 5.2–5.3 s; street 244, car 238, heli 204, hill 208,
+      russian-hill-view 208 fps; heap ≤ 809 MB.)
+- [x] Tests green (geodata and teleports on core data). (130/130.)
+- [x] Tunnels work; freeways at least visual. (Stockton and Broadway tunnels driven by traffic and the player; freeway
+      decks with highway traffic; the Mission Creek bridges.)
+- [x] Gallery, perf log, progress log, handover. (`docs/review/p3/`, `docs/perf-log.md`, `PLAN.md` §11, `docs/handover.md`.)
+
+## Results (2026-10-22, one session)
+
+- **P3.1** Core box from data (`tools/boxes.json`): the union of the `analysis_neighborhood` street extents of Russian
+  Hill, Nob Hill, Chinatown, Financial District/South Beach, North Beach, Tenderloin and South of Market, plus 300 m:
+  4.03 × 5.35 km. 15,999 footprints (15,735 kept, 52,789 masses), 3,357 links, 2,135 nodes, 1,342 curb islands (94.0% of
+  footprints covered), two DEM tiles. Files: terrain 11.96 MB, ground mask 23.9 MB, buildings 3.14 MB, `sf-geodata.js`
+  1.0 MB: no tiling needed. Reports: `docs/reports/*-core.md`. Conforming re-checked: p95 0.0054 m⁻¹ (< 0.04), none.
+  The tests read whichever box `js/sf-geodata.js` was built for (`tests/helpers/geo-box.cjs`); the slice's binaries are
+  gone (rebuildable). Road network on the core: 95.4% of drivable edges connected (PLAN.md P3-4).
+- **P3.2** Measured first: everything eager is within budget, so no streaming (P3-2). `stats().gpuMB` added.
+- **P3.3** `js/grade-separation.js`; tunnels and bridges in `road-network.js` (`spans()`); OSM deck layers in
+  `GEO.roadGraph.decks`; no DSM over SF in 3DEP, so deck heights are `DECK_H_ESTIMATE` per layer (P3-3).
+- **P3.4** Lombard's crooked block flagged (`crooked`, 64), curves to 0.25 m, a station at each hairpin, 8 km/h, no
+  pedestrians; stretches over 40% are not driven by traffic, the ones from 25% to 40% are (listed in P3-5); OSM surface
+  rail (`GEO.rail`) painted, rail medians not walked (P3-6).
+- **P3.5** Ten landmark teleports from OSM centroids (P3-7); labels for them; the landmarks query now keeps relations'
+  members and named points.
+- **P3.6** `russian-hill-view` bench; gallery `docs/review/p3/`.

@@ -7,7 +7,9 @@ import test from 'node:test';
 import { readBin } from '../tools/geo-terrain.mjs';
 import { toWorld, RAW } from '../tools/geo-base.mjs';
 
-const BOX = 'slice';
+import geoBox from './helpers/geo-box.cjs';
+
+const { BOX } = geoBox;
 const binFile = new URL(`../data/terrain-${BOX}.bin`, import.meta.url);
 const rawFile = `${RAW}/datasf/buildings-${BOX}.geojson`;
 

@@ -38,7 +38,7 @@ The internal namespace `window.NYC` / `__NYC_APP` stays (D2).
 | `trees.js` | 992 | Modify | Ground y; inventory placement; species classes | 2, 4 |
 | `tsl-materials.js` | 3156 | Modify + add | `boxBase` / `plinth` attributes for facade shaders (P2); ground-mask terrain material (P2); SF palettes and stucco (P4) | 2, 4 |
 | `vehicle-lights.js` | 39 | Keep | Already follows slope (tested) | n/a |
-| new `data-loader.js`, `sf-ground.js`, `sf-buildings.js` (exist since P1); `terrain.js`, `terrain-mesh.js`, `sf-style.js`, `region.js` | | Create | | 1, 2, 4, 6 |
+| new `data-loader.js`, `sf-ground.js`, `sf-buildings.js` (exist since P1); `terrain.js`, `terrain-mesh.js`, `grade-separation.js` (P3.3), `sf-style.js`, `region.js` | | Create | | 1, 2, 3, 4, 6 |
 
 ## Page and styles
 

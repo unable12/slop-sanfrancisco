@@ -4,10 +4,20 @@
 // Low-Angle Action Cam, POV/Cockpit Cam, 7 Iconic NYC Architectural Cameras, and Auto-Director Drone.
 
 const { THREE } = window.NYC;
-// The ground under (x, z) (js/terrain.js), 0 before the terrain is loaded; cameras stay CAMERA_CLEARANCE above it
+// The ground under (x, z) (js/terrain.js), 0 before the terrain is loaded; cameras stay CAMERA_CLEARANCE above it. In a
+// tunnel or on a bridge (grade-separation.js, picked by the followed entity's height, `level`) its floor, and the
+// cameras stay under a tunnel's roof
+const level = { y: null };
 const groundY = (x, z) => {
   const T = window.NYC.Terrain;
-  return T && T.loaded ? T.groundAt(x, z) : 0;
+  if (!(T && T.loaded)) return 0;
+  const G = window.NYC.GradeSeparation;
+  const d = G && level.y !== null ? G.floorAt(x, z, level.y) : null;
+  return d !== null ? d : T.groundAt(x, z);
+};
+const roofY = (x, z) => {
+  const G = window.NYC.GradeSeparation;
+  return G && level.y !== null ? G.roofAt(x, z, level.y) : Infinity;
 };
 const CAMERA_CLEARANCE = 0.55;
 
@@ -160,6 +170,7 @@ class CameraSystem {
 
   update(dt, elapsed) {
     const entity = this.controllerManager.getActiveEntity();
+    level.y = entity.position.y;
     const desiredPos = this._desiredPos;
     const desiredLook = this._desiredLook;
 
@@ -363,6 +374,7 @@ class CameraSystem {
       this.currentPos.y = Math.max(groundY(this.currentPos.x, this.currentPos.z) + CAMERA_CLEARANCE, this.currentPos.y);
     }
 
+    this.currentPos.y = Math.min(this.currentPos.y, roofY(this.currentPos.x, this.currentPos.z) - 0.4);
     this.camera.position.copy(this.currentPos);
     this.camera.lookAt(this.currentLookAt);
   }

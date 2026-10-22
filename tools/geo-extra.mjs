@@ -3,10 +3,12 @@
 // - piers: OSM man_made=pier areas reaching out over the water (as NYC's: oriented box + outline)
 // - parks: DataSF Recreation and Parks Properties (gtr9-ntp6)
 // - water: OSM natural=water polygons on land (ponds, fountains are skipped below 200 m^2)
-// - landmarks: OSM named buildings & towers with their footprints and height tags (phase 5 builds on these)
+// - landmarks: OSM named buildings & towers with their footprints and height tags (phase 5 builds on these), and
+//   named attractions, monuments and neighbourhoods as points (teleports, labels)
+// - rail: OSM surface tram & light rail centrelines (rail paint and rail medians, P3.4)
 // Every ring follows NYC's orientation (negative ringArea()).
 import path from 'node:path';
-import { osm, datasf, worldPolygons, toWorld, rdpRing, ringArea, bbox, boxWorld, log, ROOT, BOX } from './geo-base.mjs';
+import { osm, datasf, worldPolygons, toWorld, rdp, rdpRing, ringArea, bbox, boxWorld, log, ROOT, BOX } from './geo-base.mjs';
 import { readBin } from './geo-terrain.mjs';
 
 const neg = (r) => (ringArea(r) > 0 ? r.slice().reverse() : r);
@@ -110,6 +112,14 @@ export function buildExtra(box = BOX) {
   for (const e of osm('landmarks', box)) {
     const t = e.tags || {};
     if (!t.name) continue;
+    // a named point (an attraction, a monument, a neighbourhood's label): where it is, no footprint; a footprint of the
+    // same name wins
+    if (e.type === 'node') {
+      if (landmarks[t.name]) continue;
+      const [x, z] = toWorld(e.lon, e.lat);
+      landmarks[t.name] = { x, z, w: 0, d: 0, h: null, levels: null, area: 0, ring: [], kind: t.tourism || t.historic || t.place || t.man_made || '' };
+      continue;
+    }
     for (const ring of osmRings(e)) {
       const b = bbox(ring);
       const area = Math.abs(ringArea(ring));
@@ -123,9 +133,18 @@ export function buildExtra(box = BOX) {
     }
   }
 
-  log(`extra ${box}: ${land.length} land polygons, ${pierOut.length} piers, ${parks.length} parks, ${water.length} water bodies, ${Object.keys(landmarks).length} landmark footprints`);
+  // --- surface rail (OSM tram & light rail: the Embarcadero's and Market St's F & E lines, the N and T on King St & 3rd
+  //     St; their tunnels left out): centrelines for the rail paint & the rail medians (P3.4; trams come in P4) -------
+  const rail = [];
+  for (const e of osm('rail', box)) {
+    const t = e.tags || {};
+    if (e.type !== 'way' || !e.geometry || !/^(tram|light_rail)$/.test(t.railway || '') || (t.tunnel && t.tunnel !== 'no')) continue;
+    rail.push({ kind: t.railway, pts: rdp(e.geometry.map((g) => toWorld(g.lon, g.lat)), 0.2) });
+  }
+
+  log(`extra ${box}: ${land.length} land polygons, ${pierOut.length} piers, ${parks.length} parks, ${water.length} water bodies, ${Object.keys(landmarks).length} landmark footprints, ${rail.length} rail lines`);
   void B;
-  return { land, piers: pierOut, parks, water, landmarks };
+  return { land, piers: pierOut, parks, water, landmarks, rail };
 }
 
 // Outer contours of the mask's 4-connected components larger than minArea (m^2): corner walk with the component on the

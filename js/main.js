@@ -31,7 +31,7 @@ const { CameraSystem, CAMERA_PRESETS } = window.NYC;
 const { LightingSystem } = window.NYC;
 const { NYCMapSystem } = window.NYC;
 const { setupSceneCulling, updateSceneCulling } = window.NYC;
-const { loadCityData, buildSFGround, buildSFBuildingsV0, buildRoadNetwork, buildSFStreetDetails } = window.NYC;
+const { loadCityData, buildSFGround, buildSFBuildingsV0, buildRoadNetwork, buildSFStreetDetails, buildGradeSeparation } = window.NYC;
 
 // Subsystems on / off while San Francisco replaces the New York city builders phase by phase (PLAN.md, docs/phases):
 // the NYC builders still exist but expect Manhattan's tables, which are empty here (city-config.js)
@@ -43,21 +43,23 @@ const FEATURES = {
   landmarks: false,
   details: 'sf', // 'sf' (sf-street-details.js, on the road network) | true (street-details.js, New York's) | false
   traffic: true,
-  highway: false
+  highway: true // on the freeway decks (grade-separation.js)
 };
 
 // Scripted camera paths for ?bench=name: keyframes [x, y, z, yawDeg, pitchDeg] spread evenly over BENCH_SECONDS
 // (yaw 0 looks north, -z). Coordinates are in the current city's world frame.
 const BENCH_SECONDS = 20;
 // San Francisco slice: street = up Grant Ave through Chinatown, car = along California St from Nob Hill to the Financial
-// District, heli = a loop around the slice, hill = a turn on the spot at Nob Hill. The y of the paths in BENCH_ON_GROUND
-// is height above the ground (Terrain.groundAt), the others' absolute
-const BENCH_ON_GROUND = new Set(['street', 'car', 'hill']);
+// District, heli = a loop around the slice, hill = a turn on the spot at Nob Hill; the core (P3.6): russian-hill-view = a
+// turn on the spot on Russian Hill's summit (Vallejo & Florence St, 110 m), across the whole core and the bay. The y of the
+// paths in BENCH_ON_GROUND is height above the ground (Terrain.groundAt), the others' absolute
+const BENCH_ON_GROUND = new Set(['street', 'car', 'hill', 'russian-hill-view']);
 const BENCH_PATHS = {
   street: [[-391, 1.7, -727, 9, 0], [-446, 1.7, -1073, 9, 0]],
   car: [[-902, 1.4, -325, -99, -2], [-612, 1.4, -371, -99, -2], [400, 1.4, -531, -99, -2]],
   heli: [[-300, 300, 400, 0, -25], [500, 320, -400, 90, -25], [-300, 340, -1200, 180, -25], [-1100, 320, -400, 270, -25], [-300, 300, 400, 360, -25]],
-  hill: [[-950, 8, -330, 0, -4], [-950, 8, -330, 360, -4]]
+  hill: [[-950, 8, -330, 0, -4], [-950, 8, -330, 360, -4]],
+  'russian-hill-view': [[-1116, 8, -1052, 0, -4], [-1116, 8, -1052, 360, -4]]
 };
 function samplePath(keys, u) {
   const f = u * (keys.length - 1);
@@ -151,7 +153,15 @@ async function initApp() {
     ? createTrafficSystem(scene, cityGrid.sidewalks, [], { network: roadNetwork })
     : { update() {}, network: null, cars: [] };
   markInit('traffic');
-  const highwayTraffic = FEATURES.highway ? createHighwayTraffic(scene, cityGrid.highwayLanes) : { update() {} };
+  // Tunnels, bridges and freeway decks (grade-separation.js): their floors for the player and the cameras, their walls
+  // and columns as colliders, the freeways' lanes for the highway traffic
+  const gradeSeparation = roadNetwork
+    ? buildGradeSeparation(scene, roadNetwork)
+    : { colliders: [], highwayLanes: [], floorAt: () => null, roofAt: () => Infinity };
+  window.NYC.GradeSeparation = gradeSeparation;
+  if (cityGrid.terrain) cityGrid.terrain.rebuild(); // the portals carved
+  markInit('grade');
+  const highwayTraffic = FEATURES.highway ? createHighwayTraffic(scene, gradeSeparation.highwayLanes) : { update() {} };
   // ?debug=roads: the road network's lanes, junction curves, arms & control drawn over the ground (road-network.js)
   if (new URLSearchParams(location.search).get('debug') === 'roads') {
     scene.add(window.NYC.buildRoadDebug(roadNetwork || buildRoadNetwork(cityGrid.sidewalks, [])));
@@ -160,7 +170,7 @@ async function initApp() {
   markInit('roadPaint');
 
   // 4. Initialize Third-Person Controllers (Person, Car, Cyclist, Helicopter) & Multi-Camera System
-  const controllerManager = new ThirdPersonControllerManager(scene, allColliders);
+  const controllerManager = new ThirdPersonControllerManager(scene, [...allColliders, ...gradeSeparation.colliders]);
   const cameraSystem = new CameraSystem(renderer.domElement, controllerManager);
   const touchControls = new TouchControls(controllerManager);
   markInit('controllers');
@@ -617,7 +627,8 @@ async function initApp() {
         triangles: renderer.info.render.triangles,
         geometries: renderer.info.memory.geometries,
         textures: renderer.info.memory.textures,
-        terrain: cityGrid.terrain ? cityGrid.terrain.stats() : null
+        terrain: cityGrid.terrain ? cityGrid.terrain.stats() : null,
+        gpuMB: gpuMegabytes()
       }),
       heightAt: (x, z) => window.NYC.Terrain.heightAt(x, z),
       groundAt: (x, z) => window.NYC.Terrain.groundAt(x, z),
@@ -627,6 +638,32 @@ async function initApp() {
       setCamera: (pose) => { debugState.camera = pose; }
     }
   };
+
+  // GPU memory the scene's geometry and its materials' own data textures take, estimated from their CPU-side arrays
+  // (each counted once; render targets, the shadow map and textures inside node graphs, such as the 1 m ground mask,
+  // aren't included)
+  function gpuMegabytes() {
+    const seen = new Set();
+    let bytes = 0;
+    const add = (a) => {
+      if (!a || seen.has(a)) return;
+      seen.add(a);
+      bytes += a.array ? a.array.byteLength : 0;
+    };
+    scene.traverse((o) => {
+      const g = o.geometry;
+      if (g) {
+        add(g.index);
+        for (const a of Object.values(g.attributes)) add(a);
+      }
+      if (o.isInstancedMesh) add(o.instanceMatrix);
+      const m = o.material;
+      for (const t of m ? Object.values(m).filter((v) => v && v.isTexture) : []) {
+        if (!seen.has(t)) { seen.add(t); bytes += t.image?.data?.byteLength || 0; }
+      }
+    });
+    return Math.round(bytes / 1e6);
+  }
 
   // 6b. Shader pre-compilation behind the loading screen. compileAsync() builds the node graphs in slices and has the GPU
   //     process compile the pipelines in parallel, but after every 8 ms slice it waits for a rendered frame, which

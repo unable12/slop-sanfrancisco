@@ -1,5 +1,5 @@
-// js/terrain.js (the runtime height API) over the baked slice terrain: continuity, normals, slope, water, and agreement
-// with the building footprints' own lidar ground (data/buildings-<box>.bin `base` = gnd_min_m).
+// js/terrain.js (the runtime height API) over the baked terrain (tests/helpers/geo-box.cjs): continuity, normals, slope,
+// water, and agreement with the building footprints' own lidar ground (data/buildings-<box>.bin `base` = gnd_min_m).
 const assert = require('node:assert/strict');
 const { readFileSync, existsSync } = require('node:fs');
 const { join } = require('node:path');
@@ -7,7 +7,7 @@ const test = require('node:test');
 const vm = require('node:vm');
 
 const root = join(__dirname, '..');
-const BOX = 'slice';
+const { BOX } = require('./helpers/geo-box.cjs');
 const terrainFile = join(root, `data/terrain-${BOX}.bin`);
 const buildingsFile = join(root, `data/buildings-${BOX}.bin`);
 
@@ -56,8 +56,19 @@ test('heightAt is continuous: 20k pairs 0.1 m apart', { skip }, () => {
     worst = Math.max(worst, dh);
     assert.ok(dh <= 0.1 * maxGrade + quant, `|dh| ${dh} at ${x},${z} (max grade ${maxGrade})`);
   }
-  // no spikes: the steepest cells are real retaining walls (Telegraph and Russian Hill, about 4 m over one 2 m cell)
-  assert.ok(maxGrade < 5, `max grade ${maxGrade}`);
+  // the steepest cells are real cliffs and retaining walls: the Telegraph Hill quarry face north of Coit Tower is
+  // ~9.7 m over one 2 m cell (the slice's walls ~4 m); no spikes: no cell stands over 2 m above or below all four of
+  // its neighbours (core worst 1.2 m, PLAN.md P3-1)
+  assert.ok(maxGrade < 10, `max grade ${maxGrade}`);
+  let spike = 0;
+  for (let j = 1; j + 1 < T.h; j++) {
+    for (let i = 1; i + 1 < T.w; i++) {
+      const k = j * T.w + i, H = T.heights, c = H[k];
+      const nb = [H[k - 1], H[k + 1], H[k - T.w], H[k + T.w]];
+      spike = Math.max(spike, Math.min(...nb.map((v) => c - v)), Math.min(...nb.map((v) => v - c)));
+    }
+  }
+  assert.ok(spike < 2, `spike ${spike} m`);
 });
 
 test('normals are unit length and point up; slopeAt matches finite differences', { skip }, () => {
@@ -82,7 +93,9 @@ test('normals are unit length and point up; slopeAt matches finite differences',
   diffs.sort((a, b) => a - b);
   assert.ok(diffs[2500] < 0.01, `median |slope diff| ${diffs[2500]}`);
   assert.ok(diffs[4950] < 0.08, `p99 |slope diff| ${diffs[4950]}`);
-  assert.ok(diffs[4999] < 0.4, `max |slope diff| ${diffs[4999]}`);
+  // (the largest samples land on cliffs, where the grade changes within a cell: < 0.4 on the slice, 0.48 on the core's
+  // Telegraph Hill quarry face, PLAN.md P3-1)
+  assert.ok(diffs[4999] < 0.6, `max |slope diff| ${diffs[4999]}`);
 });
 
 test('water returns waterLevel; outside the data heightAt is below the water', { skip }, () => {

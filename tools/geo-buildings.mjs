@@ -25,7 +25,7 @@ function clipToCorridor(rect, theta, roadDepth, stats) {
   const cs = Math.cos(theta), sn = Math.sin(theta);
   const world = (lx, lz) => [cx + lx * cs + lz * sn, cz - lx * sn + lz * cs];
   let clipped = false;
-  for (let pass = 0; pass < 8; pass++) {
+  for (let pass = 0; pass < 32; pass++) {
     let moved = false;
     for (const [ax, az] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
       const len = ax ? d : w;

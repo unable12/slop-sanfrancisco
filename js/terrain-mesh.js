@@ -37,10 +37,14 @@ function buildTerrainMesh(scene) {
 
   // Height of the mesh at a grid point (metres from the data origin, clamped to the data): land as measured, the bay
   // dropped below its surface
+  // dropped under a tunnel's floor at its portals too (grade-separation.js carveAt, once it is built: rebuild())
   const surfaceY = (lx, lz) => {
     const i = Math.min(T.w - 1, Math.round(Math.min(lx, extentX) / T.cell));
     const j = Math.min(T.h - 1, Math.round(Math.min(lz, extentZ) / T.cell));
     const y = T.heights[j * T.w + i];
+    const G = window.NYC.GradeSeparation;
+    const carved = G && G.carveAt(T.originX + i * T.cell, T.originZ + j * T.cell);
+    if (carved !== null && carved !== undefined) return Math.min(y, carved);
     return y > water + 0.05 ? y : water - WATER_DROP;
   };
 
@@ -181,9 +185,18 @@ function buildTerrainMesh(scene) {
   group.add(...buildShadowCaster(surfaceY, extentX, extentZ));
   scene.add(group);
   console.info(`[terrain] ${chunks.filter((c) => c.land).length} land chunks of ${CHUNK} m in ${tiles.length} tiles`);
+  // Every tile built again at its current levels (after grade-separation.js has carved the portals)
+  function rebuild() {
+    for (const tile of tiles) {
+      tile.key = '';
+      rebuildTile(tile);
+    }
+  }
+
   return {
     group,
     update,
+    rebuild,
     stats: () => ({
       tiles: tiles.length,
       visibleTiles: tiles.filter((t) => t.mesh.visible).length,

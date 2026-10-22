@@ -16,6 +16,9 @@ const SHORE_MARGIN = 1; // metres of land kept between a lane and the bay (the t
 const LANE_W = 3.4; // metres per lane
 const JUNCTION_MERGE = 8; // centreline links shorter than this join their two junctions into one (see 4b)
 const PROFILE_STEP = 2; // metres between the height samples along an edge
+const MAX_GRADE = 0.4; // steepest stretch the traffic drives (SF's steepest streets: ~31%), over GRADE_WINDOW m
+const GRADE_WINDOW = 15;
+const SLIDES = [0.6, -0.6, 1.2, -1.2, 1.8, -1.8, 2.4, -2.4]; // lateral shifts tried for a street a curb closes (5.)
 
 function buildRoadNetwork(sidewalks, obstacles) {
   // 1. Spatial hash of ground footprints: curbs bound the roads, everything else also blocks pedestrians
@@ -122,15 +125,15 @@ function buildRoadNetwork(sidewalks, obstacles) {
     for (let i = 0; i < RG.nodes.length; i += 2) pos.push({ x: RG.nodes[i], z: RG.nodes[i + 1] });
     const links = [];
     RG.links.forEach(([a, b, ni, w, lanes, dir, inner, flags], li) => {
-      // pedestrian-only & private ways carry no traffic; freeways, ramps & tunnels don't follow the ground (left out
-      // until they get their own decks and bores, PLAN.md P2-10)
-      if (flags & (1 | 2 | 4 | 8 | 16)) return;
+      // pedestrian-only & private ways carry no traffic; freeways & ramps (decks drawn by grade-separation.js) aren't
+      // driven (PLAN.md P2-10, P3-3); tunnels and bridges run straight between their portals or banks (spans())
+      if (flags & (1 | 4 | 8 | 16)) return;
       const pts = [pos[a]];
       for (let k = 0; k < inner.length; k += 2) pts.push({ x: inner[k], z: inner[k + 1] });
       pts.push(pos[b]);
       let len = 0;
       for (let k = 0; k + 1 < pts.length; k++) len += Math.hypot(pts[k + 1].x - pts[k].x, pts[k + 1].z - pts[k].z);
-      links.push({ li, a, b, name: RG.names[ni], w, lanes, dir, pts, len });
+      links.push({ li, a, b, name: RG.names[ni], w, lanes, dir, pts, len, tunnel: (flags & 2) !== 0, crooked: (flags & 64) !== 0 });
     });
     const parent = pos.map((_, i) => i);
     const find = (i) => (parent[i] === i ? i : (parent[i] = find(parent[i])));
@@ -178,6 +181,50 @@ function buildRoadNetwork(sidewalks, obstacles) {
       const each = Array.from({ length: per }, (_, k) => step * (k + 0.5));
       return { half, axis, fwd: each, back: each };
     }
+    // A bridge may be split at a node out on the water (Mission Creek's drawbridges): its span is found along the
+    // street carried on across such nodes (the same name, going on straightest), then measured from this link's start
+    const byNode = new Map();
+    for (const l of links) for (const i of [l.a, l.b]) byNode.set(i, [...(byNode.get(i) || []), l]);
+    const wetNode = (i) => !!(T && T.loaded) && T.heightAt(pos[i].x, pos[i].z) <= T.waterLevel + 0.05;
+    function carryOn(l, node, back) {
+      const out = [];
+      let cur = l, at = node;
+      for (let step = 0; step < 4 && wetNode(at); step++) {
+        const p = at === cur.a ? cur.pts : cur.pts.slice().reverse(); // leaving `at`
+        const dx = p[1].x - p[0].x, dz = p[1].z - p[0].z;
+        let best = null, bd = 0.5;
+        for (const m of byNode.get(at) || []) {
+          if (m === cur || m.name !== cur.name) continue;
+          const q = m.a === at ? m.pts : m.pts.slice().reverse();
+          const d = -((q[1].x - q[0].x) * dx + (q[1].z - q[0].z) * dz) / ((Math.hypot(q[1].x - q[0].x, q[1].z - q[0].z) * Math.hypot(dx, dz)) || 1);
+          if (d > bd) { bd = d; best = m; }
+        }
+        if (!best) break;
+        const q = best.a === at ? best.pts.slice(1) : best.pts.slice().reverse().slice(1); // from `at` on, outwards
+        out.push(...q);
+        cur = best;
+        at = best.a === at ? best.b : best.a;
+      }
+      return back ? out.reverse() : out;
+    }
+    function bridgeOf(l, pts) {
+      if (!T || !T.loaded) return null;
+      const wet = l.pts.some((p, k) => {
+        if (!k) return false;
+        const q = l.pts[k - 1], n = Math.ceil(Math.hypot(p.x - q.x, p.z - q.z) / 2);
+        for (let i = 0; i <= n; i++) if (T.heightAt(q.x + ((p.x - q.x) * i) / n, q.z + ((p.z - q.z) * i) / n) <= T.waterLevel + 0.05) return true;
+        return false;
+      });
+      if (!wet) return null;
+      const before = carryOn(l, l.a, true);
+      const after = carryOn(l, l.b, false);
+      const b = spans([...before, ...pts, ...after], false);
+      if (!b) return null;
+      let off = 0;
+      for (let k = 1; k <= before.length; k++) off += Math.hypot((before[k] || pts[0]).x - before[k - 1].x, (before[k] || pts[0]).z - before[k - 1].z);
+      const own = spans(pts, false, true);
+      return { ...b, p0: b.p0 - off, p1: b.p1 - off, pts: own.pts, cum: own.cum };
+    }
     const DEG = Math.PI / 180;
     for (const l of links) {
       const A = junction(find(l.a));
@@ -189,6 +236,8 @@ function buildRoadNetwork(sidewalks, obstacles) {
       // The Embarcadero)
       const STRAY = 1.5;
       const stations = [A];
+      const arcs = [0]; // each station's distance along the link (where a tunnel's portals or a bridge's banks are, spans())
+      let arc = 0;
       let last = pts[0];
       let lastK = 0;
       let rest = l.len;
@@ -203,20 +252,28 @@ function buildRoadNetwork(sidewalks, obstacles) {
         const p2 = pts[k + 1];
         const d0 = Math.hypot(p1.x - last.x, p1.z - last.z);
         rest -= Math.hypot(p1.x - pts[k - 1].x, p1.z - pts[k - 1].z);
+        arc += Math.hypot(p1.x - pts[k - 1].x, p1.z - pts[k - 1].z);
         let turn = Math.abs(Math.atan2(p2.z - p1.z, p2.x - p1.x) - Math.atan2(p1.z - last.z, p1.x - last.x));
         if (turn > Math.PI) turn = 2 * Math.PI - turn;
-        if ((turn < 12 * DEG && !strays(k + 1)) || d0 < 15 || rest < 15) continue;
+        // (Lombard's crooked block: a station at each of its hairpins' bends, 8 m apart or more: no edge is shorter)
+        if ((turn < 12 * DEG && !strays(k + 1)) || (l.crooked ? d0 < 8 || rest < 8 : d0 < 15 || rest < 15)) continue;
         const s = { x: p1.x, z: p1.z, hx: 0, hz: 0, signal: false, in: [], out: [], general: true, shape: true, rg: [] };
         nodes.push(s);
         stations.push(s);
+        arcs.push(arc);
         last = p1;
         lastK = k;
       }
       stations.push(B);
+      arcs.push(arc + Math.hypot(B.x - pts[pts.length - 2].x, B.z - pts[pts.length - 2].z));
       const lanes = lanesOf(l);
+      const bore = l.tunnel ? spans(pts, true) : bridgeOf(l, pts);
       for (let k = 0; k + 1 < stations.length; k++) {
         runs.push({
           from: stations[k], to: stations[k + 1], ...lanes, name: l.name,
+          // a tunnel or bridge: where its run lies along the link (arcs at its two ends) and the link's span (spans())
+          bore: bore && { ...bore, a0: arcs[k], a1: arcs[k + 1] },
+          crooked: l.crooked,
           // the centreline node & link where traffic arrives at a junction: its far end going forwards, its near end
           // going back
           arriveFwd: k + 2 === stations.length ? { node: l.b, link: l.li } : null,
@@ -239,16 +296,40 @@ function buildRoadNetwork(sidewalks, obstacles) {
     }
     return true;
   };
-  function addEdgeGeneral(from, to, axis, lanes, half, divided, arrive, name) {
+  // the steepest grade along a straight line over GRADE_WINDOW m (its whole length, if shorter), from the terrain
+  function steepest(x0, z0, dx, dz, span) {
+    if (!T || !T.loaded) return 0;
+    const w = Math.min(GRADE_WINDOW, span);
+    let g = 0;
+    for (let t = 0; t + w <= span + 1e-6; t += 2) {
+      g = Math.max(g, Math.abs(T.groundAt(x0 + dx * (t + w), z0 + dz * (t + w)) - T.groundAt(x0 + dx * t, z0 + dz * t)) / w);
+    }
+    return g;
+  }
+  function addEdgeGeneral(from, to, axis, lanes, half, divided, arrive, name, bore = null, crooked = false) {
     const x0 = from.x;
     const z0 = from.z;
     const span = Math.hypot(to.x - x0, to.z - z0);
     if (span < 8) return;
     const dx = (to.x - x0) / span;
     const dz = (to.z - z0) / span;
-    const open = lanes.filter((o) => laneOpen(x0, z0, dx, dz, span, o));
+    // steeper than any street in SF over 15 m (MAX_GRADE: stairs and terraces on Telegraph and Russian Hill, a bump the
+    // bare-earth DEM keeps): not driven by the traffic (the player can)
+    if (!bore && steepest(x0, z0, dx, dz, span) > MAX_GRADE) return;
+    // (a tunnel runs under the curb islands and buildings above it, a bridge over the water). Where a curb or median
+    // closes every lane (the centreline isn't always the roadway's middle: divided roads, bends), the lanes slide
+    // across together, up to 2.4 m (SLIDES), to the place that keeps the most of them open
+    let open = bore ? lanes : lanes.filter((o) => laneOpen(x0, z0, dx, dz, span, o));
+    // (a one-way street whose single lane down its middle is closed is closed itself: a plaza, a pedestrian mall)
+    for (const shift of bore || open.length || (lanes.length === 1 && lanes[0] === 0) ? [] : SLIDES) {
+      const moved = lanes.map((o) => o + shift).filter((o) => laneOpen(x0, z0, dx, dz, span, o));
+      if (moved.length > open.length) open = moved;
+      if (open.length === lanes.length) break;
+    }
     if (!open.length) return;
-    edges.push({ from, to, axis, x0, z0, dx, dz, rx: -dz, rz: dx, span, half, lanes: open.sort((p, q) => p - q), moves: [], general: true, cand: lanes, divided: !!divided, arrive, name });
+    edges.push({ from, to, axis, x0, z0, dx, dz, rx: -dz, rz: dx, span, half, lanes: open.sort((p, q) => p - q), moves: [], general: true, cand: lanes, divided: !!divided, arrive, name, bore,
+      // Lombard's crooked block: driven at 8 km/h (traffic.js); its sidewalks are stairs, no one walks them
+      speedCap: crooked ? 8 / 3.6 : Infinity, noWalk: crooked });
   }
   // A divided road drawn as two one-way roadways between the same two junctions (most of the Bowery) runs both ways
   // along one centreline here: each way keeps to the right of it, as on a two-way street, and the road is as wide as
@@ -277,8 +358,9 @@ function buildRoadNetwork(sidewalks, obstacles) {
     if (r.half >= 7.25) r.axis = o.axis = 'ave'; // as wide as a major road (see lanesOf)
   }
   for (const r of genRuns) {
-    if (r.fwd.length) addEdgeGeneral(r.from, r.to, r.axis, r.fwd, r.half, r.divided, r.arriveFwd, r.name);
-    if (r.back.length) addEdgeGeneral(r.to, r.from, r.axis, r.back, r.half, r.divided, r.arriveBack, r.name);
+    const tf = r.bore;
+    if (r.fwd.length) addEdgeGeneral(r.from, r.to, r.axis, r.fwd, r.half, r.divided, r.arriveFwd, r.name, tf, r.crooked);
+    if (r.back.length) addEdgeGeneral(r.to, r.from, r.axis, r.back, r.half, r.divided, r.arriveBack, r.name, tf && { ...tf, a0: tf.a1, a1: tf.a0 }, r.crooked);
   }
   // Two edges from one node to the same next one (a service road whose ends were drawn onto its main road's junctions)
   // would drive through each other: keep the grid's, else the one with the most lanes
@@ -342,7 +424,7 @@ function buildRoadNetwork(sidewalks, obstacles) {
       }
     }
     for (const [e, other] of partner) {
-      e.lanes = e.cand.map((o) => o - e.cand[0] + 1.8).filter((o) => laneOpen(e.x0, e.z0, e.dx, e.dz, e.span, o));
+      e.lanes = e.cand.map((o) => o - e.cand[0] + 1.8).filter((o) => e.bore || laneOpen(e.x0, e.z0, e.dx, e.dz, e.span, o));
       e.half += other;
       if (e.half >= 7.25) e.axis = 'ave'; // as wide as a major road (see lanesOf)
       e.divided = true;
@@ -518,12 +600,12 @@ function buildRoadNetwork(sidewalks, obstacles) {
   //    left turns, straight on, right turns, into lanes in the same order, so no two paths from one approach cross.
   const lateral = (e, i) => e.x0 * e.rx + e.z0 * e.rz + e.lanes[i];
   const ORDER = { U: -1, L: 0, S: 1, R: 2 };
-  function pathClear(e, i, f, j) {
+  function pathClear(e, i, f, j, clear = 0.8) {
     const c = makeCurve(e, i, f, j);
     const p = { x: 0, z: 0, dx: 0, dz: 0 };
     for (let k = 1; k < 10; k++) {
       curvePoint(c, c.len * k / 10, p);
-      if (blockedOnStreet(p.x, p.z, 0.8)) return false;
+      if (blockedOnStreet(p.x, p.z, clear)) return false;
     }
     return true;
   }
@@ -546,10 +628,13 @@ function buildRoadNetwork(sidewalks, obstacles) {
     }
     return j;
   }
-  // Let lane i of e make move m into lane j of its edge (clamped to the lanes there), if the way is clear
+  // Let lane i of e make move m into lane j of its edge (clamped to the lanes there), if the way is clear (at a bend in
+  // one street, a shape node, the street goes on whatever its curbs: hairpins like Telegraph Hill Blvd's cut the inside
+  // corner's curb a little; going straight on, the lane passes a traffic island at its side 0.4 m off, as on Columbus
+  // Ave at Greenwich St)
   function link(e, m, i, j) {
     j = Math.max(0, Math.min(m.to.lanes.length - 1, j));
-    if (m.out[i] < 0 && inOrder(e, m, i, j) && pathClear(e, i, m.to, j)) m.out[i] = j;
+    if (m.out[i] < 0 && inOrder(e, m, i, j) && (e.to.shape || pathClear(e, i, m.to, j, m.turn === 'S' ? 0.4 : 0.8))) m.out[i] = j;
     return m.out[i] >= 0;
   }
   function serveEveryLane(e) {
@@ -575,7 +660,8 @@ function buildRoadNetwork(sidewalks, obstacles) {
         e.moves.push({ to: f, turn: 'U', cross: -1, out: new Array(n).fill(-1) });
         continue;
       }
-      if (f.to === e.from || e.dx * f.dx + e.dz * f.dz < -0.5) continue;
+      // turns up to ~143° (SF's acute corners: Market St's diagonal against the grids, Columbus Ave), never round
+      if (f.to === e.from || e.dx * f.dx + e.dz * f.dz < -0.8) continue;
       const cross = e.dx * f.dz - e.dz * f.dx;
       e.moves.push({ to: f, turn: cross > 0.5 ? 'R' : cross < -0.5 ? 'L' : 'S', cross, out: new Array(n).fill(-1) });
     }
@@ -840,11 +926,13 @@ function buildRoadNetwork(sidewalks, obstacles) {
   const groundAt = (x, z) => (T && T.loaded ? T.groundAt(x, z) : 0);
   for (const e of edges) {
     const n = Math.max(1, Math.ceil(e.len / PROFILE_STEP));
+    // in a tunnel or on a bridge, between its portals or banks, the straight line from one end's ground to the other's
     const sample = (o) => {
       const prof = new Float32Array(n + 1);
       for (let k = 0; k <= n; k++) {
         const s = Math.min(e.len, k * PROFILE_STEP);
-        prof[k] = groundAt(e.sx + e.dx * s + e.rx * o, e.sz + e.dz * s + e.rz * o);
+        const y = e.bore ? boreY(e.bore, edgeArc(e, s)) : null;
+        prof[k] = y !== null ? y : groundAt(e.sx + e.dx * s + e.rx * o, e.sz + e.dz * s + e.rz * o);
       }
       return prof;
     };
@@ -875,6 +963,68 @@ function buildRoadNetwork(sidewalks, obstacles) {
   }
 
   return { nodes, edges, connector, curvePoint, walkable, onSidewalk, edgeY, edgeGrade, curveY };
+}
+
+// Where a link leaves the ground, along its centreline pts (from its first point): a tunnel link's bore, the stretch
+// whose ground stands more than PORTAL_COVER m over the straight line between its ends, each portal set back to the
+// last sample whose ground is within 1 m of that line (the open approach); or a bridge, the stretch over the water (the
+// bare-earth DEM has no bridges: Mission Creek's 3rd and 4th St bridges), between its banks BANK_SETBACK m back from
+// the water's edge. The road runs straight from one end's ground to the other's. Returns { kind, p0, p1, y0, y1, pts,
+// cum } (arcs along the link in m), or null where the link stays on the ground (or the water reaches its ends: a pier,
+// or the data's edge)
+const PORTAL_COVER = 3;
+const BANK_SETBACK = 8;
+function spans(pts, tunnel, measureOnly = false) {
+  const T = window.NYC.Terrain;
+  if (!T || !T.loaded) return null;
+  const cum = [0];
+  for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + Math.hypot(pts[k].x - pts[k - 1].x, pts[k].z - pts[k - 1].z));
+  if (measureOnly) return { pts, cum };
+  const L = cum[cum.length - 1];
+  const at = (u) => linkPoint({ pts, cum }, u);
+  const n = Math.max(2, Math.ceil(L / 2));
+  const u = Array.from({ length: n + 1 }, (_, k) => (L * k) / n);
+  const h = u.map((a) => { const p = at(a); return T.heightAt(p.x, p.z); });
+  const g = h.map((y) => Math.max(y, T.waterLevel));
+  if (!tunnel) {
+    const wet = h.map((y) => y <= T.waterLevel + 0.05);
+    const first = wet.indexOf(true);
+    if (first < 0) return null;
+    const last = wet.lastIndexOf(true);
+    if (first === 0 || last === n) return null;
+    // the banks: BANK_SETBACK m back from the water's edge, behind the seawall's face
+    const k0 = Math.max(0, first - 1 - BANK_SETBACK / 2), k1 = Math.min(n, last + 1 + BANK_SETBACK / 2);
+    return { kind: 'bridge', p0: u[k0], p1: u[k1], y0: g[k0], y1: g[k1], pts, cum };
+  }
+  const line = (k) => g[0] + ((g[n] - g[0]) * k) / n;
+  const covered = g.map((y, k) => y - line(k) > PORTAL_COVER);
+  const first = covered.indexOf(true);
+  if (first < 0) return null;
+  const last = covered.lastIndexOf(true);
+  let k0 = first;
+  while (k0 > 0 && g[k0] - line(k0) > 1) k0--;
+  let k1 = last;
+  while (k1 < n && g[k1] - line(k1) > 1) k1++;
+  return { kind: 'tunnel', p0: u[k0], p1: u[k1], y0: g[k0], y1: g[k1], pts, cum };
+}
+// The point u metres along a bore's link centreline
+function linkPoint(b, u) {
+  const { pts, cum } = b;
+  let k = 1;
+  while (k < cum.length - 1 && cum[k] < u) k++;
+  const t = Math.min(1, Math.max(0, (u - cum[k - 1]) / (cum[k] - cum[k - 1] || 1)));
+  return { x: pts[k - 1].x + (pts[k].x - pts[k - 1].x) * t, z: pts[k - 1].z + (pts[k].z - pts[k - 1].z) * t };
+}
+// The road's height u m along a tunnel's or bridge's link: on the line between its ends, or null outside (on the ground)
+function boreY(b, u) {
+  if (u < b.p0 || u > b.p1) return null;
+  return b.y0 + ((b.y1 - b.y0) * (u - b.p0)) / (b.p1 - b.p0 || 1);
+}
+// How far along its link (from the link's first point) edge e of a tunnel or bridge is, s m past its start stop line
+function edgeArc(e, s) {
+  const b = e.bore;
+  const t = Math.min(1, Math.max(0, (Math.hypot(e.sx - e.x0, e.sz - e.z0) + s) / e.span));
+  return b.a0 + (b.a1 - b.a0) * t;
 }
 
 // Height of the ground along edge e, s metres past its start stop line (clamped to [0, e.len]): on lane i, or on its
@@ -1080,5 +1230,5 @@ function buildRoadDebug(net) {
   return lines;
 }
 
-Object.assign(window.NYC, { buildRoadNetwork, buildRoadDebug, CROSSWALK, edgeY, edgeGrade, curveY });
+Object.assign(window.NYC, { buildRoadNetwork, buildRoadDebug, CROSSWALK, edgeY, edgeGrade, curveY, boreY, edgeArc, linkPoint });
 })();

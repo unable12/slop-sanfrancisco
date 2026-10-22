@@ -4,7 +4,7 @@
 //   node tools/dev/probe.mjs <url> <out.png> [waitSeconds]           one page: backend, readiness, fps, heap, errors, screenshot
 //   node tools/dev/probe.mjs --shots tools/dev/shots.json [--base URL] [--out shots] [--only a,b]
 //                                                                    every named shot (query string per name) -> <out>/<name>.png
-//   node tools/dev/probe.mjs --bench street|car|heli|hill [--base URL] [--query extra=1]
+//   node tools/dev/probe.mjs --bench street|car|heli|hill|russian-hill-view [--base URL] [--query extra=1]
 //                                                                    runs ?bench=<name> and prints the [bench] result
 //   node tools/dev/probe.mjs <url> <out.png> [waitSeconds] --eval '<js expression>'
 //                                                                    also prints the expression's value once ready
