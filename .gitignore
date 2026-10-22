@@ -1,0 +1,6 @@
+.DS_Store
+data/raw/
+node_modules/
+tools/node_modules/
+shots/
+*.tmp.*
