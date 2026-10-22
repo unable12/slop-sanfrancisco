@@ -1,0 +1,10 @@
+{
+  "name": "slop-sf-tools",
+  "private": true,
+  "description": "Offline data pipeline dependencies (never imported by the runtime in js/)",
+  "type": "module",
+  "dependencies": {
+    "geotiff": "^3.0.5",
+    "proj4": "^2.22.0"
+  }
+}

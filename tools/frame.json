@@ -1,0 +1,6 @@
+{
+  "lat0": 37.788721152,
+  "lon0": -122.402065729,
+  "originNodeCnn": 30735000,
+  "derivation": "Centreline node shared by MARKET ST and MONTGOMERY ST segments (DataSF 3psu-pn9h, f_node_cnn/t_node_cnn; all 5 matching segment endpoints coincide exactly), retrieved 2026-10-22. Fixed here so that changing boxes never moves the world origin."
+}

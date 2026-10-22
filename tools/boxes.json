@@ -1,0 +1,7 @@
+{
+  "_comment": "Named lat/lon boxes for tools/fetch-geodata.mjs. Derivations are recorded so they can be recomputed from data.",
+  "slice": {
+    "latS": 37.786657, "latN": 37.798163, "lonW": -122.418942, "lonE": -122.392412,
+    "derivation": "Bounding box of active CALIFORNIA ST centreline points between HYDE ST and DRUMM ST (DataSF 3psu-pn9h, 2026-10-22), expanded 500 m north/south, 250 m west, 350 m east (to include the Ferry Building). 2.33 x 1.28 km."
+  }
+}
