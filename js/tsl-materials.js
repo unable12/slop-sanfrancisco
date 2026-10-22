@@ -150,22 +150,38 @@ const filteredPulse = Fn(([x, a, b, w]) => {
 });
 
 /**
+ * The terrain's height (js/terrain.js) under a world xz node, from a half-float copy of the height field (linear
+ * filtering: ~6 cm steps at 100 m, plenty for shading). 0 before the terrain is loaded.
+ */
+let _groundTexture = null;
+function groundHeightNode(xz) {
+  const T = window.NYC.Terrain;
+  if (!T || !T.loaded) return float(0.0);
+  if (!_groundTexture) {
+    const half = new Uint16Array(T.heights.length);
+    for (let k = 0; k < half.length; k++) half[k] = THREE.DataUtils.toHalfFloat(T.heights[k]);
+    _groundTexture = new THREE.DataTexture(half, T.w, T.h, THREE.RedFormat, THREE.HalfFloatType);
+    _groundTexture.magFilter = THREE.LinearFilter;
+    _groundTexture.minFilter = THREE.LinearFilter;
+    _groundTexture.generateMipmaps = false;
+    _groundTexture.needsUpdate = true;
+  }
+  // texel centres sit on the samples: sample (i, j) at uv ((i + 0.5) / w, (j + 0.5) / h)
+  const uvG = xz.sub(vec2(T.originX, T.originZ)).div(T.cell).add(0.5).div(vec2(T.w, T.h));
+  return texture(_groundTexture, uvG).r;
+}
+
+/**
  * Occlusion-Aware Urban Canyon Sky Visibility (aoNode)
- * Models how Manhattan street canyons occlude overhead sky irradiance near the street floor (y = 0..65m),
- * while opening up in Central Park and on upper tower shafts.
+ * Models how street canyons occlude overhead sky irradiance near the street floor (0..65 m above the ground, which on
+ * San Francisco's hills is the terrain under the fragment), opening up on upper tower shafts.
  */
 const canyonSkyAONode = Fn(() => {
   const wp = positionWorld;
-  // Open sky inside Central Park (city-config.js CENTRAL_PARK_BOUNDS, 5th Ave to Central Park West, 59th to 110th St)
-  const cp = window.NYC.CENTRAL_PARK_BOUNDS;
-  const inParkX = smoothstep(cp.minX - 10.0, cp.minX + 20.0, wp.x).mul(float(1.0).sub(smoothstep(cp.maxX - 20.0, cp.maxX + 10.0, wp.x)));
-  const inParkZ = smoothstep(cp.minZ - 10.0, cp.minZ + 30.0, wp.z).mul(float(1.0).sub(smoothstep(cp.maxZ - 30.0, cp.maxZ + 10.0, wp.z)));
-  const inPark = inParkX.mul(inParkZ);
-
-  const heightOpenness = smoothstep(0.0, 68.0, wp.y);
-  const streetCrevice = smoothstep(0.0, 7.5, wp.y).mul(0.22).add(0.78);
-  const canyonAO = mix(float(0.44), float(1.0), heightOpenness).mul(streetCrevice);
-  return mix(canyonAO, float(1.0), inPark);
+  const aboveGround = wp.y.sub(groundHeightNode(wp.xz));
+  const heightOpenness = smoothstep(0.0, 68.0, aboveGround);
+  const streetCrevice = smoothstep(0.0, 7.5, aboveGround).mul(0.22).add(0.78);
+  return mix(float(0.44), float(1.0), heightOpenness).mul(streetCrevice);
 });
 
 // Material caches to prevent duplicate WebGPU WGSL shader compilation across blocks & landmarks
@@ -372,7 +388,7 @@ const WALL_KINDS = { shop: 0, entry: 1, rear: 2, lotLine: 3, blankStone: 4 };
  * (folded into `solid`); `wallS`, `wallW`, `wallH`, `fromTop` & `boxSeed` place things on the wall (painted signs).
  * Plain JS (not Fn) so it inlines into each node graph exactly like hand-written code.
  */
-function facadeCell(windowWidth, floorHeight, boxLocal, cornerPier = 0) {
+function facadeCell(windowWidth, floorHeight, boxLocal, cornerPier = 0, groundBase = boxLocal) {
   // Box-local walls are told apart by the box's own normals (createFacadeBoxes instances may be turned about +y to
   // follow a non-grid street); world-space walls by the world normal
   const nWall = boxLocal ? normalGeometry : facadeWorldNormal;
@@ -435,14 +451,22 @@ function facadeCell(windowWidth, floorHeight, boxLocal, cornerPier = 0) {
     uCoord = gridU.mul(bayWidth);
   }
 
-  const vCoord = positionWorld.y;
+  // Height on the wall: above the building's ground (`boxBase`: x = its ground y, y = the plinth drop; floors count from
+  // x + y, the band below that is a solid plinth where the ground falls away downhill), or world y without groundBase
+  let vCoord = positionWorld.y;
+  let plinthBand = float(0.0);
+  if (groundBase) {
+    const boxBase = attribute('boxBase', 'vec2');
+    vCoord = positionWorld.y.sub(boxBase.x.add(boxBase.y));
+    plinthBand = float(1.0).sub(step(0.0, vCoord));
+  }
   const gridV = vCoord.div(floorHeight);
   const cellId = vec2(floor(gridU), floor(gridV));
   const cellUV = vec2(fract(gridU), fract(gridV));
   const fw = vec2(fwidth(gridU), fwidth(gridV));
 
   // Ground floor is strictly floor index 0 (gridV < 1.0) so floor 1 is never sliced in half!
-  const floor0 = float(1.0).sub(step(1.0, gridV));
+  const floor0 = float(1.0).sub(step(1.0, gridV)).mul(float(1.0).sub(plinthBand));
   const wall = float(1.0).sub(isRoof);
   const isGroundFloor = floor0.mul(float(1.0).sub(step(WALL_KINDS.shop + 0.5, kind)));
   const blank = step(WALL_KINDS.lotLine - 0.5, kind).mul(wall);
@@ -461,7 +485,7 @@ function facadeCell(windowWidth, floorHeight, boxLocal, cornerPier = 0) {
     partial = float(1.0).sub(whole).mul(wall);
     coping = float(1.0).sub(step(0.32, fromTop)).mul(wall);
   }
-  const solid = max(max(inPier.mul(float(1.0).sub(isGroundFloor)), blank), partial);
+  const solid = max(max(max(inPier.mul(float(1.0).sub(isGroundFloor)), blank), partial), plinthBand.mul(wall));
   return {
     isRoof, uCoord, vCoord, gridV, cellId, cellUV, fw, bayWidth, isGroundFloor, solid, floor0, back, blank, door, tone,
     wallS, wallW, wallH, fromTop, boxSeed, partial, coping
@@ -487,10 +511,11 @@ function createCurtainWallMaterial(opts = {}) {
     warmth = 0.62,
     reflectivity = 0.92,
     seed = 1.0,
-    boxLocal = false
+    boxLocal = false,
+    groundBase = boxLocal // floors count from the per-vertex / per-instance `boxBase` (facadeCell)
   } = opts;
 
-  const cacheKey = `${glassTint}_${frameTint}_${windowWidth}_${floorHeight}_${litProbability}_${warmth}_${reflectivity}_${seed}_${boxLocal}`;
+  const cacheKey = `${glassTint}_${frameTint}_${windowWidth}_${floorHeight}_${litProbability}_${warmth}_${reflectivity}_${seed}_${boxLocal}_${groundBase}`;
   if (_curtainWallCache.has(cacheKey)) {
     return _curtainWallCache.get(cacheKey);
   }
@@ -516,7 +541,7 @@ function createCurtainWallMaterial(opts = {}) {
 
   // The facade cell and the apartment behind each pane are built once and shared by every output below, so the
   // shader carries a single copy of them (and evaluates the interior mapping once per pixel)
-  const facade = facadeCell(uWindowWidth, uFloorHeight, boxLocal);
+  const facade = facadeCell(uWindowWidth, uFloorHeight, boxLocal, 0, groundBase);
   const { isRoof, uCoord, vCoord, gridV, cellId, cellUV, fw, bayWidth, isGroundFloor, blank, tone, partial, coping } = facade;
   // Pane UV inside the mullions & spandrel, the 3D apartment behind it and whether the ground-floor shop is lit
   const winUV = clamp(
@@ -686,10 +711,11 @@ function createPreWarBuildingMaterial(opts = {}) {
     crownGlowColor = 0xffe0a3,
     seed = 42.0,
     boxLocal = false,
-    cornerPier = 1.2 // solid masonry at both ends of every wall above the shopfronts (box-local mode)
+    cornerPier = 1.2, // solid masonry at both ends of every wall above the shopfronts (box-local mode)
+    groundBase = boxLocal // floors count from the per-vertex / per-instance `boxBase` (facadeCell)
   } = opts;
 
-  const cacheKey = `${stoneColor}_${trimColor}_${windowWidth}_${floorHeight}_${litProbability}_${warmth}_${crownGlowHeight}_${seed}_${boxLocal}_${cornerPier}`;
+  const cacheKey = `${stoneColor}_${trimColor}_${windowWidth}_${floorHeight}_${litProbability}_${warmth}_${crownGlowHeight}_${seed}_${boxLocal}_${cornerPier}_${groundBase}`;
   if (_preWarCache.has(cacheKey)) {
     return _preWarCache.get(cacheKey);
   }
@@ -722,7 +748,7 @@ function createPreWarBuildingMaterial(opts = {}) {
 
   // The facade cell, the window opening and the apartment behind it are built once and shared by every output below,
   // so the shader carries a single copy of them (and evaluates the interior mapping once per pixel)
-  const facade = facadeCell(uWindowWidth, uFloorHeight, boxLocal, cornerPier);
+  const facade = facadeCell(uWindowWidth, uFloorHeight, boxLocal, cornerPier, groundBase);
   const { isRoof, uCoord, vCoord, gridV, cellId, cellUV, fw, bayWidth, isGroundFloor, solid, back, blank, door, tone } = facade;
   const { wallS, wallW, wallH, fromTop, boxSeed, coping } = facade;
   const open = float(1.0).sub(solid).mul(float(1.0).sub(door)); // 0 in the corner piers, blank walls & doorways
@@ -1058,13 +1084,17 @@ function createPreWarBuildingMaterial(opts = {}) {
  * (y = centre; ry: turn about +y, for blocks laid out along a non-grid street), with the per-instance `box` attribute
  * (size + a spread seed carrying the building's tone in its fraction) that lays each wall out in whole window bays,
  * and `faces`: the WALL_KINDS of the box's -x, +x, -z & +z walls (storefront fronts all round when omitted).
+ * `base` (the building's ground y, default 0) and `plinth` (metres of solid plinth above it, default 0) go to the
+ * `boxBase` attribute: floors count from base + plinth, wherever the box stands (facadeCell).
  */
 function createFacadeBoxes(material, boxes) {
   const geometry = new THREE.BoxGeometry(1, 1, 1);
   const box = new THREE.InstancedBufferAttribute(new Float32Array(boxes.length * 4), 4);
   const faces = new THREE.InstancedBufferAttribute(new Float32Array(boxes.length * 4), 4);
+  const boxBase = new THREE.InstancedBufferAttribute(new Float32Array(boxes.length * 2), 2);
   geometry.setAttribute('box', box);
   geometry.setAttribute('faces', faces);
+  geometry.setAttribute('boxBase', boxBase);
 
   const mesh = new THREE.InstancedMesh(geometry, material, boxes.length);
   const matrix = new THREE.Matrix4();
@@ -1077,6 +1107,7 @@ function createFacadeBoxes(material, boxes) {
     else mesh.setMatrixAt(i, matrix.makeScale(b.w, b.h, b.d).setPosition(b.x, b.y, b.z));
     box.setXYZW(i, b.w, b.h, b.d, ((i * 29) % 1000) + 0.1 + 0.8 * (b.tone ?? 0.5));
     if (b.faces) faces.setXYZW(i, b.faces[0], b.faces[1], b.faces[2], b.faces[3]);
+    boxBase.setXY(i, b.base ?? 0, b.plinth ?? 0);
   });
   return mesh;
 }

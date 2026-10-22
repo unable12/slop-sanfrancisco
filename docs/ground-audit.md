@@ -13,6 +13,8 @@ The single checklist for "nothing floats or sinks" in Phase 2. Every place in `j
 | C | a vertical size, thickness or non-height constant that merely matched the regex | none |
 | S | shader (TSL) using absolute world y for floors, storefronts, lenses or fog | must use a base attribute or be ground-relative |
 
+Marks: ☐ open, ☑ fixed, ⏭ deferred: the code path is not used by San Francisco (NYC-only, or the v1 buildings build no awnings, fire escapes, sheds or yards); revisit with its owner phase (awnings and street trees: P4).
+
 ## Summary
 
 | File | Hits | A | S | B/C | Owner(s) |
@@ -57,7 +59,7 @@ Live (buildings `v0`). Replaced by the `v1` path in `buildings.js` (P2.5); until
 
 | ☐ | line | class | code | note / fix | owner |
 |---|---|---|---|---|---|
-| ☐ | 38 | A | `colliders.push({ minX, maxX, minZ, maxZ, maxY: h });` | Collider top = footprint height measured from y = 0 (the extrusion starts at y = 0); needs minY = base, maxY = roof | P2.5 |
+| ☑ | 38 | A | `colliders.push({ minX, maxX, minZ, maxZ, maxY: h });` | Collider top = footprint height measured from y = 0 (the extrusion starts at y = 0); needs minY = base, maxY = roof | P2.5 |
 
 ## `tsl-materials.js`
 
@@ -65,9 +67,9 @@ Live. 76 hits, almost all cell-local shader constants. The two S items are the w
 
 | ☐ | line | class | code | note / fix | owner |
 |---|---|---|---|---|---|
-| ☐ | 166 | S | `const streetCrevice = smoothstep(0.0, 7.5, wp.y).mul(0.22).a` | canyonSkyAONode: street-crevice AO on absolute y (and 68 m openness one line above, not matched); use height above ground (boxBase / ground attribute) | P2.5.1 |
+| ☑ | 166 | S | `const streetCrevice = smoothstep(0.0, 7.5, wp.y).mul(0.22).a` | canyonSkyAONode: street-crevice AO on absolute y (and 68 m openness one line above, not matched); use height above ground (boxBase / ground attribute) | P2.5.1 |
 | – | 225, 547, 577, 764-784 (6), 840-875 (5), 983-1043 (8), 1145, 1192, 1193, 1250, 1260, 1306, 1394-1425 (4), 1466, 1584, 1588, 1647-1746 (6), 1798, 1896, 1957, 1973, 2054, 2354-2363 (3), 2465, 2688, 2895-2912 (7), 2994-3118 (8) | C | (66 lines) | Cell-local UV (cellUV.y, p.y, uv().y), direction components (n.y, reflectDir.y), alpha / roughness / smoothstep constants; not world heights | - |
-| ☐ | 438 | S | `const vCoord = positionWorld.y;` | facadeCell: floor index, ground-floor / storefront mask, canyon band, soot, crown glow all derive from this vCoord; use positionWorld.y - boxBase | P2.5.1 |
+| ☑ | 438 | S | `const vCoord = positionWorld.y;` | facadeCell: floor index, ground-floor / storefront mask, canyon band, soot, crown glow all derive from this vCoord; use positionWorld.y - boxBase | P2.5.1 |
 | – | 1224, 1552, 1575, 1695, 1699 | C | (5 lines) | World y only sets the phase of brick courses / noise: cosmetic, no floor, lens or fog meaning | - |
 | – | 1662 | B | (1 line) | Already relative to a baseY parameter (TKTS steps, landmark P5) | - |
 | – | 2563 | C | (1 line) | OK: compares world y with the water level only (pond = park lakes above the bay); needs ISLAND_BOUNDS.waterLevel = Terrain.waterLevel (placeholder -2.2 at this commit) | - |
@@ -79,23 +81,23 @@ Inactive NYC builder path (`FEATURES.buildings = "nyc"` is off). P2.5 reuses its
 
 | ☐ | line | class | code | note / fix | owner |
 |---|---|---|---|---|---|
-| ☐ | 273 | A | `function pushCollider(x0, x1, z0, z1, maxY) {` | [P2.5 reuses] collider factory: maxY absolute, no minY; add minY = base | P2.5.5 |
-| ☐ | 275 | A | `colliders.push({ minX: x0, maxX: x1, minZ: z0, maxZ: z1, max` | [P2.5 reuses] AABB collider without minY | P2.5.5 |
-| ☐ | 283 | A | `colliders.push({ minX: cx - ex, maxX: cx + ex, minZ: cz - ez` | [P2.5 reuses] OBB collider without minY | P2.5.5 |
+| ☑ | 273 | A | `function pushCollider(x0, x1, z0, z1, maxY) {` | [P2.5 reuses] collider factory: maxY absolute, no minY; add minY = base | P2.5.5 |
+| ☑ | 275 | A | `colliders.push({ minX: x0, maxX: x1, minZ: z0, maxZ: z1, max` | [P2.5 reuses] AABB collider without minY | P2.5.5 |
+| ☑ | 283 | A | `colliders.push({ minX: cx - ex, maxX: cx + ex, minZ: cz - ez` | [P2.5 reuses] OBB collider without minY | P2.5.5 |
 | – | 721-878 (6), 941, 947, 1039, 1255, 1330, 1381, 1520, 1688-1695 (3), 1779, 2162, 2163, 2207, 2233, 2385 | C | (22 lines) | Recipe / material proportions (lot depth, setback, probability), geometry thickness (0.22 deck ring) or shader constants | - |
-| ☐ | 1874 | A | `if (z1 - z0 > 8) blockDetail.scaffoldSheds.push({ x: minX - ` | [NYC-only] sidewalk shed at y = 0.22 (NYC curb); drop with the NYC recipes or use groundAt + CURB_H | P2.5 |
-| ☐ | 2042 | A | `sites.push({ x, y: 0.22, z, scale: 0.8 + h * 0.3, species: h` | [NYC-only] street-tree sites at NYC curb height; SF trees come from the inventory | P4.5 |
-| ☐ | 2173 | A | `dummy.position.set((r.x0 + r.x1) * 0.5, 0.225, (r.z0 + r.z1)` | [NYC-only] rear-yard slabs at y = 0.225; v1 masses have no yards, drop | P2.5 |
-| ☐ | 2290 | S | `const storey = positionWorld.y.sub(3.55).div(3.45); // Landi` | [NYC-only] fire-escape landings from absolute y (3.55 + n * 3.45); needs the box base, or leave fire escapes off in v1 | P2.5 |
+| ⏭ | 1874 | A | `if (z1 - z0 > 8) blockDetail.scaffoldSheds.push({ x: minX - ` | [NYC-only] sidewalk shed at y = 0.22 (NYC curb); drop with the NYC recipes or use groundAt + CURB_H | P2.5 |
+| ⏭ | 2042 | A | `sites.push({ x, y: 0.22, z, scale: 0.8 + h * 0.3, species: h` | [NYC-only] street-tree sites at NYC curb height; SF trees come from the inventory | P4.5 |
+| ⏭ | 2173 | A | `dummy.position.set((r.x0 + r.x1) * 0.5, 0.225, (r.z0 + r.z1)` | [NYC-only] rear-yard slabs at y = 0.225; v1 masses have no yards, drop | P2.5 |
+| ⏭ | 2290 | S | `const storey = positionWorld.y.sub(3.55).div(3.45); // Landi` | [NYC-only] fire-escape landings from absolute y (3.55 + n * 3.45); needs the box base, or leave fire escapes off in v1 | P2.5 |
 | – | 2293 | C | (1 line) | Pixel footprint (derivative) for the fire-escape mask | - |
 | – | 2384, 2564, 2615 | C | (3 lines) | Off-screen parking spot for unused lights (sentinel) | - |
 | – | 2448, 2476, 2485, 2494 | B | (4 lines) | [P2.5 reuses commit() detail streaming] offset from the item y that commit() stores (roof y1 / awning y); correct once parts carry absolute y | - |
 | – | 2459, 2463, 2467 | B | (3 lines) | [disabled by FEATURES.waterTowers=false] offset from the roof y | - |
-| ☐ | 2502 | A | `dummy.position.set(a.x, 4.68, a.z);` | [P2.5 reuses] awning sign at constant y = 4.68; use awning y (a.y) + offset | P2.5 |
+| ⏭ | 2502 | A | `dummy.position.set(a.x, 4.68, a.z);` | [P2.5 reuses] awning sign at constant y = 4.68; use awning y (a.y) + offset | P2.5 |
 | – | 2516 | B | (1 line) | [NYC-only] offset from the shed y (source row is A) | - |
-| ☐ | 2570 | A | `const camY = camera.position.y;` | [P2.5 reuses] storefront-spot distance adds camY^2 as if awnings stood at y = 0; use camY - a.y | P2.5 |
-| ☐ | 2608 | A | `spot.position.set(a.x + outX * 0.45, 4.35, a.z + outZ * 0.45` | [P2.5 reuses] storefront spotlight at constant y = 4.35; use a.y + offset | P2.5 |
-| ☐ | 2609 | A | `spot.target.position.set(a.x + outX * 1.85, 0.0, a.z + outZ ` | [P2.5 reuses] spotlight target at y = 0.0; use the sidewalk ground at the target | P2.5 |
+| ⏭ | 2570 | A | `const camY = camera.position.y;` | [P2.5 reuses] storefront-spot distance adds camY^2 as if awnings stood at y = 0; use camY - a.y | P2.5 |
+| ⏭ | 2608 | A | `spot.position.set(a.x + outX * 0.45, 4.35, a.z + outZ * 0.45` | [P2.5 reuses] storefront spotlight at constant y = 4.35; use a.y + offset | P2.5 |
+| ⏭ | 2609 | A | `spot.target.position.set(a.x + outX * 1.85, 0.0, a.z + outZ ` | [P2.5 reuses] spotlight target at y = 0.0; use the sidewalk ground at the target | P2.5 |
 
 ## `street-details.js`
 
@@ -323,22 +325,22 @@ From `docs/research.md` §3 and from reading the code. Class is A or S as in the
 | – | `lighting.js:220` | C | Aerial fog height falloff exp(-y / 900 m) on absolute y (`ya = max(positionWorld.y, 0)`). Decision: fine as world-height fog, altitude haze is physical with NAVD88 y. Marine layer extends it in P6.3 | none | P6.3 |
 | ☐ | `road-network.js:51` | A | `onLand` uses `getIslandBoundsAtZ` (shore table); `blocked`, `walkable` and `blockedOnStreet` all go through it | land polygon (P1.10) or `groundAt > waterLevel` | P2.7.3 |
 | ☐ | `road-network.js:443, 487` | A | Edges carry x0, z0, dx, dz, lanes and no y (both `addEdge` and `addEdgeGeneral`); curves (`k0 = 0.552` builder) carry no y either | height profile every 2 m from `groundAt`, cumulative 3D length, Hermite y for curves: `edgeY`, `edgeGrade`, `curveY` | P2.7.4 |
-| ☐ | `sf-ground.js:62` | A | Curb slabs: base -0.05, top H = `ISLAND_BOUNDS.sidewalkHeight`, both constant (the grep only caught the lawn at H + 0.012) | outline meshes draped on `groundAt`, top = groundAt + CURB_H | P2.4 |
-| ☐ | `sf-ground.js:54` | A | Road deck: `LAND_RINGS` polygon flat at y = 0 (and the stone bulkhead from `waterLevel - 0.4` to -0.02 on the line above) | replaced by the terrain mesh; seawall extruded to per-vertex `groundAt` | P2.2.1 / P2.2.6 / P2.2.7 |
-| ☐ | `sf-ground.js:71` | A | Piers: deck top constant 0.1, base from `ISLAND_BOUNDS.waterLevel` (placeholder -2.2 in `city-config.js:121`; docs/handover.md: set it to `GEO.data.terrain.waterLevel`) | base = `Terrain.waterLevel - 0.3`, top = pier shore height + 0.1 | P2.2 |
-| ☐ | `city-config.js:121` | A | `ISLAND_BOUNDS` = { sidewalkHeight 0.15, waterLevel -2.2 }: read by sf-ground (bay plane, bulkhead, piers), `tsl-materials.js` water (`harbourY`) and `controllers.js` | waterLevel from `Terrain.waterLevel`; sidewalkHeight becomes `CURB_H` (P2.4) | P2.2.5 / P2.4 |
-| ☐ | `sf-buildings.js:35` | A | Each footprint extrudes from y = 0 up by `roof - base` and is never translated to `base`; the table's `base` is read and only subtracted | v1 path: mass bottom = base - 1.0, top = roof (P2.5.3); stop-gap: translate by base | P2.5 |
-| ☐ | `main.js:54` | A | Bench paths (street y 1.7, car 1.4, hill 8) and `?cam=x,y,z` use absolute y, so they sink into hills; heli path y 300-340 is above the 117 m peak | y relative to `groundAt` for street, car and hill; keep heli absolute | P2.6 / P2.12 |
+| ☑ | `sf-ground.js:62` | A | Curb slabs: base -0.05, top H = `ISLAND_BOUNDS.sidewalkHeight`, both constant (the grep only caught the lawn at H + 0.012) | outline meshes draped on `groundAt`, top = groundAt + CURB_H | P2.4 |
+| ☑ | `sf-ground.js:54` | A | Road deck: `LAND_RINGS` polygon flat at y = 0 (and the stone bulkhead from `waterLevel - 0.4` to -0.02 on the line above) | replaced by the terrain mesh; seawall extruded to per-vertex `groundAt` | P2.2.1 / P2.2.6 / P2.2.7 |
+| ☑ | `sf-ground.js:71` | A | Piers: deck top constant 0.1, base from `ISLAND_BOUNDS.waterLevel` (placeholder -2.2 in `city-config.js:121`; docs/handover.md: set it to `GEO.data.terrain.waterLevel`) | base = `Terrain.waterLevel - 0.3`, top = pier shore height + 0.1 | P2.2 |
+| ☑ | `city-config.js:121` | A | `ISLAND_BOUNDS` = { sidewalkHeight 0.15, waterLevel -2.2 }: read by sf-ground (bay plane, bulkhead, piers), `tsl-materials.js` water (`harbourY`) and `controllers.js` | waterLevel from `Terrain.waterLevel`; sidewalkHeight becomes `CURB_H` (P2.4) | P2.2.5 / P2.4 |
+| ☑ | `sf-buildings.js:35` | A | Each footprint extrudes from y = 0 up by `roof - base` and is never translated to `base`; the table's `base` is read and only subtracted | v1 path: mass bottom = base - 1.0, top = roof (P2.5.3); stop-gap: translate by base | P2.5 |
+| ☑ | `main.js:54` | A | Bench paths (street y 1.7, car 1.4, hill 8) and `?cam=x,y,z` use absolute y, so they sink into hills; heli path y 300-340 is above the 117 m peak | y relative to `groundAt` for street, car and hill; keep heli absolute | P2.6 / P2.12 |
 | ☐ | `road-paint.js:29` | A | Paint quad vertices pushed at the constant `HEIGHT` (row above); flat quads between two points, no subdivision | ribbons subdivided every 1 m with y = groundAt + 0.012 | P2.11 |
 | ☐ | `street-details.js:296, 403, 434, 466, 737, 784` | A | Light-site records (`cobraLampSites`, `streetPointSites`) store literal world y (6.18, 8.02, 4.02 twice, 2.75, 2.15); the pool placement at lines 1161 / 1197 uses them directly | store ground y + offset, or site records relative to a per-site base | P2.10 |
 | ☐ | `street-details.js:834, 843` | A | Central Park and Bryant Park tree heights (CP_LAWN_Y = 1.19, Bryant terrace `top - 0.2`) | disable (NYC-only) behind a flag | P2.10.4 |
-| ☐ | `tsl-materials.js:165` | S | `canyonSkyAONode` also opens the sky by absolute y (`smoothstep(0, 68, wp.y)`, the row above is the street crevice term); used by 13 materials | height above ground (shared fix with the crevice row) | P2.5.1 |
-| ☐ | `tsl-materials.js:592, 828, 839, 1042` | S | Facade canyon-bounce band, soot and crown glow thresholds are all in `vCoord` (absolute y); they follow the `vCoord` fix (rows above) but their thresholds (14 / 22-75 m, 180 m, `crownGlowHeight`) are heights above ground | confirm after the `boxBase` change | P2.5.1 |
+| ☑ | `tsl-materials.js:165` | S | `canyonSkyAONode` also opens the sky by absolute y (`smoothstep(0, 68, wp.y)`, the row above is the street crevice term); used by 13 materials | height above ground (shared fix with the crevice row) | P2.5.1 |
+| ☑ | `tsl-materials.js:592, 828, 839, 1042` | S | Facade canyon-bounce band, soot and crown glow thresholds are all in `vCoord` (absolute y); they follow the `vCoord` fix (rows above) but their thresholds (14 / 22-75 m, 180 m, `crownGlowHeight`) are heights above ground | confirm after the `boxBase` change | P2.5.1 |
 | ☐ | `tsl-materials.js:1700` | S | Marble ashlar ground-splash grime on absolute y (3.6 .. 0.2 m); landmark material (Washington Square Arch) | ground-relative when the landmark is placed | P5 (or P2.5.1 if used earlier) |
-| ☐ | `buildings.js:481` | A | [P2.5 reuses] `mass()` stacks parts from y = 0 (`y0 = f0 * storey`); every downstream box, collider and roof item inherits it | v1: masses from `base - 1.0` to `roof` | P2.5.3 / P2.5.4 |
-| ☐ | `buildings.js:604, 724` | A | [P2.5 reuses] awnings at y = 3.8 and fire-escape landings at y = 3.55 are literal heights above a y = 0 ground (the sign, spotlight and shader rows above follow them) | ground y of the front + offset | P2.5 |
-| ☐ | `buildings.js:415` | A | [P2.5 reuses] each block gets one collider from y = 0 up to 26 m, with no `minY` | per-mass colliders `{minY: base, maxY: roof}` | P2.5.5 |
-| ☐ | `buildings.js:306` | A | [P2.5 reuses] the detail-streaming quadtree is sized by `ISLAND_BOUNDS` (x, z only) | data bounds (x, z); no y issue | P2.5.6 |
+| ☑ | `buildings.js:481` | A | [P2.5 reuses] `mass()` stacks parts from y = 0 (`y0 = f0 * storey`); every downstream box, collider and roof item inherits it | v1: masses from `base - 1.0` to `roof` | P2.5.3 / P2.5.4 |
+| ⏭ | `buildings.js:604, 724` | A | [P2.5 reuses] awnings at y = 3.8 and fire-escape landings at y = 3.55 are literal heights above a y = 0 ground (the sign, spotlight and shader rows above follow them) | ground y of the front + offset | P2.5 |
+| ☑ | `buildings.js:415` | A | [P2.5 reuses] each block gets one collider from y = 0 up to 26 m, with no `minY` | per-mass colliders `{minY: base, maxY: roof}` | P2.5.5 |
+| ☑ | `buildings.js:306` | A | [P2.5 reuses] the detail-streaming quadtree is sized by `ISLAND_BOUNDS` (x, z only) | data bounds (x, z); no y issue | P2.5.6 |
 | – | `pedestrians.js:1062, 1097, 1136, 1142, 1210` | B | PersonRig takes ground through `ground(owner, x, z)` for every foot and the pelvis (lines in the second column are the call sites). Terrain-ready: it only needs the callbacks (`personGround`, `pedGround`) to return terrain heights | none in this file | - |
 | – | `trees.js:879` | B | Tree culling centre = site y + 6 m, relative to the site | none | - |
 

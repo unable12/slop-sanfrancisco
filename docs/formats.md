@@ -30,7 +30,9 @@ Samples are point values at those positions; interpolate bilinearly. Water cells
 
 ## `data/buildings-<box>.bin`: building footprints (`format: "sf-buildings"`, version 1)
 
-**Header fields:** `count`, `fields` (`base, roof, peak, ringStart, ringCount`), `tableFloats`, `vertexFloats`.
+**Header fields:** `count`, `fields` (`base, roof, peak, ringStart, ringCount, theta, massStart, massCount, shops`),
+`tableFloats`, `vertexFloats`, `massFields` (`cx, cz, w, d`), `massFloats`. Version 2 (P2.5) added the last four table
+fields and the masses.
 
 **Payload.** Float32:
 - first `tableFloats` values: `count` records of 5 floats each;
@@ -39,7 +41,13 @@ Samples are point values at those positions; interpolate bilinearly. Water cells
   - `peak`: highest first return, m NAVD88;
   - `ringStart`: index of the first vertex in the pool;
   - `ringCount`: number of vertices;
-- then the vertex pool of `vertexFloats` values, as `x, z` pairs in world metres. Rings have negative `ringArea()` (NYC convention).
+  - `theta`: the building's turn about +y (three.js rotation; its dominant edge direction is -theta in the world);
+  - `massStart`, `massCount`: its rectangles in the mass pool (`massCount` 0: drawn as its outline, the rectangles cover
+    under 90% of it);
+  - `shops`: 1 when its land-use parcel has retail floor space;
+- then the vertex pool of `vertexFloats` values, as `x, z` pairs in world metres. Rings have negative `ringArea()` (NYC convention);
+- then the mass pool of `massFloats` values: per rectangle its centre `cx, cz` and size `w` (along local x) and `d`
+  (along local z), turned by its building's `theta` (`tools/rect-cover.mjs`).
 
 ## `data/groundmask-<box>.bin`: ground classes (`format: "sf-groundmask"`, version 1)
 

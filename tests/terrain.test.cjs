@@ -111,7 +111,8 @@ test('terrain agrees with the footprints’ lidar ground (gnd_min_m) at runtime 
   const verts = new Float32Array(payload, header.tableFloats * 4, header.vertexFloats);
   const diffs = [];
   for (let b = 0; b < header.count; b++) {
-    const [base, , , start, count] = table.subarray(b * 5, b * 5 + 5);
+    const F = header.fields.length;
+    const [base, , , start, count] = table.subarray(b * F, b * F + 5);
     const ring = [];
     for (let k = 0; k < count; k++) ring.push([verts[2 * (start + k)], verts[2 * (start + k) + 1]]);
     const inside = (x, z) => {

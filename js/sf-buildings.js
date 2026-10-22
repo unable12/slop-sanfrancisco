@@ -19,8 +19,9 @@ function buildSFBuildingsV0(scene) {
   const tall = [];
   const colliders = [];
   const footprints = [];
+  const F = header.fields.length;
   for (let i = 0; i < header.count; i++) {
-    const [base, roof, , start, count] = table.subarray(i * 5, i * 5 + 5);
+    const [base, roof, , start, count] = table.subarray(i * F, i * F + 5);
     const h = roof - base;
     const pts = [];
     let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;

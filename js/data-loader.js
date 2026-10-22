@@ -2,7 +2,7 @@
 // js/data-loader.js
 // Fetches the pipeline's binary data (docs/formats.md) named in GEO.data before the city is built (main.js):
 //   window.NYC.DATA.terrain   { header, q: Uint16Array }                  height field (tools/geo-terrain.mjs)
-//   window.NYC.DATA.buildings { header, table: Float32Array, verts: Float32Array } footprints (tools/geo-buildings.mjs)
+//   window.NYC.DATA.buildings { header, table, verts, masses: Float32Array }   footprints (tools/geo-buildings.mjs)
 //   window.NYC.DATA.groundMask { header, mask: Uint8Array }                 ground classes, 1 m (tools/geo-groundmask.mjs)
 
 const { GEO } = window.NYC;
@@ -29,7 +29,8 @@ async function loadCityData(onProgress) {
     buildings: {
       header: b.header,
       table: new Float32Array(b.buf, b.offset, b.header.tableFloats),
-      verts: new Float32Array(b.buf, b.offset + b.header.tableFloats * 4, b.header.vertexFloats)
+      verts: new Float32Array(b.buf, b.offset + b.header.tableFloats * 4, b.header.vertexFloats),
+      masses: new Float32Array(b.buf, b.offset + (b.header.tableFloats + b.header.vertexFloats) * 4, b.header.massFloats || 0)
     },
     groundMask: { header: m.header, mask: new Uint8Array(m.buf, m.offset, m.header.w * m.header.h) }
   };

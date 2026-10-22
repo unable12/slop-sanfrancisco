@@ -42,6 +42,8 @@ const {
   CENTRAL_PARK_BOUNDS,
   ISLAND_BOUNDS,
   BLOCKS,
+  GEO,
+  blockAt,
   LANDMARK_SITES,
   streetZ,
   avenueX,
@@ -256,7 +258,10 @@ function carve(r, holes, axis = 'x') {
   return out.map(([u0, u1, v0, v1]) => (flip ? rect(v0, v1, u0, u1) : rect(u0, u1, v0, v1)));
 }
 
-function buildCityBlocks(scene) {
+// opts.sf: San Francisco's real footprints (FEATURES.buildings = 'v1', see buildSFMasses) instead of Manhattan's
+// generated blocks
+function buildCityBlocks(scene, opts = {}) {
+  const sf = !!opts.sf;
   const group = new THREE.Group();
   group.name = 'ManhattanCityBlocks';
   const colliders = [];
@@ -301,12 +306,13 @@ function buildCityBlocks(scene) {
     return table[table.length - 1][0];
   }
 
-  // Full-island Spatial Quadtree covering Harlem (~129th St) down to the Battery
+  // Full-island Spatial Quadtree covering Harlem (~129th St) down to the Battery (San Francisco: the data box)
+  const qb = sf ? { minX: GEO.box.x0, maxX: GEO.box.x1, minZ: GEO.box.z0, maxZ: GEO.box.z1 } : ISLAND_BOUNDS;
   const quadtree = new ManhattanQuadtree({
-    minX: ISLAND_BOUNDS.minX - 50,
-    maxX: ISLAND_BOUNDS.maxX + 50,
-    minZ: ISLAND_BOUNDS.minZ - 50,
-    maxZ: ISLAND_BOUNDS.maxZ + 50
+    minX: qb.minX - 50,
+    maxX: qb.maxX + 50,
+    minZ: qb.minZ - 50,
+    maxZ: qb.maxZ + 50
   }, 6, 9);
   const allBlocks = [];
 
@@ -1994,7 +2000,165 @@ function buildCityBlocks(scene) {
     for (let k = 0; k < n; k++) out.push([x0, x1, z0 + k * (s + gap), z0 + k * (s + gap) + s]);
     return out;
   }
-  for (const b of BLOCKS) {
+  // B'. San Francisco (FEATURES.buildings = 'v1', PLAN.md D8): every real footprint (data/buildings-<box>.bin) as the
+  //     oriented rectangles that cover it (tools/rect-cover.mjs), each a facade box from 1 m under the building's lowest
+  //     ground (gnd_min_m) up to its main roof (median first return). Floors count from the box's own lowest ground, a
+  //     plinth fills the drop to its highest (boxBase / plinth, facadeCell). Walls looking onto a roadway within 12 m are
+  //     fronts (storefronts where the parcel has retail floor space, else an entrance), walls against another mass are
+  //     party walls, the rest rear walls. Cornices on the masonry roofs, a bulkhead on the highest; footprints the
+  //     rectangles cover badly are drawn as their outline in world-u mode.
+  function buildSFMasses() {
+    const { header, table, verts, masses } = window.NYC.DATA.buildings;
+    const T = window.NYC.Terrain;
+    const F = header.fields.length;
+    const FRONT_REACH = 12;
+    const PARTY_GAP = 0.5;
+    const FOUNDATION = 1.0;
+    const PLINTH_MIN = 0.6;
+    const hash = (a, b) => Math.abs(Math.sin(a * 12.9898 + b * 78.233) * 43758.5453) % 1;
+
+    // Every mass, and a grid over them for the party-wall and front tests
+    const all = [];
+    for (let i = 0; i < header.count; i++) {
+      const r = table.subarray(i * F, i * F + F);
+      const [, , , , , theta, start, count] = r;
+      const cs = Math.cos(theta), sn = Math.sin(theta);
+      for (let k = start; k < start + count; k++) {
+        const [cx, cz, w, d] = masses.subarray(k * 4, k * 4 + 4);
+        all.push({ i, cx, cz, w, d, cs, sn });
+      }
+    }
+    const CELL = 32;
+    const grid = new Map();
+    for (const m of all) {
+      const ex = Math.abs(m.cs) * m.w * 0.5 + Math.abs(m.sn) * m.d * 0.5;
+      const ez = Math.abs(m.sn) * m.w * 0.5 + Math.abs(m.cs) * m.d * 0.5;
+      for (let gx = Math.floor((m.cx - ex) / CELL); gx <= Math.floor((m.cx + ex) / CELL); gx++) {
+        for (let gz = Math.floor((m.cz - ez) / CELL); gz <= Math.floor((m.cz + ez) / CELL); gz++) {
+          const key = gx * 100000 + gz;
+          if (!grid.has(key)) grid.set(key, []);
+          grid.get(key).push(m);
+        }
+      }
+    }
+    // the mass (other than `self`) containing (x, z), if any; local = R_y(-θ)(p - c)
+    const massAt = (x, z, self) => {
+      for (const m of grid.get(Math.floor(x / CELL) * 100000 + Math.floor(z / CELL)) || []) {
+        if (m === self) continue;
+        const dx = x - m.cx, dz = z - m.cz;
+        if (Math.abs(dx * m.cs - dz * m.sn) <= m.w * 0.5 && Math.abs(dx * m.sn + dz * m.cs) <= m.d * 0.5) return m;
+      }
+      return null;
+    };
+    const onRoadway = (x, z) => T.groundAt(x, z) > T.waterLevel + 0.05 && !blockAt(x, z);
+    // createFacadeBoxes `faces` order: local -x, +x, -z, +z; outward world normal of local (lx, lz) = R_y(θ)(lx, lz)
+    const WALLS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+    function wallKind(m, lx, lz, shops) {
+      const nx = lx * m.cs + lz * m.sn, nz = -lx * m.sn + lz * m.cs;
+      const half = lx ? m.w * 0.5 : m.d * 0.5;
+      const len = lx ? m.d : m.w;
+      // along the wall: R_y(θ)(lz, lx) rotated a quarter turn
+      const ax = -lz * m.cs + lx * m.sn, az = lz * m.sn + lx * m.cs;
+      const at = (u, out) => [m.cx + nx * (half + out) + ax * u * len, m.cz + nz * (half + out) + az * u * len];
+      const samples = [-0.35, 0, 0.35];
+      let party = 0;
+      for (const u of samples) if (massAt(...at(u, PARTY_GAP), m)) party++;
+      if (party >= 2) return WALL_KINDS.lotLine;
+      for (const u of samples) {
+        for (let o = 1.5; o <= FRONT_REACH; o += 1.5) {
+          const [x, z] = at(u, o);
+          if (massAt(x, z, m)) break;
+          if (onRoadway(x, z)) return shops ? WALL_KINDS.shop : WALL_KINDS.entry;
+        }
+      }
+      return WALL_KINDS.rear;
+    }
+
+    const polyGeos = [];
+    let massCount = 0;
+    for (let i = 0; i < header.count; i++) {
+      const [base, roof, , ringStart, ringCount, theta, start, count, shopsFlag] = table.subarray(i * F, i * F + F);
+      const pts = [];
+      for (let k = 0; k < ringCount; k++) pts.push({ x: verts[2 * (ringStart + k)], z: verts[2 * (ringStart + k) + 1] });
+      const xs = pts.map((p) => p.x), zs = pts.map((p) => p.z);
+      const minX = Math.min(...xs), maxX = Math.max(...xs), minZ = Math.min(...zs), maxZ = Math.max(...zs);
+      const height = roof - base;
+      const tone = hash(i, base);
+      const mat = height >= 45 ? 3 + Math.floor(hash(base, i) * 3) : height >= 18 ? (tone < 0.55 ? 0 : 1) : (tone < 0.6 ? 1 : 2);
+      const blk = {
+        id: `sf_${i}`, cx: (minX + maxX) * 0.5, cz: (minZ + maxZ) * 0.5, minX, maxX, minZ, maxZ, district: 'sf', ry: theta,
+        cornices: [], waterTowers: [], hvacUnits: [], fireEscapes: [], awnings: [], scaffoldSheds: [], yards: [],
+        footprints: [{ x0: minX, x1: maxX, z0: minZ, z1: maxZ, h: height, tone, pts }], maxH: height
+      };
+      rand = mulberry32((Math.imul(Math.round(blk.cx * 4), 73856093) ^ Math.imul(Math.round(blk.cz * 4), 19349663) ^ 10019) >>> 0);
+      const bottom = base - FOUNDATION;
+      if (count === 0) {
+        // badly covered by rectangles: the outline itself, world-u facades counted from its base
+        const shape = new THREE.Shape();
+        pts.forEach((p, k) => (k ? shape.lineTo(p.x, -p.z) : shape.moveTo(p.x, -p.z)));
+        shape.closePath();
+        const g = new THREE.ExtrudeGeometry(shape, { depth: roof - bottom, bevelEnabled: false, curveSegments: 1 });
+        g.rotateX(-Math.PI / 2);
+        g.translate(0, bottom, 0);
+        const ng = g.index ? g.toNonIndexed() : g;
+        ng.deleteAttribute('uv');
+        const bb = new Float32Array(ng.attributes.position.count * 2);
+        for (let k = 0; k < bb.length; k += 2) bb[k] = base;
+        ng.setAttribute('boxBase', new THREE.BufferAttribute(bb, 2));
+        polyGeos.push(ng);
+        colliders.push({ minX, maxX, minZ, maxZ, minY: base, maxY: roof });
+      }
+      const cs = Math.cos(theta), sn = Math.sin(theta);
+      let top = null;
+      for (let k = start; k < start + count; k++) {
+        const m = all[massCount++];
+        // lowest & highest ground under the mass (corners, edge midpoints & centre)
+        let g0 = Infinity, g1 = -Infinity;
+        for (const u of [-0.5, 0, 0.5]) {
+          for (const v of [-0.5, 0, 0.5]) {
+            const lx = u * m.w, lz = v * m.d;
+            const g = T.groundAt(m.cx + lx * cs + lz * sn, m.cz - lx * sn + lz * cs);
+            g0 = Math.min(g0, g);
+            g1 = Math.max(g1, g);
+          }
+        }
+        g0 = Math.max(g0, base);
+        const plinth = g1 - g0 > PLINTH_MIN ? Math.min(g1 - g0, roof - g0 - storeys[mat]) : 0;
+        const box = {
+          x: m.cx, y: (bottom + roof) * 0.5, z: m.cz, w: m.w, h: roof - bottom, d: m.d, ry: theta, tone,
+          base: g0, plinth: Math.max(0, plinth),
+          faces: WALLS.map(([lx, lz]) => wallKind(m, lx, lz, shopsFlag > 0))
+        };
+        buckets[mat].push(box);
+        colliders.push({
+          minX: m.cx - (Math.abs(cs) * m.w + Math.abs(sn) * m.d) * 0.5, maxX: m.cx + (Math.abs(cs) * m.w + Math.abs(sn) * m.d) * 0.5,
+          minZ: m.cz - (Math.abs(sn) * m.w + Math.abs(cs) * m.d) * 0.5, maxZ: m.cz + (Math.abs(sn) * m.w + Math.abs(cs) * m.d) * 0.5,
+          minY: base, maxY: roof, obb: { cx: m.cx, cz: m.cz, hx: m.w * 0.5, hz: m.d * 0.5, cs, sn }
+        });
+        if (mat <= 2 && m.w > 3 && m.d > 3) blk.cornices.push({ x: m.cx, y: roof, z: m.cz, w: m.w + 1.0, h: 0.8, d: m.d + 1.0 });
+        if (!top || m.w * m.d > top.w * top.d) top = m;
+      }
+      // a bulkhead / mechanical penthouse on the largest roof
+      if (top && top.w >= 6 && top.d >= 6) {
+        const hw = Math.min(top.w - 1.2, Math.max(2.4, top.w * range(0.25, 0.45)));
+        const hd = Math.min(top.d - 1.2, Math.max(2.4, top.d * range(0.25, 0.45)));
+        blk.hvacUnits.push({ x: top.cx, y: roof, z: top.cz, w: hw, h: height >= 45 ? range(3.4, 5.8) : range(2.4, 3.2), d: hd });
+      }
+      quadtree.insert(blk);
+      allBlocks.push(blk);
+    }
+    if (polyGeos.length) {
+      const mesh = new THREE.Mesh(mergeGeometries(polyGeos, false), createPreWarBuildingMaterial({ ...facades[1][1], groundBase: true }));
+      mesh.name = 'SFBuildingOutlines';
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      group.add(mesh);
+    }
+    console.info(`[buildings] v1: ${header.count} footprints, ${massCount} masses, ${polyGeos.length} outlines`);
+  }
+
+  if (sf) buildSFMasses();
+  else for (const b of BLOCKS) {
     if (b.park > 0.6 || b.median) continue;
     minLot = b.frames ? 12 : 15;
     for (const [th, px, pz, rects] of b.frames || [[0, 0, 0, b.rects]]) {
@@ -2014,7 +2178,7 @@ function buildCityBlocks(scene) {
 
   // B6. Narrow leftover slabs no building fits on (8-26 m wide: clipped short by the shore highways or cut by Broadway)
   //     become sitting areas: a row or two of honey locusts & planes in tree pits (planted by street-details.js)
-  {
+  if (!sf) {
     const plazas = window.NYC.pavedPlazaRects || [];
     const sites = window.NYC.parkTreeSites;
     const hit = (r, x0, x1, z0, z1) => r.minX < x1 && r.maxX > x0 && r.minZ < z1 && r.maxZ > z0;

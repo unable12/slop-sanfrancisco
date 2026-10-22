@@ -28,7 +28,7 @@ const terrain = await bakeTerrain(box);
 const curbs = buildCurbIslands(box);
 const roadGraph = buildRoadGraph(box, curbs);
 const extra = buildExtra(box);
-const buildings = buildBuildings(box);
+const buildings = buildBuildings(box, curbs.blocks.map((b) => b.ring));
 const groundMask = buildGroundMask(box, { blocks: curbs.blocks.map((b) => b.ring), parks: extra.parks });
 
 const B = boxWorld(box);

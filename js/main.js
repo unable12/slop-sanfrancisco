@@ -38,7 +38,8 @@ const { loadCityData, buildSFGround, buildSFBuildingsV0 } = window.NYC;
 // the NYC builders still exist but expect Manhattan's tables, which are empty here (city-config.js)
 const FEATURES = {
   ground: 'sf', // 'sf' (sf-ground.js on js/terrain-mesh.js) | 'nyc' (city-grid.js)
-  buildings: 'v0', // 'v0' (sf-buildings.js extrusions) | 'nyc' (buildings.js)
+  buildings: 'v1', // 'v1' (buildings.js on the real footprints) | 'v0' (sf-buildings.js extrusions) | 'nyc' (buildings.js)
+  waterTowers: false, // New York's rooftop water towers (the v1 path never builds them)
   boroughs: false,
   landmarks: false,
   details: false,
@@ -132,7 +133,7 @@ async function initApp() {
   markInit('boroughs');
   const { colliders: landmarkColliders } = FEATURES.landmarks ? buildLandmarks(scene) : { colliders: [] };
   markInit('landmarks');
-  const cityBlocks = FEATURES.buildings === 'nyc' ? buildCityBlocks(scene) : buildSFBuildingsV0(scene);
+  const cityBlocks = FEATURES.buildings === 'v0' ? buildSFBuildingsV0(scene) : buildCityBlocks(scene, { sf: FEATURES.buildings === 'v1' });
   markInit('blocks');
   const allColliders = [...landmarkColliders, ...cityBlocks.colliders, ...boroughs.colliders, ...(cityGrid.colliders || [])];
 
