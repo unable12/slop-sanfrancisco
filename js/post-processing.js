@@ -1,7 +1,7 @@
 (function () {
 // Scene-linear color grading and lens bloom, composed in the existing final render pass.
 const { THREE } = window.NYC;
-const { Fn, uniform, float, vec2, vec3, vec4, dot, mix, min, max, pow, smoothstep, length, screenUV, screenSize } = window.NYC.TSL;
+const { Fn, uniform, float, vec2, vec3, vec4, dot, mix, min, max, pow, smoothstep, length, screenUV, screenSize, If, normalize } = window.NYC.TSL;
 const { bloom } = window.NYC.PostFX;
 
 // Exposure and white balance belong to the camera, independently of the physical lighting presets.
@@ -13,7 +13,7 @@ const LOOKS = {
   midnight: { exposure: 1.04, contrast: 1.08, saturation: 1.06, balance: [0.985, 1.00, 1.035], bloom: 0.30, threshold: 1.00 }
 };
 
-function createPostProcessing(renderer, sceneColor, reflections) {
+function createPostProcessing(renderer, sceneColor, reflections, depth, camera, lighting) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   // Exposure is applied before bloom so its threshold follows the image's exposed brightness.
   // RenderPipeline performs ACES and the output color-space conversion exactly once, after this graph.
@@ -23,7 +23,33 @@ function createPostProcessing(renderer, sceneColor, reflections) {
   const contrast = uniform(1.0);
   const saturation = uniform(1.0);
   const balance = uniform(new THREE.Vector3(1, 1, 1));
-  const exposed = max(sceneColor.rgb.add(reflections.rgb), vec3(0)).mul(exposure).mul(balance);
+  const fogEnabled = uniform(1);
+  const inverseProjection = uniform(camera.projectionMatrixInverse);
+  const cameraWorld = uniform(camera.matrixWorld);
+  // WebGPU clip depth is [0,1], reversed Z clears to zero, and texture V runs downwards.
+  // The camera inverse already includes reversed Z. Resolved depth makes fog
+  // independent of material count/overdraw. The sky keeps its physical shader above the marine horizon.
+  const fogged = Fn(() => {
+    const color = sceneColor.rgb.add(reflections.rgb).toVar();
+    If(fogEnabled.greaterThan(0.5), () => {
+      const clip = vec4(screenUV.x.mul(2).sub(1), float(1).sub(screenUV.y.mul(2)), depth.r, 1);
+      const view = inverseProjection.mul(clip).toVar();
+      const world = cameraWorld.mul(vec4(view.xyz.div(view.w), 1)).xyz;
+      const eye = cameraWorld.mul(vec4(0, 0, 0, 1)).xyz;
+      // Surface fog uses the resolved opaque depth; the sky only receives horizon haze.
+      If(depth.r.greaterThan(0), () => {
+        const atmosphere = lighting.createAerialFogNode(world, eye);
+        color.assign(mix(color, atmosphere.color, atmosphere.amount));
+      }).Else(() => {
+        const elevation = normalize(world.sub(eye)).y;
+        const horizon = float(1).sub(smoothstep(0.02, 0.3, elevation));
+        const marineColor = vec3(0.7, 0.76, 0.8).mul(float(1).sub(lighting.uNightFactor.mul(0.93)));
+        color.assign(mix(color, marineColor, lighting.uMarine.mul(horizon).mul(0.95)));
+      });
+    });
+    return color;
+  })();
+  const exposed = max(fogged, vec3(0)).mul(exposure).mul(balance);
 
   // Limit only bloom's peak radiance, scaling RGB together to retain neon and lamp colors.
   // The original HDR image keeps its full range for the tone mapper's highlight shoulder.
@@ -67,7 +93,7 @@ function createPostProcessing(renderer, sceneColor, reflections) {
   }
 
   applyPreset('golden');
-  return { outputNode, bloomPass, applyPreset, exposure, contrast, saturation, balance };
+  return { outputNode, fogEnabled, bloomPass, applyPreset, exposure, contrast, saturation, balance };
 }
 
 Object.assign(window.NYC, { createPostProcessing });

@@ -66,6 +66,15 @@ function buildTerrainMesh(scene) {
   }
 
   const material = createTerrainMaterial(makeMaskTexture(), window.NYC.DATA.groundMask.header);
+  if (window.NYC.DATA.fullRegion) {
+    // A 50 m dither transition reveals the regional ground underneath without alpha blending or double interiors.
+    const { positionWorld, min, clamp, floor, sin, fract, step } = window.NYC.TSL;
+    const distance = min(min(positionWorld.x.sub(T.originX), positionWorld.x.negate().add(T.originX + extentX)),
+      min(positionWorld.z.sub(T.originZ), positionWorld.z.negate().add(T.originZ + extentZ)));
+    const noise = fract(sin(floor(positionWorld.x.mul(2)).mul(12.9898).add(floor(positionWorld.z.mul(2)).mul(78.233))).mul(43758.5453));
+    material.opacityNode = step(noise, clamp(distance.div(50), 0, 1));
+    material.alphaTest = 0.5;
+  }
   const group = new THREE.Group();
   group.name = 'SFTerrain';
 

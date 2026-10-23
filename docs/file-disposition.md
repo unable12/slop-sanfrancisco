@@ -16,7 +16,7 @@ The internal namespace `window.NYC` / `__NYC_APP` stays (D2).
 | File | Lines | Disposition | What changes | Phase |
 |---|---|---|---|---|
 | `actor-models.js` | 1952 | Keep → small additions | SF fleet models (bus livery, sensor-pod cars, SFPD), cable car, tram | 4 |
-| `boroughs.js` | 3394 | Not loaded since P1 (decision P1-2); drop after porting | `buildBuildingChunks`, window-grid shader, mask-driven ground shader → `region.js` | 6 |
+| `boroughs.js` | 3394 | Removed in P6; retained in git history | Chunk instancing and window-grid shader reused in `region.js`; real-data mask replaces procedural geography | 6 |
 | `buildings.js` | 2636 | Modify heavily | New v1 path: footprint masses → `commit()` → facade boxes; `minY` colliders; quadtree over data bounds; NYC recipes, avenue/district tables and landmark reserves removed once v1 passes | 2, 4 |
 | `cameras.js` | 352 | Modify lightly | y ≥ ground + 0.55; terrain-aware boom | 2 |
 | `city-config.js` | 809 | Rewrite internals, keep exports | Generic functions kept; NYC tables replaced by SF data or emptied; `ISLAND_BOUNDS` / `getIslandBoundsAtZ` become land-polygon based (same names) | 1 |

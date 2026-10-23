@@ -1,0 +1,50 @@
+[
+  {
+    "level": "log",
+    "message": "[bench-details] {\"name\":\"twin-peaks-view\",\"medianMs\":8.3,\"p95Ms\":9.2,\"fps\":120,\"frames\":4769,\"width\":1280,\"height\":720,\"heapMB\":855,\"gpuMedianMs\":30.474,\"gpuSamples\":1192,\"fogComparison\":{\"camera\":\"path-start\",\"order\":\"ABBAABBA\",\"blocks\":[{\"fog\":0,\"medianMs\":31.064064000000005,\"samples\":120},{\"fog\":1,\"medianMs\":30.60531200000001,\"samples\":120},{\"fog\":1,\"medianMs\":30.343168000000006,\"samples\":119},{\"fog\":0,\"medianMs\":30.67084800000001,\"samples\":120},{\"fog\":0,\"medianMs\":30.146560000000004,\"samples\":120},{\"fog\":1,\"medianMs\":30.474240000000012,\"samples\":118},{\"fog\":1,\"medianMs\":30.801920000000013,\"samples\":119},{\"fog\":0,\"medianMs\":30.53977600000001,\"samples\":117}],\"pairedDeltasMs\":[-0.45875199999999694,-0.3276800000000044,0.32768000000000796,0.2621440000000028],\"medianDeltaMs\":0.2621440000000028}}",
+    "timestamp": "2026-10-23T03:59:22.795Z",
+    "url": "http://127.0.0.1:8081/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench] twin-peaks-view median_ms=8.30 p95_ms=9.20 fps=120",
+    "timestamp": "2026-10-23T03:59:22.795Z",
+    "url": "http://127.0.0.1:8081/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-idle] {\"name\":\"twin-peaks-view\",\"heapMB\":817}",
+    "timestamp": "2026-10-23T03:59:42.797Z",
+    "url": "http://127.0.0.1:8081/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-details] {\"name\":\"twin-peaks-view\",\"medianMs\":8.3,\"p95Ms\":8.8,\"fps\":120,\"frames\":4802,\"width\":1280,\"height\":720,\"heapMB\":1639,\"gpuMedianMs\":23.2,\"gpuSamples\":4682,\"fogComparison\":{\"camera\":{\"x\":-5896,\"y\":50,\"z\":-2100,\"yaw\":40,\"pitch\":0},\"order\":\"ABBAABBA\",\"blocks\":[{\"fog\":0,\"medianMs\":24.117248000000004,\"samples\":467},{\"fog\":1,\"medianMs\":23.199744000000006,\"samples\":466},{\"fog\":1,\"medianMs\":24.707072,\"samples\":466},{\"fog\":0,\"medianMs\":24.051712000000002,\"samples\":471},{\"fog\":0,\"medianMs\":23.855104000000004,\"samples\":465},{\"fog\":1,\"medianMs\":24.707072000000004,\"samples\":467},{\"fog\":1,\"medianMs\":23.789568000000003,\"samples\":465},{\"fog\":0,\"medianMs\":19.857408000000007,\"samples\":470}],\"pairedDeltasMs\":[-0.9175039999999974,0.6553599999999982,0.8519679999999994,3.932159999999996],\"medianDeltaMs\":0.8519679999999994}}",
+    "timestamp": "2026-10-23T04:00:48.852Z",
+    "url": "http://127.0.0.1:8081/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench] twin-peaks-view median_ms=8.30 p95_ms=8.80 fps=120",
+    "timestamp": "2026-10-23T04:00:48.853Z",
+    "url": "http://127.0.0.1:8081/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-idle] {\"name\":\"twin-peaks-view\",\"heapMB\":812}",
+    "timestamp": "2026-10-23T04:01:08.847Z",
+    "url": "http://127.0.0.1:8081/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-details] {\"name\":\"twin-peaks-view\",\"medianMs\":8.3,\"p95Ms\":8.8,\"fps\":120,\"frames\":4801,\"width\":1280,\"height\":720,\"heapMB\":1619,\"gpuMedianMs\":14.877,\"gpuSamples\":4703,\"fogComparison\":{\"camera\":{\"x\":-9595,\"y\":12,\"z\":2744,\"yaw\":0,\"pitch\":-4},\"order\":\"ABBAABBA\",\"blocks\":[{\"fog\":0,\"medianMs\":14.483455999999997,\"samples\":469},{\"fog\":1,\"medianMs\":13.631488,\"samples\":468},{\"fog\":1,\"medianMs\":15.007743999999995,\"samples\":470},{\"fog\":0,\"medianMs\":13.107199999999997,\"samples\":476},{\"fog\":0,\"medianMs\":16.449535999999995,\"samples\":468},{\"fog\":1,\"medianMs\":15.204351999999995,\"samples\":469},{\"fog\":1,\"medianMs\":14.417919999999997,\"samples\":471},{\"fog\":0,\"medianMs\":15.073279999999995,\"samples\":475}],\"pairedDeltasMs\":[-0.8519679999999976,1.9005439999999982,-1.245184,-0.6553599999999982],\"medianDeltaMs\":-0.6553599999999982}}",
+    "timestamp": "2026-10-23T04:02:11.637Z",
+    "url": "http://127.0.0.1:8081/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench] twin-peaks-view median_ms=8.30 p95_ms=8.80 fps=120",
+    "timestamp": "2026-10-23T04:02:11.638Z",
+    "url": "http://127.0.0.1:8081/js/main.js?v=20261022-sf-p6"
+  }
+]

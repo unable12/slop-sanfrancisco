@@ -272,7 +272,8 @@ class ThirdPersonControllerManager {
     const extX = (car ? Math.abs(cosH) * 0.86 + Math.abs(sinH) * 2.18 : radius) + 0.1;
     const extZ = (car ? Math.abs(sinH) * 0.86 + Math.abs(cosH) * 2.18 : radius) + 0.1;
     const reach = Math.max(extX, extZ);
-    const margin = heli ? 6000 : 0;
+    const bounds = heli && window.NYC.FLIGHT_BOUNDS || ISLAND_BOUNDS;
+    const margin = heli && !window.NYC.FLIGHT_BOUNDS ? 6000 : 0;
     const entity = this.getActiveEntity();
     // Conservative body cylinders, including the taxi's corners, bicycle wheels and helicopter tail/rotor.
     const body = { person: [0.48, 1.9], car: [2.4, 1.9], cyclist: [1.0, 1.9], helicopter: [6.2, 3.2] };
@@ -283,8 +284,8 @@ class ThirdPersonControllerManager {
     const cameraBack = Math.cos(0.09) * entity.chaseDistance;
     const cameraUp = entity.chaseHeight + Math.sin(0.09) * entity.chaseDistance * 0.85;
     const clampPoint = (px, pz) => {
-      pz = Math.max(ISLAND_BOUNDS.minZ + (heli ? -6000 : 30), Math.min(ISLAND_BOUNDS.maxZ + margin, pz));
-      px = Math.max(ISLAND_BOUNDS.minX - margin, Math.min(ISLAND_BOUNDS.maxX + margin, px));
+      pz = Math.max(bounds.minZ + (heli ? -margin : 30), Math.min(bounds.maxZ + margin, pz));
+      px = Math.max(bounds.minX - margin, Math.min(bounds.maxX + margin, px));
       if (!heli && getIslandBoundsAtZ) {
         const shore = getIslandBoundsAtZ(pz);
         const west = shore.westX + 8, east = shore.eastX - 8;
@@ -824,11 +825,12 @@ class ThirdPersonControllerManager {
   }
 
   resolveHorizontalCollision(pos, radius, yHeight = 1.0, carEntity = null) {
-    // The detailed island (the helicopter may roam out over the harbour & the boroughs)
+    // Ground modes stay in the detailed core; helicopters can explore the measured region.
     const heli = this.activeMode === 'helicopter';
-    const m = heli ? 6000 : 0;
-    pos.x = Math.max(ISLAND_BOUNDS.minX - m, Math.min(ISLAND_BOUNDS.maxX + m, pos.x));
-    pos.z = Math.max(ISLAND_BOUNDS.minZ + (heli ? -6000 : 30), Math.min(ISLAND_BOUNDS.maxZ + m, pos.z));
+    const bounds = heli && window.NYC.FLIGHT_BOUNDS || ISLAND_BOUNDS;
+    const m = heli && !window.NYC.FLIGHT_BOUNDS ? 6000 : 0;
+    pos.x = Math.max(bounds.minX - m, Math.min(bounds.maxX + m, pos.x));
+    pos.z = Math.max(bounds.minZ + (heli ? -m : 30), Math.min(bounds.maxZ + m, pos.z));
     // never into the bay: back to the last dry spot
     if (!heli) {
       if (!this._dry) this._dry = new WeakMap();

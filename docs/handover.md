@@ -1,64 +1,67 @@
-# Handover (2026-10-22, end of phase 5)
+# Handover (2026-10-23, Phase 6 complete)
 
-## State
+## First task next session
 
-**Phase 5 is complete; the gate passed** (`docs/phases/phase-5-landmarks.md`, Gate and Results).
-- Tests: 144/144 (`node --test tests/*.test.cjs tests/*.test.mjs`). New: `landmarks-data` (3), `landmarks-runtime` (4,
-  with the shared headless build `tests/helpers/landmarks-build.cjs`), a landmark-collider case in `controllers`; the
-  boot test counts 32 scripts.
-- Probe benches (two runs each): street 172/172, car 154/147, heli 145/137, hill 125/127, russian-hill-view 116/127 fps;
-  live heap ≤ 691 MB; ready ≤ 7.0 s; 0 errors. Level with P4 within the noise.
-- Gallery: `docs/review/p5/index.md` (43 shots, self-review). Landmark notes with sources and model notes:
-  `docs/landmarks/*.md`, index `docs/landmarks/INDEX.md`. Perf: `docs/perf-log.md`. Decisions P5-1 … P5-6 in `PLAN.md` §10.
+Start Phase 7 (`docs/phases/phase-7-ui-polish-release.md`). Phase 6's fog-cost gate now passes.
+The SF title, loading screen, camera presets and basic map labels are already done: inspect the existing UI
+before repeating those tasks. Begin with map hillshade/terrain context, then pause/settings and quality presets,
+accessibility, WebGPU fallback, attribution and final acceptance. Phase 7 has not been started or published.
 
-**Commits.** Kamil commits (K1). Phase 4 is committed (9cf1eda). Nothing of phase 5 is committed yet: **one
-ready-to-run command** at the end of `docs/commits.md`.
+## State and pending commit
 
-## What phase 5 added
+The earlier quick fixes are committed as `eafcf9a`. All Phase 6 work remains in the working tree for Kamil to
+commit. The final, path-limited command is the newest batch in `docs/commits.md`; the earlier Phase 6 checkpoint
+is superseded. No Git write command was run by this session.
 
-- **Data.** `tools/geo-landmarks.mjs` (sites, DEM ground, OSM 3D parts, bridges, region ground),
-  `tools/queries/landmarks-named.overpassql` over a new `landmarks` box (`tools/boxes.json`), `--osm` option in
-  `tools/fetch-geodata.mjs`. `GEO.landmarks` gains `base`, `groundTop`, `topH`, `slug`, `tier`, `parts`, `field`,
-  `buildings`, `detail`; `GEO.bridges`; `GEO.data.region` → `data/terrain-region.bin` (`docs/formats.md`). The x54 DEM
-  tiles are in `data/raw/dem` (289 MB). The core's terrain and buildings binaries are unchanged (`geo-terrain.mjs` now
-  lists only the tiles a box reads).
-- **Runtime.** `js/landmarks.js` (NYC content replaced: part builder, `fitToSite` without scaling, OSM part renderer with
-  dome/pyramidal/gabled roofs, 22 models, Lombard); `js/sf-bridges.js` (both bridges, `bridgeDeckAt`, far detail LOD);
-  `js/terrain.js` patches (`addPatch`, `patchesEnabled`); `js/sf-ground.js` region ground (and `?region=0`);
-  `js/data-loader.js` loads the region; `js/buildings.js` leaves generated masses under modelled outlines;
-  `js/grade-separation.js` lays the I-80 deck on the Bay Bridge; `js/main.js` builds the bridges and switches the
-  patches off while the street network is built.
+- Data: 8 m city terrain, 32 m USGS horizon terrain, 161,645 footprint boxes, 113,474 regional tree/canopy
+  instances, 4 m land cover and mapped centreline paint. 366 derived assets, 18.16 MB total, largest 2.48 MB.
+- Runtime: `js/region.js` replaces `boroughs.js`, with instancing, cached terrain LODs, 50 m core fade,
+  terrain-aware flight bounds, ferries and cargo scenery. Ground driving remains in the detailed core.
+- Atmosphere: Clear / Light haze / Marine layer, analytic 200 ± 40 m ceiling, westward density gradient,
+  advected variation, sun dimming, stronger Golden Gate chop, pier foam and night bridge lamps.
+- Fog optimisation: the existing aerial/marine equations now use resolved reversed-Z scene depth in
+  `js/post-processing.js`, inside the final colour graph and bloom prefilter. No extra render target or
+  ray marching. Depth zero is sky and gets directional marine horizon haze. Scene materials do not repeat fog.
+- Validation: **160/160 tests**, including numerical fog quadrature and camera/depth reconstruction. Six final
+  1280×720 images in `docs/review/p6/`. All seven final benches: 119–120 fps. Whole-city flight:
+  120 fps; retained heap after idle: 855 MB.
+- Fog GPU cost: three same-page paired comparisons give +0.262, +0.852 and -0.655 ms upper-median deltas.
+  The worst is below the unchanged <1 ms target. Negative values and individual outliers reflect timer/clock
+  noise; all blocks are saved. This is a median-cost result on this machine, not a per-frame guarantee.
 
-## Next session: start phase 6 (`docs/phases/phase-6-region-atmosphere.md`)
+## Reproduce
 
-1. Read `docs/commits.md`: if the phase 5 command is still pending, leave it; don't redo the work.
-2. P6.1 fetches the city box: the four SF DEM tiles are already in `data/raw/dem`. Replace the interim region ground
-   (PLAN P5-1): `data/terrain-region.bin`, `buildRegionGround` in `sf-ground.js`, the `Terrain` patches (keep
-   `patchesEnabled` off while the street network is built, or the streets past the core's terrain become land) and the
-   0 m sea threshold (`SEA_FLAT` in `geo-landmarks.mjs`: the bay is flattened at -0.4 m round Alcatraz). Keep Alcatraz's
-   4 m patch or fold it into the region tiers.
-3. The far landmarks (Sutro Tower, the Palace, Golden Gate Park's buildings, the Painted Ladies, Mission Dolores) then
-   get the region's buildings and parks round them; the Golden Gate's Marin end and the Bay Bridge's Oakland end get
-   their ground (the far tier).
-4. P6.3 fog: from Twin Peaks the Golden Gate is lost in the default haze (7.5 km); the marine layer should let the
-   towers stand out of it.
+```bash
+node --test --test-concurrency=1 tests/*.test.cjs tests/*.test.mjs
+node tools/serve.mjs
+```
 
-## Open questions / risks
+Use `?bench=twin-peaks-view&fog=marine&time=midday&gpuTiming=1&fogCompare=1&benchIdle=1` for the
+40 s paired comparison (ABBAABBA, five-second blocks, first second discarded). Optional `&cam=x,y,z,yaw,pitch`
+fixes another view. Normal `?bench` paths last 20 s. All benches render at 1280×720, DPR 1. The `benchIdle`
+option leaves the scene resident and reports heap after 20 s idle; this is not forced GC. Raw multi-gigabyte
+readings during repeated navigation include garbage and must not be called retained scene memory.
+`?fog=off` bypasses fog composition; Clear intentionally retains light aerial haze.
 
-- **Estimates in the models**, all labelled in `docs/landmarks/*.md`: the Bay Bridge's deck heights and truss (only the
-  67 m clearance and tower heights are sourced), the Golden Gate's deck depth, Salesforce Tower's taper and corner
-  radius, Transamerica's base, Oracle Park's stands and light towers, the turntable's diameter, Lombard's beds and
-  stairs, roofs and colours where no source gives them.
-- **The Bay Bridge approach** climbs at 4.5% to the deck from up to 900 m inland: ramps meeting I-80 there are raised
-  with it (junction heights). Highway traffic drives it; check it in a drive-through if anything looks off.
-- **Region ground cost** is within the bench noise; it adds ~1M triangles and ~35 MB live heap. P6's full region adds
-  177k buildings on top: budget it there.
-- **Still open from P4:** rail vehicles invisible to traffic, curb gaps in SoMa/Mission Bay, the heli bench's p95 from
-  tree uploads (23 ms), the USGS license row in `docs/data-sources.md`.
-- Not done: cars turning on the turntable; Pier 39; the Palace's lagoon and exhibition hall; Alamo Square's park.
+Final GPU evidence: `docs/review/p6/fog-final-benchmarks.json`; earlier unsuccessful and exploratory runs are
+retained separately. Full method and results: `docs/perf-log.md`. Gallery poses: `docs/review/p6/shots.json`.
+`&capture=1` pauses after GPU completion and exposes a 1280×720 PNG as a visible image for review/export.
 
-## Decisions made this phase
+For data regeneration, use `node --max-old-space-size=8192 tools/geo-region.mjs`; raw fetch commands and
+provenance are in `docs/data-sources.md`. Raw downloads remain ignored. `data/terrain-region.bin` remains a
+historical Phase 5 artifact; the runtime loads the full regional terrain instead.
 
-P5-1 … P5-6 in `PLAN.md` §10: the interim region ground; landmarks from OSM's 3D parts or sourced hand models, placed
-without scaling; masses left out only under modelled outlines; the Bay Bridge driven by the highway traffic (today's
-east span, not the demolished cantilever); bridge detail hidden beyond 3 km; Tier 2/3 status.
+## Tooling and remaining limitations
+
+Headless Chrome repeatedly stalled at `renderer.init()`. Use the in-app browser fallback rather than repeating
+those attempts. The image download helper also stalled; reading the visible capture image's data URL and
+saving it locally worked. No temporary animated preview tabs should be left running during benchmarks.
+
+- The outer city is simplified scenery, without a new walk/drive network or regional building colliders.
+- Four-metre land-cover edges are visible close up; coarse terrain LOD can hide small bits of road paint.
+- Transparent effects without depth writes inherit the opaque surface's fog depth, a screen-space approximation.
+- Vessel dimensions/speeds, canopy densities/heights and facade colours are estimates. Only one cargo anchor
+  qualified for water clearance. Oakland has measured terrain, without a fabricated skyline.
+- Phase 5 model-detail limitations and Phase 4 transit collision limits remain outside Phase 6.
+
+Decisions P6-1 through P6-5 are in `PLAN.md` §10. Token usage is unknown.

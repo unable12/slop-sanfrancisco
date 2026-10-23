@@ -1,0 +1,2343 @@
+{
+ "version": 1,
+ "ferries": [
+  {
+   "id": 27989500,
+   "name": "Alcatraz - Pier 33 Alcatraz Landing",
+   "pts": [
+    [
+     -184.4,
+     -2025.5
+    ],
+    [
+     -175.9,
+     -2027.4
+    ],
+    [
+     -167.4,
+     -2033.2
+    ],
+    [
+     -154.2,
+     -2052.5
+    ],
+    [
+     -131.6,
+     -2098.1
+    ],
+    [
+     -120.5,
+     -2148.8
+    ],
+    [
+     -117.7,
+     -2186.5
+    ],
+    [
+     -119.5,
+     -2224.5
+    ],
+    [
+     -122,
+     -2260.1
+    ],
+    [
+     -128.8,
+     -2297.6
+    ],
+    [
+     -138.1,
+     -2329.1
+    ],
+    [
+     -159.3,
+     -2376.5
+    ],
+    [
+     -200.4,
+     -2452.8
+    ],
+    [
+     -248,
+     -2525.4
+    ],
+    [
+     -303.9,
+     -2598.9
+    ],
+    [
+     -463.4,
+     -2777.8
+    ],
+    [
+     -1392.4,
+     -3984.8
+    ],
+    [
+     -1474.7,
+     -4100.7
+    ],
+    [
+     -1544.2,
+     -4164
+    ],
+    [
+     -1608.8,
+     -4204.5
+    ],
+    [
+     -1629.9,
+     -4212.7
+    ],
+    [
+     -1638.9,
+     -4213.5
+    ],
+    [
+     -1647.8,
+     -4212.3
+    ],
+    [
+     -1650.9,
+     -4211.1
+    ]
+   ],
+   "speed": 9
+  },
+  {
+   "id": 31772645,
+   "name": "Larkspur - San Francisco Ferry Building",
+   "pts": [
+    [
+     -9366.2,
+     -17316.1
+    ],
+    [
+     -9361.6,
+     -17320.4
+    ],
+    [
+     -9356.1,
+     -17322.6
+    ],
+    [
+     -9348.6,
+     -17323.4
+    ],
+    [
+     -9341.2,
+     -17322.8
+    ],
+    [
+     -9334.9,
+     -17319.5
+    ],
+    [
+     -9271,
+     -17238.2
+    ],
+    [
+     -9203.4,
+     -17182.5
+    ],
+    [
+     -8990.4,
+     -17088.2
+    ],
+    [
+     -8786.3,
+     -17018.4
+    ],
+    [
+     -8540.6,
+     -16884.6
+    ],
+    [
+     -8372.6,
+     -16682
+    ],
+    [
+     -8322.8,
+     -16645.7
+    ],
+    [
+     -8037.1,
+     -16554.2
+    ],
+    [
+     -7795.2,
+     -16398.3
+    ],
+    [
+     -7681,
+     -16371.1
+    ],
+    [
+     -7426.7,
+     -16426.5
+    ],
+    [
+     -7152,
+     -16404.8
+    ],
+    [
+     -6931.5,
+     -16357.1
+    ],
+    [
+     -6694.8,
+     -16286.9
+    ],
+    [
+     -6287.2,
+     -16115.6
+    ],
+    [
+     -5783.7,
+     -15797.9
+    ],
+    [
+     -5222.1,
+     -15236.7
+    ],
+    [
+     -1408,
+     -10443.3
+    ],
+    [
+     -1349.5,
+     -10364.5
+    ],
+    [
+     -1300.1,
+     -10288.2
+    ],
+    [
+     -1280,
+     -10238.5
+    ],
+    [
+     -1265.7,
+     -10186.7
+    ],
+    [
+     615.2,
+     -3771.9
+    ],
+    [
+     629.9,
+     -3699.4
+    ],
+    [
+     645.8,
+     -3635.5
+    ],
+    [
+     1193,
+     -1880.1
+    ],
+    [
+     1200.9,
+     -1841.5
+    ],
+    [
+     1198.6,
+     -1804.1
+    ],
+    [
+     1137.3,
+     -1395.9
+    ],
+    [
+     1122.9,
+     -1342.9
+    ],
+    [
+     1103.9,
+     -1290.9
+    ],
+    [
+     855.4,
+     -888.4
+    ],
+    [
+     837,
+     -874.1
+    ],
+    [
+     813.9,
+     -872.1
+    ],
+    [
+     792,
+     -880.8
+    ],
+    [
+     785.4,
+     -898.7
+    ]
+   ],
+   "speed": 9
+  },
+  {
+   "id": 98771919,
+   "name": "Sausalito - San Francisco Ferry Building",
+   "pts": [
+    [
+     -6651.5,
+     -7480.1
+    ],
+    [
+     -6644.3,
+     -7463.8
+    ],
+    [
+     -6630.4,
+     -7449.8
+    ],
+    [
+     -6610.2,
+     -7440.3
+    ],
+    [
+     -3370.3,
+     -6122.8
+    ],
+    [
+     -3289.6,
+     -6081.8
+    ],
+    [
+     514.7,
+     -3773.3
+    ],
+    [
+     552.7,
+     -3742.9
+    ],
+    [
+     586,
+     -3707.6
+    ],
+    [
+     614.9,
+     -3669.2
+    ],
+    [
+     635,
+     -3631.2
+    ],
+    [
+     1187.5,
+     -1879.4
+    ],
+    [
+     1193.4,
+     -1841
+    ],
+    [
+     1193.8,
+     -1803.9
+    ],
+    [
+     1131.1,
+     -1396.4
+    ],
+    [
+     1118.7,
+     -1343.1
+    ],
+    [
+     1097.2,
+     -1293.5
+    ],
+    [
+     851.3,
+     -891.9
+    ],
+    [
+     834.7,
+     -878.1
+    ],
+    [
+     814.3,
+     -876.2
+    ],
+    [
+     793.9,
+     -882.5
+    ],
+    [
+     785.4,
+     -898.7
+    ]
+   ],
+   "speed": 9
+  },
+  {
+   "id": 662437195,
+   "name": "Oakland Jack London Square - San Francisco Ferry Building",
+   "pts": [
+    [
+     988.9,
+     -641.8
+    ],
+    [
+     987.7,
+     -653.1
+    ],
+    [
+     993.6,
+     -665.6
+    ],
+    [
+     1004.4,
+     -675.5
+    ],
+    [
+     1044.5,
+     -690.9
+    ],
+    [
+     1082.2,
+     -697.5
+    ],
+    [
+     1126.4,
+     -696.5
+    ],
+    [
+     1166.3,
+     -687.3
+    ],
+    [
+     1634.7,
+     -497.6
+    ],
+    [
+     1703.2,
+     -478.7
+    ],
+    [
+     1775.2,
+     -468.3
+    ],
+    [
+     1842.9,
+     -465.2
+    ],
+    [
+     1923.6,
+     -471.7
+    ],
+    [
+     2003.2,
+     -484.6
+    ],
+    [
+     5106,
+     -1286.6
+    ],
+    [
+     5310.6,
+     -1328.4
+    ],
+    [
+     5518.2,
+     -1326.4
+    ],
+    [
+     5690.6,
+     -1290.7
+    ],
+    [
+     8491,
+     -414
+    ],
+    [
+     8567.2,
+     -408.2
+    ],
+    [
+     9362.8,
+     -407.7
+    ],
+    [
+     9441,
+     -409.3
+    ],
+    [
+     9503.5,
+     -412.5
+    ],
+    [
+     9532.5,
+     -414.1
+    ],
+    [
+     9647.7,
+     -424.6
+    ],
+    [
+     10584.6,
+     -598.3
+    ],
+    [
+     10631.4,
+     -612.9
+    ],
+    [
+     10683.6,
+     -639.8
+    ],
+    [
+     10713.6,
+     -648.3
+    ],
+    [
+     10735.2,
+     -642.7
+    ]
+   ],
+   "speed": 9
+  }
+ ],
+ "cargo": [
+  [
+   6072.3,
+   -1171.2
+  ]
+ ],
+ "roads": {
+  "url": "data/region/roads.bin",
+  "count": 31219
+ },
+ "waterLevel": -1.07,
+ "city": {
+  "x0": -12000,
+  "z0": -6000,
+  "x1": 5000,
+  "z1": 10000,
+  "w": 2126,
+  "h": 2001,
+  "step": 8,
+  "size": 1000,
+  "files": [
+   {
+    "url": "data/region/city--12--6.bin",
+    "x": -12000,
+    "z": -6000
+   },
+   {
+    "url": "data/region/city--11--6.bin",
+    "x": -11000,
+    "z": -6000
+   },
+   {
+    "url": "data/region/city--10--6.bin",
+    "x": -10000,
+    "z": -6000
+   },
+   {
+    "url": "data/region/city--9--6.bin",
+    "x": -9000,
+    "z": -6000
+   },
+   {
+    "url": "data/region/city--8--6.bin",
+    "x": -8000,
+    "z": -6000
+   },
+   {
+    "url": "data/region/city--7--6.bin",
+    "x": -7000,
+    "z": -6000
+   },
+   {
+    "url": "data/region/city--12--5.bin",
+    "x": -12000,
+    "z": -5000
+   },
+   {
+    "url": "data/region/city--11--5.bin",
+    "x": -11000,
+    "z": -5000
+   },
+   {
+    "url": "data/region/city--10--5.bin",
+    "x": -10000,
+    "z": -5000
+   },
+   {
+    "url": "data/region/city--9--5.bin",
+    "x": -9000,
+    "z": -5000
+   },
+   {
+    "url": "data/region/city--8--5.bin",
+    "x": -8000,
+    "z": -5000
+   },
+   {
+    "url": "data/region/city--7--5.bin",
+    "x": -7000,
+    "z": -5000
+   },
+   {
+    "url": "data/region/city--3--5.bin",
+    "x": -3000,
+    "z": -5000
+   },
+   {
+    "url": "data/region/city--2--5.bin",
+    "x": -2000,
+    "z": -5000
+   },
+   {
+    "url": "data/region/city-2--5.bin",
+    "x": 2000,
+    "z": -5000
+   },
+   {
+    "url": "data/region/city-3--5.bin",
+    "x": 3000,
+    "z": -5000
+   },
+   {
+    "url": "data/region/city--12--4.bin",
+    "x": -12000,
+    "z": -4000
+   },
+   {
+    "url": "data/region/city--11--4.bin",
+    "x": -11000,
+    "z": -4000
+   },
+   {
+    "url": "data/region/city--10--4.bin",
+    "x": -10000,
+    "z": -4000
+   },
+   {
+    "url": "data/region/city--9--4.bin",
+    "x": -9000,
+    "z": -4000
+   },
+   {
+    "url": "data/region/city-2--4.bin",
+    "x": 2000,
+    "z": -4000
+   },
+   {
+    "url": "data/region/city-3--4.bin",
+    "x": 3000,
+    "z": -4000
+   },
+   {
+    "url": "data/region/city--12--3.bin",
+    "x": -12000,
+    "z": -3000
+   },
+   {
+    "url": "data/region/city--7--3.bin",
+    "x": -7000,
+    "z": -3000
+   },
+   {
+    "url": "data/region/city--6--3.bin",
+    "x": -6000,
+    "z": -3000
+   },
+   {
+    "url": "data/region/city--5--3.bin",
+    "x": -5000,
+    "z": -3000
+   },
+   {
+    "url": "data/region/city--4--3.bin",
+    "x": -4000,
+    "z": -3000
+   },
+   {
+    "url": "data/region/city--3--3.bin",
+    "x": -3000,
+    "z": -3000
+   },
+   {
+    "url": "data/region/city--2--3.bin",
+    "x": -2000,
+    "z": -3000
+   },
+   {
+    "url": "data/region/city--1--3.bin",
+    "x": -1000,
+    "z": -3000
+   },
+   {
+    "url": "data/region/city-0--3.bin",
+    "x": 0,
+    "z": -3000
+   },
+   {
+    "url": "data/region/city-2--3.bin",
+    "x": 2000,
+    "z": -3000
+   },
+   {
+    "url": "data/region/city-3--3.bin",
+    "x": 3000,
+    "z": -3000
+   },
+   {
+    "url": "data/region/city--8--2.bin",
+    "x": -8000,
+    "z": -2000
+   },
+   {
+    "url": "data/region/city--7--2.bin",
+    "x": -7000,
+    "z": -2000
+   },
+   {
+    "url": "data/region/city--6--2.bin",
+    "x": -6000,
+    "z": -2000
+   },
+   {
+    "url": "data/region/city--5--2.bin",
+    "x": -5000,
+    "z": -2000
+   },
+   {
+    "url": "data/region/city--4--2.bin",
+    "x": -4000,
+    "z": -2000
+   },
+   {
+    "url": "data/region/city--3--2.bin",
+    "x": -3000,
+    "z": -2000
+   },
+   {
+    "url": "data/region/city--2--2.bin",
+    "x": -2000,
+    "z": -2000
+   },
+   {
+    "url": "data/region/city--1--2.bin",
+    "x": -1000,
+    "z": -2000
+   },
+   {
+    "url": "data/region/city-0--2.bin",
+    "x": 0,
+    "z": -2000
+   },
+   {
+    "url": "data/region/city--10--1.bin",
+    "x": -10000,
+    "z": -1000
+   },
+   {
+    "url": "data/region/city--8--1.bin",
+    "x": -8000,
+    "z": -1000
+   },
+   {
+    "url": "data/region/city--7--1.bin",
+    "x": -7000,
+    "z": -1000
+   },
+   {
+    "url": "data/region/city--6--1.bin",
+    "x": -6000,
+    "z": -1000
+   },
+   {
+    "url": "data/region/city--5--1.bin",
+    "x": -5000,
+    "z": -1000
+   },
+   {
+    "url": "data/region/city--4--1.bin",
+    "x": -4000,
+    "z": -1000
+   },
+   {
+    "url": "data/region/city--3--1.bin",
+    "x": -3000,
+    "z": -1000
+   },
+   {
+    "url": "data/region/city--2--1.bin",
+    "x": -2000,
+    "z": -1000
+   },
+   {
+    "url": "data/region/city--1--1.bin",
+    "x": -1000,
+    "z": -1000
+   },
+   {
+    "url": "data/region/city-0--1.bin",
+    "x": 0,
+    "z": -1000
+   },
+   {
+    "url": "data/region/city-1--1.bin",
+    "x": 1000,
+    "z": -1000
+   },
+   {
+    "url": "data/region/city--11-0.bin",
+    "x": -11000,
+    "z": 0
+   },
+   {
+    "url": "data/region/city--10-0.bin",
+    "x": -10000,
+    "z": 0
+   },
+   {
+    "url": "data/region/city--9-0.bin",
+    "x": -9000,
+    "z": 0
+   },
+   {
+    "url": "data/region/city--8-0.bin",
+    "x": -8000,
+    "z": 0
+   },
+   {
+    "url": "data/region/city--7-0.bin",
+    "x": -7000,
+    "z": 0
+   },
+   {
+    "url": "data/region/city--6-0.bin",
+    "x": -6000,
+    "z": 0
+   },
+   {
+    "url": "data/region/city--5-0.bin",
+    "x": -5000,
+    "z": 0
+   },
+   {
+    "url": "data/region/city--4-0.bin",
+    "x": -4000,
+    "z": 0
+   },
+   {
+    "url": "data/region/city--3-0.bin",
+    "x": -3000,
+    "z": 0
+   },
+   {
+    "url": "data/region/city--2-0.bin",
+    "x": -2000,
+    "z": 0
+   },
+   {
+    "url": "data/region/city--1-0.bin",
+    "x": -1000,
+    "z": 0
+   },
+   {
+    "url": "data/region/city-0-0.bin",
+    "x": 0,
+    "z": 0
+   },
+   {
+    "url": "data/region/city-1-0.bin",
+    "x": 1000,
+    "z": 0
+   },
+   {
+    "url": "data/region/city--11-1.bin",
+    "x": -11000,
+    "z": 1000
+   },
+   {
+    "url": "data/region/city--10-1.bin",
+    "x": -10000,
+    "z": 1000
+   },
+   {
+    "url": "data/region/city--9-1.bin",
+    "x": -9000,
+    "z": 1000
+   },
+   {
+    "url": "data/region/city--8-1.bin",
+    "x": -8000,
+    "z": 1000
+   },
+   {
+    "url": "data/region/city--7-1.bin",
+    "x": -7000,
+    "z": 1000
+   },
+   {
+    "url": "data/region/city--6-1.bin",
+    "x": -6000,
+    "z": 1000
+   },
+   {
+    "url": "data/region/city--5-1.bin",
+    "x": -5000,
+    "z": 1000
+   },
+   {
+    "url": "data/region/city--4-1.bin",
+    "x": -4000,
+    "z": 1000
+   },
+   {
+    "url": "data/region/city--3-1.bin",
+    "x": -3000,
+    "z": 1000
+   },
+   {
+    "url": "data/region/city--2-1.bin",
+    "x": -2000,
+    "z": 1000
+   },
+   {
+    "url": "data/region/city--1-1.bin",
+    "x": -1000,
+    "z": 1000
+   },
+   {
+    "url": "data/region/city-0-1.bin",
+    "x": 0,
+    "z": 1000
+   },
+   {
+    "url": "data/region/city-1-1.bin",
+    "x": 1000,
+    "z": 1000
+   },
+   {
+    "url": "data/region/city--10-2.bin",
+    "x": -10000,
+    "z": 2000
+   },
+   {
+    "url": "data/region/city--9-2.bin",
+    "x": -9000,
+    "z": 2000
+   },
+   {
+    "url": "data/region/city--8-2.bin",
+    "x": -8000,
+    "z": 2000
+   },
+   {
+    "url": "data/region/city--7-2.bin",
+    "x": -7000,
+    "z": 2000
+   },
+   {
+    "url": "data/region/city--6-2.bin",
+    "x": -6000,
+    "z": 2000
+   },
+   {
+    "url": "data/region/city--5-2.bin",
+    "x": -5000,
+    "z": 2000
+   },
+   {
+    "url": "data/region/city--4-2.bin",
+    "x": -4000,
+    "z": 2000
+   },
+   {
+    "url": "data/region/city--3-2.bin",
+    "x": -3000,
+    "z": 2000
+   },
+   {
+    "url": "data/region/city--2-2.bin",
+    "x": -2000,
+    "z": 2000
+   },
+   {
+    "url": "data/region/city--1-2.bin",
+    "x": -1000,
+    "z": 2000
+   },
+   {
+    "url": "data/region/city-0-2.bin",
+    "x": 0,
+    "z": 2000
+   },
+   {
+    "url": "data/region/city-1-2.bin",
+    "x": 1000,
+    "z": 2000
+   },
+   {
+    "url": "data/region/city--10-3.bin",
+    "x": -10000,
+    "z": 3000
+   },
+   {
+    "url": "data/region/city--9-3.bin",
+    "x": -9000,
+    "z": 3000
+   },
+   {
+    "url": "data/region/city--8-3.bin",
+    "x": -8000,
+    "z": 3000
+   },
+   {
+    "url": "data/region/city--7-3.bin",
+    "x": -7000,
+    "z": 3000
+   },
+   {
+    "url": "data/region/city--6-3.bin",
+    "x": -6000,
+    "z": 3000
+   },
+   {
+    "url": "data/region/city--5-3.bin",
+    "x": -5000,
+    "z": 3000
+   },
+   {
+    "url": "data/region/city--4-3.bin",
+    "x": -4000,
+    "z": 3000
+   },
+   {
+    "url": "data/region/city--3-3.bin",
+    "x": -3000,
+    "z": 3000
+   },
+   {
+    "url": "data/region/city--2-3.bin",
+    "x": -2000,
+    "z": 3000
+   },
+   {
+    "url": "data/region/city--1-3.bin",
+    "x": -1000,
+    "z": 3000
+   },
+   {
+    "url": "data/region/city-0-3.bin",
+    "x": 0,
+    "z": 3000
+   },
+   {
+    "url": "data/region/city-1-3.bin",
+    "x": 1000,
+    "z": 3000
+   },
+   {
+    "url": "data/region/city--10-4.bin",
+    "x": -10000,
+    "z": 4000
+   },
+   {
+    "url": "data/region/city--9-4.bin",
+    "x": -9000,
+    "z": 4000
+   },
+   {
+    "url": "data/region/city--8-4.bin",
+    "x": -8000,
+    "z": 4000
+   },
+   {
+    "url": "data/region/city--7-4.bin",
+    "x": -7000,
+    "z": 4000
+   },
+   {
+    "url": "data/region/city--6-4.bin",
+    "x": -6000,
+    "z": 4000
+   },
+   {
+    "url": "data/region/city--5-4.bin",
+    "x": -5000,
+    "z": 4000
+   },
+   {
+    "url": "data/region/city--4-4.bin",
+    "x": -4000,
+    "z": 4000
+   },
+   {
+    "url": "data/region/city--3-4.bin",
+    "x": -3000,
+    "z": 4000
+   },
+   {
+    "url": "data/region/city--2-4.bin",
+    "x": -2000,
+    "z": 4000
+   },
+   {
+    "url": "data/region/city--1-4.bin",
+    "x": -1000,
+    "z": 4000
+   },
+   {
+    "url": "data/region/city-0-4.bin",
+    "x": 0,
+    "z": 4000
+   },
+   {
+    "url": "data/region/city-1-4.bin",
+    "x": 1000,
+    "z": 4000
+   },
+   {
+    "url": "data/region/city-2-4.bin",
+    "x": 2000,
+    "z": 4000
+   },
+   {
+    "url": "data/region/city--10-5.bin",
+    "x": -10000,
+    "z": 5000
+   },
+   {
+    "url": "data/region/city--9-5.bin",
+    "x": -9000,
+    "z": 5000
+   },
+   {
+    "url": "data/region/city--8-5.bin",
+    "x": -8000,
+    "z": 5000
+   },
+   {
+    "url": "data/region/city--7-5.bin",
+    "x": -7000,
+    "z": 5000
+   },
+   {
+    "url": "data/region/city--6-5.bin",
+    "x": -6000,
+    "z": 5000
+   },
+   {
+    "url": "data/region/city--5-5.bin",
+    "x": -5000,
+    "z": 5000
+   },
+   {
+    "url": "data/region/city--4-5.bin",
+    "x": -4000,
+    "z": 5000
+   },
+   {
+    "url": "data/region/city--3-5.bin",
+    "x": -3000,
+    "z": 5000
+   },
+   {
+    "url": "data/region/city--2-5.bin",
+    "x": -2000,
+    "z": 5000
+   },
+   {
+    "url": "data/region/city--1-5.bin",
+    "x": -1000,
+    "z": 5000
+   },
+   {
+    "url": "data/region/city-0-5.bin",
+    "x": 0,
+    "z": 5000
+   },
+   {
+    "url": "data/region/city-1-5.bin",
+    "x": 1000,
+    "z": 5000
+   },
+   {
+    "url": "data/region/city-2-5.bin",
+    "x": 2000,
+    "z": 5000
+   },
+   {
+    "url": "data/region/city-3-5.bin",
+    "x": 3000,
+    "z": 5000
+   },
+   {
+    "url": "data/region/city--10-6.bin",
+    "x": -10000,
+    "z": 6000
+   },
+   {
+    "url": "data/region/city--9-6.bin",
+    "x": -9000,
+    "z": 6000
+   },
+   {
+    "url": "data/region/city--8-6.bin",
+    "x": -8000,
+    "z": 6000
+   },
+   {
+    "url": "data/region/city--7-6.bin",
+    "x": -7000,
+    "z": 6000
+   },
+   {
+    "url": "data/region/city--6-6.bin",
+    "x": -6000,
+    "z": 6000
+   },
+   {
+    "url": "data/region/city--5-6.bin",
+    "x": -5000,
+    "z": 6000
+   },
+   {
+    "url": "data/region/city--4-6.bin",
+    "x": -4000,
+    "z": 6000
+   },
+   {
+    "url": "data/region/city--3-6.bin",
+    "x": -3000,
+    "z": 6000
+   },
+   {
+    "url": "data/region/city--2-6.bin",
+    "x": -2000,
+    "z": 6000
+   },
+   {
+    "url": "data/region/city--1-6.bin",
+    "x": -1000,
+    "z": 6000
+   },
+   {
+    "url": "data/region/city-0-6.bin",
+    "x": 0,
+    "z": 6000
+   },
+   {
+    "url": "data/region/city-1-6.bin",
+    "x": 1000,
+    "z": 6000
+   },
+   {
+    "url": "data/region/city-2-6.bin",
+    "x": 2000,
+    "z": 6000
+   },
+   {
+    "url": "data/region/city-3-6.bin",
+    "x": 3000,
+    "z": 6000
+   },
+   {
+    "url": "data/region/city--10-7.bin",
+    "x": -10000,
+    "z": 7000
+   },
+   {
+    "url": "data/region/city--9-7.bin",
+    "x": -9000,
+    "z": 7000
+   },
+   {
+    "url": "data/region/city--8-7.bin",
+    "x": -8000,
+    "z": 7000
+   },
+   {
+    "url": "data/region/city--7-7.bin",
+    "x": -7000,
+    "z": 7000
+   },
+   {
+    "url": "data/region/city--6-7.bin",
+    "x": -6000,
+    "z": 7000
+   },
+   {
+    "url": "data/region/city--5-7.bin",
+    "x": -5000,
+    "z": 7000
+   },
+   {
+    "url": "data/region/city--4-7.bin",
+    "x": -4000,
+    "z": 7000
+   },
+   {
+    "url": "data/region/city--3-7.bin",
+    "x": -3000,
+    "z": 7000
+   },
+   {
+    "url": "data/region/city--2-7.bin",
+    "x": -2000,
+    "z": 7000
+   },
+   {
+    "url": "data/region/city--1-7.bin",
+    "x": -1000,
+    "z": 7000
+   },
+   {
+    "url": "data/region/city-0-7.bin",
+    "x": 0,
+    "z": 7000
+   },
+   {
+    "url": "data/region/city-1-7.bin",
+    "x": 1000,
+    "z": 7000
+   },
+   {
+    "url": "data/region/city-2-7.bin",
+    "x": 2000,
+    "z": 7000
+   },
+   {
+    "url": "data/region/city-3-7.bin",
+    "x": 3000,
+    "z": 7000
+   },
+   {
+    "url": "data/region/city--10-8.bin",
+    "x": -10000,
+    "z": 8000
+   },
+   {
+    "url": "data/region/city--9-8.bin",
+    "x": -9000,
+    "z": 8000
+   },
+   {
+    "url": "data/region/city--8-8.bin",
+    "x": -8000,
+    "z": 8000
+   },
+   {
+    "url": "data/region/city--7-8.bin",
+    "x": -7000,
+    "z": 8000
+   },
+   {
+    "url": "data/region/city--6-8.bin",
+    "x": -6000,
+    "z": 8000
+   },
+   {
+    "url": "data/region/city--5-8.bin",
+    "x": -5000,
+    "z": 8000
+   },
+   {
+    "url": "data/region/city--4-8.bin",
+    "x": -4000,
+    "z": 8000
+   },
+   {
+    "url": "data/region/city--3-8.bin",
+    "x": -3000,
+    "z": 8000
+   },
+   {
+    "url": "data/region/city--2-8.bin",
+    "x": -2000,
+    "z": 8000
+   },
+   {
+    "url": "data/region/city--1-8.bin",
+    "x": -1000,
+    "z": 8000
+   },
+   {
+    "url": "data/region/city-0-8.bin",
+    "x": 0,
+    "z": 8000
+   },
+   {
+    "url": "data/region/city-1-8.bin",
+    "x": 1000,
+    "z": 8000
+   },
+   {
+    "url": "data/region/city-2-8.bin",
+    "x": 2000,
+    "z": 8000
+   },
+   {
+    "url": "data/region/city-3-8.bin",
+    "x": 3000,
+    "z": 8000
+   },
+   {
+    "url": "data/region/city--9-9.bin",
+    "x": -9000,
+    "z": 9000
+   },
+   {
+    "url": "data/region/city--8-9.bin",
+    "x": -8000,
+    "z": 9000
+   },
+   {
+    "url": "data/region/city--7-9.bin",
+    "x": -7000,
+    "z": 9000
+   },
+   {
+    "url": "data/region/city--6-9.bin",
+    "x": -6000,
+    "z": 9000
+   },
+   {
+    "url": "data/region/city--5-9.bin",
+    "x": -5000,
+    "z": 9000
+   },
+   {
+    "url": "data/region/city--4-9.bin",
+    "x": -4000,
+    "z": 9000
+   },
+   {
+    "url": "data/region/city--3-9.bin",
+    "x": -3000,
+    "z": 9000
+   },
+   {
+    "url": "data/region/city--2-9.bin",
+    "x": -2000,
+    "z": 9000
+   },
+   {
+    "url": "data/region/city--1-9.bin",
+    "x": -1000,
+    "z": 9000
+   },
+   {
+    "url": "data/region/city-0-9.bin",
+    "x": 0,
+    "z": 9000
+   }
+  ],
+  "missing": 0,
+  "source": [
+   "horizon/USGS_13_n38w123_20250826.tif",
+   "dem/USGS_1M_10_x54y418_CA_SanFrancisco_B23.tif",
+   "dem/USGS_1M_10_x54y419_CA_SanFrancisco_B23.tif",
+   "dem/USGS_1M_10_x55y418_CA_SanFrancisco_B23.tif",
+   "dem/USGS_1M_10_x55y419_CA_SanFrancisco_B23.tif"
+  ]
+ },
+ "horizon": {
+  "x0": -24000,
+  "z0": -20000,
+  "x1": 28000,
+  "z1": 16000,
+  "w": 1626,
+  "h": 1126,
+  "step": 32,
+  "size": 4000,
+  "files": [
+   {
+    "url": "data/region/horizon--6--5.bin",
+    "x": -24000,
+    "z": -20000
+   },
+   {
+    "url": "data/region/horizon--5--5.bin",
+    "x": -20000,
+    "z": -20000
+   },
+   {
+    "url": "data/region/horizon--4--5.bin",
+    "x": -16000,
+    "z": -20000
+   },
+   {
+    "url": "data/region/horizon--3--5.bin",
+    "x": -12000,
+    "z": -20000
+   },
+   {
+    "url": "data/region/horizon--2--5.bin",
+    "x": -8000,
+    "z": -20000
+   },
+   {
+    "url": "data/region/horizon--1--5.bin",
+    "x": -4000,
+    "z": -20000
+   },
+   {
+    "url": "data/region/horizon-0--5.bin",
+    "x": 0,
+    "z": -20000
+   },
+   {
+    "url": "data/region/horizon-1--5.bin",
+    "x": 4000,
+    "z": -20000
+   },
+   {
+    "url": "data/region/horizon-2--5.bin",
+    "x": 8000,
+    "z": -20000
+   },
+   {
+    "url": "data/region/horizon-3--5.bin",
+    "x": 12000,
+    "z": -20000
+   },
+   {
+    "url": "data/region/horizon-4--5.bin",
+    "x": 16000,
+    "z": -20000
+   },
+   {
+    "url": "data/region/horizon-5--5.bin",
+    "x": 20000,
+    "z": -20000
+   },
+   {
+    "url": "data/region/horizon-6--5.bin",
+    "x": 24000,
+    "z": -20000
+   },
+   {
+    "url": "data/region/horizon--6--4.bin",
+    "x": -24000,
+    "z": -16000
+   },
+   {
+    "url": "data/region/horizon--5--4.bin",
+    "x": -20000,
+    "z": -16000
+   },
+   {
+    "url": "data/region/horizon--4--4.bin",
+    "x": -16000,
+    "z": -16000
+   },
+   {
+    "url": "data/region/horizon--3--4.bin",
+    "x": -12000,
+    "z": -16000
+   },
+   {
+    "url": "data/region/horizon--2--4.bin",
+    "x": -8000,
+    "z": -16000
+   },
+   {
+    "url": "data/region/horizon--1--4.bin",
+    "x": -4000,
+    "z": -16000
+   },
+   {
+    "url": "data/region/horizon-0--4.bin",
+    "x": 0,
+    "z": -16000
+   },
+   {
+    "url": "data/region/horizon-1--4.bin",
+    "x": 4000,
+    "z": -16000
+   },
+   {
+    "url": "data/region/horizon-2--4.bin",
+    "x": 8000,
+    "z": -16000
+   },
+   {
+    "url": "data/region/horizon-3--4.bin",
+    "x": 12000,
+    "z": -16000
+   },
+   {
+    "url": "data/region/horizon-4--4.bin",
+    "x": 16000,
+    "z": -16000
+   },
+   {
+    "url": "data/region/horizon-5--4.bin",
+    "x": 20000,
+    "z": -16000
+   },
+   {
+    "url": "data/region/horizon-6--4.bin",
+    "x": 24000,
+    "z": -16000
+   },
+   {
+    "url": "data/region/horizon--6--3.bin",
+    "x": -24000,
+    "z": -12000
+   },
+   {
+    "url": "data/region/horizon--5--3.bin",
+    "x": -20000,
+    "z": -12000
+   },
+   {
+    "url": "data/region/horizon--4--3.bin",
+    "x": -16000,
+    "z": -12000
+   },
+   {
+    "url": "data/region/horizon--3--3.bin",
+    "x": -12000,
+    "z": -12000
+   },
+   {
+    "url": "data/region/horizon--2--3.bin",
+    "x": -8000,
+    "z": -12000
+   },
+   {
+    "url": "data/region/horizon--1--3.bin",
+    "x": -4000,
+    "z": -12000
+   },
+   {
+    "url": "data/region/horizon-0--3.bin",
+    "x": 0,
+    "z": -12000
+   },
+   {
+    "url": "data/region/horizon-1--3.bin",
+    "x": 4000,
+    "z": -12000
+   },
+   {
+    "url": "data/region/horizon-2--3.bin",
+    "x": 8000,
+    "z": -12000
+   },
+   {
+    "url": "data/region/horizon-3--3.bin",
+    "x": 12000,
+    "z": -12000
+   },
+   {
+    "url": "data/region/horizon-4--3.bin",
+    "x": 16000,
+    "z": -12000
+   },
+   {
+    "url": "data/region/horizon-5--3.bin",
+    "x": 20000,
+    "z": -12000
+   },
+   {
+    "url": "data/region/horizon-6--3.bin",
+    "x": 24000,
+    "z": -12000
+   },
+   {
+    "url": "data/region/horizon--5--2.bin",
+    "x": -20000,
+    "z": -8000
+   },
+   {
+    "url": "data/region/horizon--4--2.bin",
+    "x": -16000,
+    "z": -8000
+   },
+   {
+    "url": "data/region/horizon--3--2.bin",
+    "x": -12000,
+    "z": -8000
+   },
+   {
+    "url": "data/region/horizon--2--2.bin",
+    "x": -8000,
+    "z": -8000
+   },
+   {
+    "url": "data/region/horizon--1--2.bin",
+    "x": -4000,
+    "z": -8000
+   },
+   {
+    "url": "data/region/horizon-0--2.bin",
+    "x": 0,
+    "z": -8000
+   },
+   {
+    "url": "data/region/horizon-1--2.bin",
+    "x": 4000,
+    "z": -8000
+   },
+   {
+    "url": "data/region/horizon-2--2.bin",
+    "x": 8000,
+    "z": -8000
+   },
+   {
+    "url": "data/region/horizon-3--2.bin",
+    "x": 12000,
+    "z": -8000
+   },
+   {
+    "url": "data/region/horizon-4--2.bin",
+    "x": 16000,
+    "z": -8000
+   },
+   {
+    "url": "data/region/horizon-5--2.bin",
+    "x": 20000,
+    "z": -8000
+   },
+   {
+    "url": "data/region/horizon-6--2.bin",
+    "x": 24000,
+    "z": -8000
+   },
+   {
+    "url": "data/region/horizon--3--1.bin",
+    "x": -12000,
+    "z": -4000
+   },
+   {
+    "url": "data/region/horizon--2--1.bin",
+    "x": -8000,
+    "z": -4000
+   },
+   {
+    "url": "data/region/horizon--1--1.bin",
+    "x": -4000,
+    "z": -4000
+   },
+   {
+    "url": "data/region/horizon-0--1.bin",
+    "x": 0,
+    "z": -4000
+   },
+   {
+    "url": "data/region/horizon-1--1.bin",
+    "x": 4000,
+    "z": -4000
+   },
+   {
+    "url": "data/region/horizon-2--1.bin",
+    "x": 8000,
+    "z": -4000
+   },
+   {
+    "url": "data/region/horizon-3--1.bin",
+    "x": 12000,
+    "z": -4000
+   },
+   {
+    "url": "data/region/horizon-4--1.bin",
+    "x": 16000,
+    "z": -4000
+   },
+   {
+    "url": "data/region/horizon-5--1.bin",
+    "x": 20000,
+    "z": -4000
+   },
+   {
+    "url": "data/region/horizon-6--1.bin",
+    "x": 24000,
+    "z": -4000
+   },
+   {
+    "url": "data/region/horizon--3-0.bin",
+    "x": -12000,
+    "z": 0
+   },
+   {
+    "url": "data/region/horizon--2-0.bin",
+    "x": -8000,
+    "z": 0
+   },
+   {
+    "url": "data/region/horizon--1-0.bin",
+    "x": -4000,
+    "z": 0
+   },
+   {
+    "url": "data/region/horizon-0-0.bin",
+    "x": 0,
+    "z": 0
+   },
+   {
+    "url": "data/region/horizon-1-0.bin",
+    "x": 4000,
+    "z": 0
+   },
+   {
+    "url": "data/region/horizon-2-0.bin",
+    "x": 8000,
+    "z": 0
+   },
+   {
+    "url": "data/region/horizon-3-0.bin",
+    "x": 12000,
+    "z": 0
+   },
+   {
+    "url": "data/region/horizon-4-0.bin",
+    "x": 16000,
+    "z": 0
+   },
+   {
+    "url": "data/region/horizon-5-0.bin",
+    "x": 20000,
+    "z": 0
+   },
+   {
+    "url": "data/region/horizon-6-0.bin",
+    "x": 24000,
+    "z": 0
+   },
+   {
+    "url": "data/region/horizon--3-1.bin",
+    "x": -12000,
+    "z": 4000
+   },
+   {
+    "url": "data/region/horizon--2-1.bin",
+    "x": -8000,
+    "z": 4000
+   },
+   {
+    "url": "data/region/horizon--1-1.bin",
+    "x": -4000,
+    "z": 4000
+   },
+   {
+    "url": "data/region/horizon-0-1.bin",
+    "x": 0,
+    "z": 4000
+   },
+   {
+    "url": "data/region/horizon-3-1.bin",
+    "x": 12000,
+    "z": 4000
+   },
+   {
+    "url": "data/region/horizon-4-1.bin",
+    "x": 16000,
+    "z": 4000
+   },
+   {
+    "url": "data/region/horizon-5-1.bin",
+    "x": 20000,
+    "z": 4000
+   },
+   {
+    "url": "data/region/horizon-6-1.bin",
+    "x": 24000,
+    "z": 4000
+   },
+   {
+    "url": "data/region/horizon--3-2.bin",
+    "x": -12000,
+    "z": 8000
+   },
+   {
+    "url": "data/region/horizon--2-2.bin",
+    "x": -8000,
+    "z": 8000
+   },
+   {
+    "url": "data/region/horizon--1-2.bin",
+    "x": -4000,
+    "z": 8000
+   },
+   {
+    "url": "data/region/horizon-0-2.bin",
+    "x": 0,
+    "z": 8000
+   },
+   {
+    "url": "data/region/horizon-3-2.bin",
+    "x": 12000,
+    "z": 8000
+   },
+   {
+    "url": "data/region/horizon-4-2.bin",
+    "x": 16000,
+    "z": 8000
+   },
+   {
+    "url": "data/region/horizon-5-2.bin",
+    "x": 20000,
+    "z": 8000
+   },
+   {
+    "url": "data/region/horizon-6-2.bin",
+    "x": 24000,
+    "z": 8000
+   },
+   {
+    "url": "data/region/horizon--3-3.bin",
+    "x": -12000,
+    "z": 12000
+   },
+   {
+    "url": "data/region/horizon--2-3.bin",
+    "x": -8000,
+    "z": 12000
+   },
+   {
+    "url": "data/region/horizon--1-3.bin",
+    "x": -4000,
+    "z": 12000
+   },
+   {
+    "url": "data/region/horizon-0-3.bin",
+    "x": 0,
+    "z": 12000
+   },
+   {
+    "url": "data/region/horizon-5-3.bin",
+    "x": 20000,
+    "z": 12000
+   },
+   {
+    "url": "data/region/horizon-6-3.bin",
+    "x": 24000,
+    "z": 12000
+   }
+  ],
+  "missing": 0,
+  "source": [
+   "horizon/USGS_13_n38w123_20250826.tif"
+  ]
+ },
+ "mask": {
+  "url": "data/region/groundmask.bin",
+  "format": "sf-region-mask",
+  "version": 1,
+  "cell": 4,
+  "originX": -12000,
+  "originZ": -6000,
+  "w": 4250,
+  "h": 4000,
+  "classes": [
+   "urban",
+   "asphalt",
+   "park",
+   "sand",
+   "rock",
+   "forest",
+   "cemetery",
+   "industrial",
+   "water"
+  ],
+  "encoding": "rle-u32",
+  "counts": [
+   5744287,
+   1345841,
+   1048344,
+   30447,
+   13963,
+   158689,
+   6549,
+   606472,
+   8045408
+  ],
+  "fallbackWidths": 17300,
+  "measuredSegments": 22170
+ },
+ "buildings": {
+  "files": [
+   {
+    "url": "data/region/buildings--1-2.bin",
+    "count": 1761
+   },
+   {
+    "url": "data/region/buildings--1-3.bin",
+    "count": 3214
+   },
+   {
+    "url": "data/region/buildings--1-4.bin",
+    "count": 2754
+   },
+   {
+    "url": "data/region/buildings--1-5.bin",
+    "count": 3148
+   },
+   {
+    "url": "data/region/buildings--1-6.bin",
+    "count": 2888
+   },
+   {
+    "url": "data/region/buildings--1-7.bin",
+    "count": 1752
+   },
+   {
+    "url": "data/region/buildings--2-2.bin",
+    "count": 2350
+   },
+   {
+    "url": "data/region/buildings--2-3.bin",
+    "count": 3676
+   },
+   {
+    "url": "data/region/buildings--2-4.bin",
+    "count": 4131
+   },
+   {
+    "url": "data/region/buildings--2-5.bin",
+    "count": 3649
+   },
+   {
+    "url": "data/region/buildings--2-6.bin",
+    "count": 1057
+   },
+   {
+    "url": "data/region/buildings--2-7.bin",
+    "count": 1208
+   },
+   {
+    "url": "data/region/buildings--3--1.bin",
+    "count": 2581
+   },
+   {
+    "url": "data/region/buildings--3--2.bin",
+    "count": 1379
+   },
+   {
+    "url": "data/region/buildings--3-0.bin",
+    "count": 1697
+   },
+   {
+    "url": "data/region/buildings--3-1.bin",
+    "count": 2308
+   },
+   {
+    "url": "data/region/buildings--3-2.bin",
+    "count": 3630
+   },
+   {
+    "url": "data/region/buildings--3-3.bin",
+    "count": 3782
+   },
+   {
+    "url": "data/region/buildings--3-4.bin",
+    "count": 3049
+   },
+   {
+    "url": "data/region/buildings--3-5.bin",
+    "count": 3464
+   },
+   {
+    "url": "data/region/buildings--3-6.bin",
+    "count": 3787
+   },
+   {
+    "url": "data/region/buildings--3-7.bin",
+    "count": 2200
+   },
+   {
+    "url": "data/region/buildings--4--1.bin",
+    "count": 1519
+   },
+   {
+    "url": "data/region/buildings--4--2.bin",
+    "count": 642
+   },
+   {
+    "url": "data/region/buildings--4-0.bin",
+    "count": 2494
+   },
+   {
+    "url": "data/region/buildings--4-1.bin",
+    "count": 2272
+   },
+   {
+    "url": "data/region/buildings--4-2.bin",
+    "count": 2921
+   },
+   {
+    "url": "data/region/buildings--4-3.bin",
+    "count": 1645
+   },
+   {
+    "url": "data/region/buildings--4-4.bin",
+    "count": 2308
+   },
+   {
+    "url": "data/region/buildings--4-5.bin",
+    "count": 2307
+   },
+   {
+    "url": "data/region/buildings--4-6.bin",
+    "count": 3470
+   },
+   {
+    "url": "data/region/buildings--4-7.bin",
+    "count": 2548
+   },
+   {
+    "url": "data/region/buildings--5--1.bin",
+    "count": 207
+   },
+   {
+    "url": "data/region/buildings--5--2.bin",
+    "count": 83
+   },
+   {
+    "url": "data/region/buildings--5-0.bin",
+    "count": 2919
+   },
+   {
+    "url": "data/region/buildings--5-1.bin",
+    "count": 1492
+   },
+   {
+    "url": "data/region/buildings--5-2.bin",
+    "count": 2402
+   },
+   {
+    "url": "data/region/buildings--5-3.bin",
+    "count": 2325
+   },
+   {
+    "url": "data/region/buildings--5-4.bin",
+    "count": 2630
+   },
+   {
+    "url": "data/region/buildings--5-5.bin",
+    "count": 2975
+   },
+   {
+    "url": "data/region/buildings--5-6.bin",
+    "count": 4069
+   },
+   {
+    "url": "data/region/buildings--5-7.bin",
+    "count": 2176
+   },
+   {
+    "url": "data/region/buildings--6--1.bin",
+    "count": 203
+   },
+   {
+    "url": "data/region/buildings--6--2.bin",
+    "count": 176
+   },
+   {
+    "url": "data/region/buildings--6-0.bin",
+    "count": 2789
+   },
+   {
+    "url": "data/region/buildings--6-1.bin",
+    "count": 1654
+   },
+   {
+    "url": "data/region/buildings--6-2.bin",
+    "count": 3047
+   },
+   {
+    "url": "data/region/buildings--6-3.bin",
+    "count": 3249
+   },
+   {
+    "url": "data/region/buildings--6-4.bin",
+    "count": 2569
+   },
+   {
+    "url": "data/region/buildings--6-5.bin",
+    "count": 1295
+   },
+   {
+    "url": "data/region/buildings--6-6.bin",
+    "count": 2578
+   },
+   {
+    "url": "data/region/buildings--6-7.bin",
+    "count": 334
+   },
+   {
+    "url": "data/region/buildings--7--1.bin",
+    "count": 85
+   },
+   {
+    "url": "data/region/buildings--7-0.bin",
+    "count": 2450
+   },
+   {
+    "url": "data/region/buildings--7-1.bin",
+    "count": 1849
+   },
+   {
+    "url": "data/region/buildings--7-2.bin",
+    "count": 2785
+   },
+   {
+    "url": "data/region/buildings--7-3.bin",
+    "count": 3106
+   },
+   {
+    "url": "data/region/buildings--7-4.bin",
+    "count": 3105
+   },
+   {
+    "url": "data/region/buildings--7-5.bin",
+    "count": 1183
+   },
+   {
+    "url": "data/region/buildings--7-6.bin",
+    "count": 135
+   },
+   {
+    "url": "data/region/buildings--7-7.bin",
+    "count": 146
+   },
+   {
+    "url": "data/region/buildings--8-0.bin",
+    "count": 1006
+   },
+   {
+    "url": "data/region/buildings--8-1.bin",
+    "count": 2038
+   },
+   {
+    "url": "data/region/buildings--8-2.bin",
+    "count": 2657
+   },
+   {
+    "url": "data/region/buildings--8-3.bin",
+    "count": 3139
+   },
+   {
+    "url": "data/region/buildings--8-4.bin",
+    "count": 2605
+   },
+   {
+    "url": "data/region/buildings--8-5.bin",
+    "count": 174
+   },
+   {
+    "url": "data/region/buildings-0-2.bin",
+    "count": 1864
+   },
+   {
+    "url": "data/region/buildings-0-3.bin",
+    "count": 1072
+   },
+   {
+    "url": "data/region/buildings-0-4.bin",
+    "count": 1639
+   },
+   {
+    "url": "data/region/buildings-0-5.bin",
+    "count": 2868
+   },
+   {
+    "url": "data/region/buildings-0-6.bin",
+    "count": 2114
+   },
+   {
+    "url": "data/region/buildings-0-7.bin",
+    "count": 502
+   },
+   {
+    "url": "data/region/buildings-1--4.bin",
+    "count": 163
+   },
+   {
+    "url": "data/region/buildings-1-1.bin",
+    "count": 11
+   },
+   {
+    "url": "data/region/buildings-1-2.bin",
+    "count": 168
+   },
+   {
+    "url": "data/region/buildings-1-3.bin",
+    "count": 230
+   },
+   {
+    "url": "data/region/buildings-1-4.bin",
+    "count": 851
+   },
+   {
+    "url": "data/region/buildings-1-5.bin",
+    "count": 2002
+   },
+   {
+    "url": "data/region/buildings-1-6.bin",
+    "count": 181
+   },
+   {
+    "url": "data/region/buildings-1-7.bin",
+    "count": 4
+   },
+   {
+    "url": "data/region/buildings-2--3.bin",
+    "count": 59
+   },
+   {
+    "url": "data/region/buildings-2--4.bin",
+    "count": 292
+   },
+   {
+    "url": "data/region/buildings-2-4.bin",
+    "count": 10
+   },
+   {
+    "url": "data/region/buildings-2-5.bin",
+    "count": 321
+   },
+   {
+    "url": "data/region/buildings-2-6.bin",
+    "count": 46
+   },
+   {
+    "url": "data/region/buildings-3-5.bin",
+    "count": 22
+   }
+  ],
+  "stats": {
+   "input": 177023,
+   "core": 16658,
+   "landmark": 116,
+   "missingHeight": 0,
+   "small": 5437,
+   "buildings": 154870,
+   "boxes": 161645,
+   "split": 6716
+  },
+  "exclusion": {
+   "x0": -2522.6,
+   "x1": 1629.1,
+   "z0": -2830.1,
+   "z1": 2637.3
+  }
+ },
+ "trees": {
+  "url": "data/region/trees.bin",
+  "counts": {
+   "inventory": 109192,
+   "forest": 2443,
+   "park": 1839
+  }
+ },
+ "notes": [
+  "OSM directed coastlines classify sea and islands; USGS tidal surfaces are normalized to the core water datum without deleting low land.",
+  "Region road widths are measured between citywide curb segments; unmatched segments use core street-name medians, then class-based estimates.",
+  "Region buildings and trees are scenery; traffic remains in the detailed core."
+ ]
+}

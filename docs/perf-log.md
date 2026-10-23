@@ -42,3 +42,105 @@ Note: Chrome caches compiled shaders between runs (profiles are fresh, but the G
 | 2026-10-22 | P5 gate, `--bench hill` | 6.5–7.0 | 125, 127 fps; p95 8.9–9.6 ms | 771–804 (live 686–687) | 0 | |
 | 2026-10-22 | P5 gate, `--bench russian-hill-view` | 6.2–6.6 | 116, 127 fps; p95 9.8–10.3 ms | 735–830 (live 687–691) | 0 | Looks over the region ground to Sutro Tower and the bridges |
 | 2026-10-22 | P5, A/B `--query region=0` (no interim region ground) `hill` / `russian-hill-view` / `heli` | 5.6–6.3 | 94 / 87 / 102 fps | live 650–653 | 0 | Slower than with it: the run-to-run noise on this machine is larger than the region ground's cost, so no measurable cost. The region ground adds ~35 MB live heap |
+
+## Phase 6 — 2026-10-22, implementation complete; fog-cost gate open
+
+**Method change:** the headless Chrome probe repeatedly stalls at `renderer.init()` before scene construction
+(22–27 MB heap, no JavaScript errors). Longer waits, foregrounding the page and alternate ANGLE selection did
+not resolve it reliably. Results below use the in-app browser on the same machine. `?bench` forces a 1280×720
+canvas, DPR 1; animation is refresh-capped around 120 fps. These are not directly comparable to older uncapped
+headless results. No tests or data builds ran during the final quiet fog comparison.
+
+| Path / preset | Median frame ms | p95 ms | FPS | Raw heap MB | Notes |
+|---|---:|---:|---:|---:|---|
+| street / haze | 8.3 | 8.9 | 120 | 972 | Final implementation; raw heap before collection |
+| car / haze | 8.3 | 16.7 | 120 | 2,539 | Final implementation; raw heap before collection |
+| heli / haze | 8.4 | 16.8 | 119 | 1,151 | Final implementation; raw heap before collection |
+| hill / haze | 8.4 | 16.9 | 119 | 908 | Final implementation; raw heap before collection |
+| russian-hill-view / haze | 8.4 | 16.7 | 119 | 2,101 | Final implementation; raw heap before collection |
+| heli-city / clear | 8.3 | 16.7 | 120 | 2,287 | 855 MB after 20 s idle, full scene retained; before final seam/paint polish |
+| heli-city / clear, final | 8.3 | 16.7 | 120 | 952 | Final geometry and shader; 874 MB after idle |
+| twin-peaks-view / fog off | 8.3 | 9.3 | 120 | 1,652 | Final geometry; 817 MB after idle |
+| twin-peaks-view / marine | 8.3 | 9.3 | 120 | 961 | Latest fog branch; GPU measurement below |
+
+The post-benchmark idle read stops animation for 20 s and gives the browser an opportunity to collect garbage,
+without releasing the scene. It is not a forced-GC measurement, but a used-heap reading below 1.2 GB is an upper
+bound on retained JS heap. The initial raw 1.8–2.3 GB readings alone did not establish a live-memory failure.
+The final Twin Peaks marine startup phases total about 5.1 s; no console errors or warnings were observed in
+these final browser runs.
+
+### Fog cost: not passed
+
+`&gpuTiming=1` uses the pinned Three.js `trackTimestamp` / `resolveTimestampsAsync()` API and records the median
+sum of GPU render-pass durations for each frame. This is a GPU query metric, not presentation FPS. The comparison
+uses the same 20 s Twin Peaks path and midday preset; `?fog=off` removes the fog graph entirely.
+
+| Version / run | Fog-off GPU median ms | Marine GPU median ms | Delta ms |
+|---|---:|---:|---:|
+| Initial marine colour sampled filtered sky environment | 17.564 | 19.268 | +1.704 |
+| Diffuse marine colour, quiet final geometry comparison | 14.221 | 18.481 | +4.260 |
+| Separate marine/aerial calculations, latest run | 14.221 | 16.843 | +2.622 |
+
+An intermediate marine result was 15.466 ms; another baseline during other checks was 20.251 ms. Those illustrate
+substantial run-to-run variation and are not used to claim a pass. Refresh-capped frame medians differed by 0 ms,
+which is insufficient evidence for the <1 ms GPU-cost target. After the initial implementation and two shader
+optimisations, the target remains unproven and the latest clean comparison exceeds it. The Phase 6 gate remains
+open. Do not weaken the target or hide this result behind the 120 fps ceiling.
+
+Raw browser log entries, including intermediate runs: `docs/review/p6/browser-benchmarks.json`.
+
+
+### Fog optimisation — final depth composition (2026-10-23)
+
+The earlier failures above are retained as history. Fog now uses the existing resolved scene depth in the
+final colour graph and the half-resolution bloom prefilter, with no extra render target. The camera's inverse
+projection includes reversed Z; sky depth zero gets only directional marine horizon haze. Clear/haze retain
+the sky-matched aerial equations. Marine colour remains below the bloom threshold. Transparent effects
+without depth writes use the opaque surface underneath, a screen-space approximation.
+
+`?bench=twin-peaks-view&fog=marine&time=midday&gpuTiming=1&fogCompare=1&benchIdle=1` runs a
+40-second paired comparison at 1280×720: eight five-second blocks in ABBAABBA order (A=fog off,
+B=marine), discarding the first second of each block. Camera position and fog animation time are fixed;
+traffic is frozen and sun/sky illumination stays identical. Only the fog composition uniform toggles.
+No tests, builds, or other animated preview tabs run during the measurements. An optional `&cam=x,y,z,yaw,pitch`
+selects a second viewpoint. Report the upper median of four signed adjacent-pair differences, keeping all
+blocks, including negative differences and outliers. This measures the shader cost without separately
+reloading/compiling a scene. GPU timer quantisation and clock variation remain; negative deltas indicate
+noise, not proof that fog is free. The threshold is still <1 ms, not a refresh-rate comparison.
+
+Pre-sky-fix exploratory paired runs are saved in `docs/review/p6/fog-paired-benchmarks.json` and are
+superseded by final-shader results below.
+
+
+| Final shader viewpoint | Four signed paired differences, ms | Upper median delta, ms | Result |
+|---|---|---:|---|
+| Twin Peaks, above layer | -0.459, -0.328, +0.328, +0.262 | **+0.262** | Pass |
+| Golden Gate / Crissy, inside layer | -0.918, +0.655, +0.852, +3.932 | **+0.852** | Pass |
+| Ocean Beach, dense coastal layer | -0.852, +1.901, -1.245, -0.655 | **-0.655** | Pass (within noise) |
+
+The worst viewpoint's paired median is **0.852 ms**, below 1 ms. Individual blocks still vary by several
+milliseconds; this is a median-cost acceptance result on this machine, not a guarantee that every frame or
+other GPU stays below 1 ms. No pairs were discarded. All three views maintained 120 fps; Twin Peaks retained
+817 MB after idle. Raw final-shader evidence: `docs/review/p6/fog-final-benchmarks.json`.
+
+Regression validation: **160/160 tests**, including numerical quadrature of the production marine integral,
+horizontal/zero-length rays, and reversed-depth reconstruction with camera rotation/translation. Six gallery
+images were regenerated from the final shader; no console shader errors or warnings were observed.
+
+### Final runtime regression pass — 2026-10-23
+
+All seven paths rerun with the final fog shader, 1280×720, no concurrent tests or animated tabs.
+
+| Path | Median ms | p95 ms | FPS | Raw heap MB | After idle MB |
+|---|---:|---:|---:|---:|---:|
+| street | 8.3 | 9.1 | 120 | 935 | 816 |
+| car | 8.3 | 16.7 | 120 | 1105 | 819 |
+| heli | 8.4 | 16.8 | 119 | 1071 | 820 |
+| hill | 8.4 | 16.7 | 119 | 849 | 813 |
+| russian-hill-view | 8.4 | 16.7 | 119 | 865 | 814 |
+| heli-city | 8.3 | 16.7 | 120 | 906 | 855 |
+| twin-peaks-view | 8.3 | 9.3 | 120 | 836 | — |
+
+Core paths use light haze; city flight uses Clear; Twin Peaks uses Marine at midday. All meet the
+frame-rate and heap budgets. No console errors or warnings. Raw evidence: `docs/review/p6/final-runtime-benchmarks.json`.
+Phase 6 gate passed; Phase 7 is next.

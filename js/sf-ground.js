@@ -65,9 +65,9 @@ function buildRegionGround(region) {
     Terrain.patches.unshift(patch);
     return patch;
   });
-  const inDetail = (x, z) => details.some((d) => x > d.x0 + region.step && z > d.z0 + region.step && x < d.x0 + (d.nx - 1) * d.step - region.step && z < d.z0 + (d.nz - 1) * d.step - region.step);
+  const inDetail = (x, z) => details.some((d) => x > d.x0 + (region?.step || 8) && z > d.z0 + (region?.step || 8) && x < d.x0 + (d.nx - 1) * d.step - (region?.step || 8) && z < d.z0 + (d.nz - 1) * d.step - (region?.step || 8));
   for (const d of details) addGroundMesh(group, d, () => false, null);
-  addGroundMesh(group, region, inDetail, details.length ? (x, z) => details.some((d) => x >= d.x0 && z >= d.z0 && x <= d.x0 + (d.nx - 1) * d.step && z <= d.z0 + (d.nz - 1) * d.step) : null);
+  if (region) addGroundMesh(group, region, inDetail, details.length ? (x, z) => details.some((d) => x >= d.x0 && z >= d.z0 && x <= d.x0 + (d.nx - 1) * d.step && z <= d.z0 + (d.nz - 1) * d.step) : null);
   return group;
 }
 // A ground patch as 2 km chunks (CH cells): `skip(x, z)` cells (all four corners) are left out, `under(x, z)` vertices
@@ -176,8 +176,8 @@ function buildSFGround(scene) {
   if (piers.length) group.add(merged(piers, deck, 'SFPiers', { cast: true }));
 
   scene.add(group);
-  // ?region=0: without the interim region ground (A/B for the perf log)
-  if (window.NYC.DATA && window.NYC.DATA.region && new URLSearchParams(location.search).get('region') !== '0') scene.add(buildRegionGround(window.NYC.DATA.region));
+  // ?region=0: omit regional scenery meshes for performance comparisons
+  if (window.NYC.DATA && (window.NYC.DATA.region || window.NYC.DATA.fullRegion) && new URLSearchParams(location.search).get('region') !== '0') scene.add(buildRegionGround(window.NYC.DATA.fullRegion ? null : window.NYC.DATA.region));
   console.info(`[ground] ${BLOCKS.length} curb islands (${cells.size} cells, ${islandTris} triangles), ${piers.length} piers (box ${GEO.box.name})`);
   return { group, terrain, sidewalks, footprints: [], colliders: [], highwayLanes: [] };
 }

@@ -147,3 +147,37 @@ visual checks and a live Market Street drive remain unverified. No new performan
 ```bash
 git add -- README.md docs/commits.md index.html js/cameras.js js/controllers.js js/main.js js/nyc-map.js tests/cameras.test.cjs tests/controllers.test.cjs && git commit -m "recover to a clear road with r, san francisco camera views and map labels" -- README.md docs/commits.md index.html js/cameras.js js/controllers.js js/main.js js/nyc-map.js tests/cameras.test.cjs tests/controllers.test.cjs
 ```
+
+
+## 2026-10-22: Phase 6 implementation checkpoint — SUPERSEDED by the final Phase 6 batch below
+
+P6.1 data, P6.2 regional renderer, P6.3 functional weather implementation and P6.4 water/ships/night.
+This saves the working implementation; it **does not mark Phase 6 complete**. Tests pass (157/157),
+whole-city frame rate and memory are within budget, and the gallery is saved. The latest measured marine-fog
+cost is +2.622 ms versus the <1 ms target. P6.5 and the overall phase gate remain open; details and next steps
+are in `docs/perf-log.md` and `docs/handover.md`.
+
+One batch because these tasks share `main.js`, `lighting.js`, the loader and generated manifest. Kamil commits.
+
+```bash
+git rm --cached -q -- js/boroughs.js && git add -- PLAN.md README.md css/style.css docs/commits.md docs/data-sources.md docs/file-disposition.md docs/formats.md docs/handover.md docs/perf-log.md docs/phases/phase-6-region-atmosphere.md index.html js/controllers.js js/data-loader.js js/lighting.js js/main.js js/sf-bridges.js js/sf-ground.js js/terrain-mesh.js js/tsl-materials.js tests/boot.test.cjs tests/controllers.test.cjs tools/boxes.json tools/dev/probe.mjs tools/serve.mjs data/region docs/reports/region.md docs/review/p6 js/region.js tests/region-data.test.mjs tests/region-runtime.test.cjs tools/fetch-horizon.mjs tools/geo-region.mjs tools/queries/ferries.overpassql && git commit -m "fill out san francisco and the bay, add marine fog and ferries (P6.1-P6.4)" -- PLAN.md README.md css/style.css docs/commits.md docs/data-sources.md docs/file-disposition.md docs/formats.md docs/handover.md docs/perf-log.md docs/phases/phase-6-region-atmosphere.md index.html js/boroughs.js js/controllers.js js/data-loader.js js/lighting.js js/main.js js/sf-bridges.js js/sf-ground.js js/terrain-mesh.js js/tsl-materials.js tests/boot.test.cjs tests/controllers.test.cjs tools/boxes.json tools/dev/probe.mjs tools/serve.mjs data/region docs/reports/region.md docs/review/p6 js/region.js tests/region-data.test.mjs tests/region-runtime.test.cjs tools/fetch-horizon.mjs tools/geo-region.mjs tools/queries/ferries.overpassql
+```
+
+
+## 2026-10-23: Phase 6 complete — run this batch only
+
+P6.1–P6.5, including the final fog optimisation and gate evidence. Supersedes the uncommitted checkpoint above.
+160/160 tests; worst paired-median fog cost 0.852 ms at 1280×720; city flight 120 fps, 855 MB after idle;
+six final gallery images. No threshold relaxed. The array keeps the command limited to these Phase 6 paths.
+One commit because the tasks share runtime, data and documentation files. Kamil commits; nothing is pushed.
+
+```bash
+p6_files=(
+  PLAN.md README.md css/style.css docs/commits.md docs/data-sources.md docs/file-disposition.md docs/formats.md docs/handover.md
+  docs/perf-log.md docs/phases/phase-6-region-atmosphere.md index.html js/controllers.js js/data-loader.js js/lighting.js
+  js/main.js js/post-processing.js js/sf-bridges.js js/sf-ground.js js/terrain-mesh.js js/tsl-materials.js tests/boot.test.cjs
+  tests/controllers.test.cjs tools/boxes.json tools/dev/probe.mjs tools/serve.mjs data/region docs/reports/region.md
+  docs/review/p6 js/region.js tests/fog.test.cjs tests/region-data.test.mjs tests/region-runtime.test.cjs tools/fetch-horizon.mjs
+  tools/geo-region.mjs tools/queries/ferries.overpassql
+) && git rm --cached -q -- js/boroughs.js && git add -- "${p6_files[@]}" && git commit -m "fill out san francisco and the bay with fast marine fog and ferries (P6.1-P6.5)" -- "${p6_files[@]}" js/boroughs.js
+```

@@ -1507,3 +1507,6 @@ body.touch-enabled .pop-item { min-height: 44px; }
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Weather control shares the toolbar's compact styling. */
+#fog-preset { color: var(--text-1); background: var(--bg-panel, #171c24); border: 0; border-radius: 4px; font: inherit; padding: 4px; }

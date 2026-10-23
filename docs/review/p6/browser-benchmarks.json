@@ -1,0 +1,200 @@
+[
+  {
+    "level": "log",
+    "message": "[bench-details] {\"name\":\"twin-peaks-view\",\"medianMs\":8.3,\"p95Ms\":9.2,\"fps\":120,\"frames\":2402,\"width\":1280,\"height\":720,\"heapMB\":870,\"gpuMedianMs\":17.564,\"gpuSamples\":1794}",
+    "timestamp": "2026-10-23T02:52:18.920Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench] twin-peaks-view median_ms=8.30 p95_ms=9.20 fps=120",
+    "timestamp": "2026-10-23T02:52:18.920Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-details] {\"name\":\"twin-peaks-view\",\"medianMs\":8.3,\"p95Ms\":9.3,\"fps\":120,\"frames\":2314,\"width\":1280,\"height\":720,\"heapMB\":892,\"gpuMedianMs\":19.268,\"gpuSamples\":1583}",
+    "timestamp": "2026-10-23T02:53:22.840Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench] twin-peaks-view median_ms=8.30 p95_ms=9.30 fps=120",
+    "timestamp": "2026-10-23T02:53:22.840Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-details] {\"name\":\"heli-city\",\"medianMs\":8.3,\"p95Ms\":16.7,\"fps\":120,\"frames\":2197,\"width\":1280,\"height\":720,\"heapMB\":2287}",
+    "timestamp": "2026-10-23T02:54:47.942Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench] heli-city median_ms=8.30 p95_ms=16.70 fps=120",
+    "timestamp": "2026-10-23T02:54:47.942Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-idle] {\"name\":\"heli-city\",\"heapMB\":855}",
+    "timestamp": "2026-10-23T02:55:07.945Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-details] {\"name\":\"twin-peaks-view\",\"medianMs\":8.3,\"p95Ms\":9.1,\"fps\":120,\"frames\":2399,\"width\":1280,\"height\":720,\"heapMB\":1771,\"gpuMedianMs\":15.466,\"gpuSamples\":1786}",
+    "timestamp": "2026-10-23T02:58:49.494Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench] twin-peaks-view median_ms=8.30 p95_ms=9.10 fps=120",
+    "timestamp": "2026-10-23T02:58:49.494Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-details] {\"name\":\"twin-peaks-view\",\"medianMs\":8.3,\"p95Ms\":9,\"fps\":120,\"frames\":2399,\"width\":1280,\"height\":720,\"heapMB\":1644,\"gpuMedianMs\":20.251,\"gpuSamples\":1725}",
+    "timestamp": "2026-10-23T03:01:23.104Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench] twin-peaks-view median_ms=8.30 p95_ms=9.00 fps=120",
+    "timestamp": "2026-10-23T03:01:23.104Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-idle] {\"name\":\"twin-peaks-view\",\"heapMB\":821}",
+    "timestamp": "2026-10-23T03:01:43.106Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-details] {\"name\":\"twin-peaks-view\",\"medianMs\":8.3,\"p95Ms\":9.3,\"fps\":120,\"frames\":2308,\"width\":1280,\"height\":720,\"heapMB\":1652,\"gpuMedianMs\":14.221,\"gpuSamples\":1666}",
+    "timestamp": "2026-10-23T03:06:08.382Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench] twin-peaks-view median_ms=8.30 p95_ms=9.30 fps=120",
+    "timestamp": "2026-10-23T03:06:08.383Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-idle] {\"name\":\"twin-peaks-view\",\"heapMB\":817}",
+    "timestamp": "2026-10-23T03:06:28.387Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-details] {\"name\":\"twin-peaks-view\",\"medianMs\":8.3,\"p95Ms\":9.4,\"fps\":120,\"frames\":2294,\"width\":1280,\"height\":720,\"heapMB\":1699,\"gpuMedianMs\":18.481,\"gpuSamples\":1593}",
+    "timestamp": "2026-10-23T03:08:11.938Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench] twin-peaks-view median_ms=8.30 p95_ms=9.40 fps=120",
+    "timestamp": "2026-10-23T03:08:11.938Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-idle] {\"name\":\"twin-peaks-view\",\"heapMB\":833}",
+    "timestamp": "2026-10-23T03:08:31.940Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-details] {\"name\":\"twin-peaks-view\",\"medianMs\":8.3,\"p95Ms\":9.3,\"fps\":120,\"frames\":2320,\"width\":1280,\"height\":720,\"heapMB\":961,\"gpuMedianMs\":16.843,\"gpuSamples\":1602}",
+    "timestamp": "2026-10-23T03:11:39.675Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench] twin-peaks-view median_ms=8.30 p95_ms=9.30 fps=120",
+    "timestamp": "2026-10-23T03:11:39.676Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-details] {\"name\":\"heli-city\",\"medianMs\":8.3,\"p95Ms\":16.7,\"fps\":120,\"frames\":2187,\"width\":1280,\"height\":720,\"heapMB\":952}",
+    "timestamp": "2026-10-23T03:12:49.619Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench] heli-city median_ms=8.30 p95_ms=16.70 fps=120",
+    "timestamp": "2026-10-23T03:12:49.619Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-idle] {\"name\":\"heli-city\",\"heapMB\":874}",
+    "timestamp": "2026-10-23T03:13:09.622Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-details] {\"name\":\"street\",\"medianMs\":8.3,\"p95Ms\":8.9,\"fps\":120,\"frames\":2383,\"width\":1280,\"height\":720,\"heapMB\":972}",
+    "timestamp": "2026-10-23T03:16:41.063Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench] street median_ms=8.30 p95_ms=8.90 fps=120",
+    "timestamp": "2026-10-23T03:16:41.063Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-details] {\"name\":\"car\",\"medianMs\":8.3,\"p95Ms\":16.7,\"fps\":120,\"frames\":2105,\"width\":1280,\"height\":720,\"heapMB\":2539}",
+    "timestamp": "2026-10-23T03:18:26.786Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench] car median_ms=8.30 p95_ms=16.70 fps=120",
+    "timestamp": "2026-10-23T03:18:26.786Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-details] {\"name\":\"heli\",\"medianMs\":8.4,\"p95Ms\":16.8,\"fps\":119,\"frames\":1687,\"width\":1280,\"height\":720,\"heapMB\":1151}",
+    "timestamp": "2026-10-23T03:20:34.235Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench] heli median_ms=8.40 p95_ms=16.80 fps=119",
+    "timestamp": "2026-10-23T03:20:34.235Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-details] {\"name\":\"hill\",\"medianMs\":8.4,\"p95Ms\":16.9,\"fps\":119,\"frames\":1745,\"width\":1280,\"height\":720,\"heapMB\":908}",
+    "timestamp": "2026-10-23T03:22:31.853Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench] hill median_ms=8.40 p95_ms=16.90 fps=119",
+    "timestamp": "2026-10-23T03:22:31.853Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench-details] {\"name\":\"russian-hill-view\",\"medianMs\":8.4,\"p95Ms\":16.7,\"fps\":119,\"frames\":1851,\"width\":1280,\"height\":720,\"heapMB\":2101}",
+    "timestamp": "2026-10-23T03:24:14.735Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  },
+  {
+    "level": "log",
+    "message": "[bench] russian-hill-view median_ms=8.40 p95_ms=16.70 fps=119",
+    "timestamp": "2026-10-23T03:24:14.735Z",
+    "url": "http://127.0.0.1:8080/js/main.js?v=20261022-sf-p6"
+  }
+]

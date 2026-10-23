@@ -21,14 +21,14 @@ const opt = (name, def) => {
 const BASE = opt('base', 'http://127.0.0.1:8080/index.html');
 const WAIT_S = Number(opt('wait', 150));
 const CHROME = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const PORT = 9333;
+const PORT = Number(opt('port', 9333));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const profile = mkdtempSync(join(tmpdir(), 'cdp-'));
 const chrome = spawn(CHROME, [
   '--headless=new', `--remote-debugging-port=${PORT}`, `--user-data-dir=${profile}`,
-  '--enable-unsafe-webgpu', '--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist',
-  '--disable-gpu-vsync', '--disable-frame-rate-limit', '--window-size=1280,720',
+  '--enable-unsafe-webgpu', '--enable-gpu', `--use-angle=${opt('angle', 'metal')}`, '--ignore-gpu-blocklist',
+  '--disable-gpu-vsync', '--disable-frame-rate-limit', '--disable-backgrounding-occluded-windows', '--disable-renderer-backgrounding', '--window-size=1280,720',
   '--no-first-run', '--no-default-browser-check', 'about:blank'
 ], { stdio: 'ignore' });
 const quit = (code) => { try { chrome.kill(); } catch {} process.exit(code); };
@@ -55,7 +55,14 @@ ws.onmessage = (m) => {
   }
   if (d.method === 'Runtime.exceptionThrown') errors.push(`exception: ${(d.params.exceptionDetails.exception?.description || d.params.exceptionDetails.text || '').slice(0, 300)}`);
 };
-const send = (method, params = {}) => new Promise((r) => { const i = ++id; pending.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
+const send = (method, params = {}) => new Promise((resolve, reject) => {
+  const i = ++id;
+  const timer = setTimeout(() => { pending.delete(i); reject(new Error(`DevTools timeout: ${method}`)); }, 30000);
+  pending.set(i, result => { clearTimeout(timer); resolve(result); });
+  ws.send(JSON.stringify({ id: i, method, params }));
+});
+process.on('uncaughtException', error => { console.error(error.message); quit(2); });
+process.on('unhandledRejection', error => { console.error(error.message); quit(2); });
 const evalJs = async (expr) => (await send('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true })).result?.result?.value;
 await send('Runtime.enable');
 await send('Page.enable');
@@ -66,6 +73,7 @@ async function load(url) {
   errors = [];
   logs = [];
   await send('Page.navigate', { url });
+  await send('Page.bringToFront');
   const t0 = Date.now();
   let ready = false;
   while (!ready && Date.now() - t0 < WAIT_S * 1000) {

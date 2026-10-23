@@ -467,3 +467,20 @@ test('road recovery skips restricted roads, checks clearance and respects one-wa
   controller.findTeleportPosition = () => null;
   assert.equal(controller.findRoadReset(), null, 'no clear road leaves recovery unavailable');
 });
+
+test('helicopter teleport and movement use the region bounds while ground modes stay in the core', () => {
+  const bounds = { minX: -12000, maxX: 20000, minZ: -20000, maxZ: 16000 };
+  const heli = teleportHarness('helicopter');
+  heli.window.NYC.FLIGHT_BOUNDS = bounds;
+  const arrival = heli.controller.teleportActiveTo(-9500, 3000, 0);
+  assert.equal(arrival.x, -9500);
+  assert.equal(arrival.z, 3000);
+  heli.ent.position.x = -20000;
+  heli.controller.resolveHorizontalCollision(heli.ent.position, 4.5, 120);
+  assert.equal(heli.ent.position.x, bounds.minX);
+  const car = teleportHarness('car');
+  car.window.NYC.FLIGHT_BOUNDS = bounds;
+  car.ent.position.x = -9500;
+  car.controller.resolveHorizontalCollision(car.ent.position, 0.65, 1, car.ent);
+  assert.ok(car.ent.position.x >= -500, 'car remains in the detailed road network');
+});

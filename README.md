@@ -6,8 +6,9 @@ San Francisco in the browser, built with [three.js](https://threejs.org/), WebGP
 through the city's north-east quarter on its real hills. The streets, curbs and building heights come from real data, and
 the cars stop at the real signals and stop signs.
 
-A port of [Slop New York](https://github.com/mrdoob/slop-newyork) by mrdoob. Work in progress: phase 5 of 7 is done. The
-landmarks and both bridges are in. The rest of the city is still bare ground, and the wider region and final UI polish are still in progress.
+A port of [Slop New York](https://github.com/mrdoob/slop-newyork) by mrdoob. Work in progress: phase 6 of 7 is done. The
+landmarks and both bridges are in. Phase 6 now fills the wider city with real terrain, simplified buildings, parks and trees, adds Marin and the East Bay,
+and introduces marine fog and ferries. Phase 6 passes its performance gate; phase 7 brings map/UI polish, settings and release preparation.
 
 ## Run it
 
@@ -32,6 +33,8 @@ Then open http://127.0.0.1:8080. three.js loads from a CDN, so the first start n
 | `R` | Reset to a nearby clear road |
 
 Use the Teleport menu (top right) to jump to the Ferry Building, Coit Tower, Lombard Street, Oracle Park and other landmarks.
+Use the Fog menu for Clear, Light haze or Marine layer (`?fog=clear|haze|marine`). Helicopters can explore
+the wider region; walking and driving remain in the detailed north-east core.
 
 ## Tests
 

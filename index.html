@@ -10,7 +10,7 @@
   <script>
     // Download the city scripts while Three.js loads; execute them only after its imports are ready below.
     const nycAppScripts = (() => {
-      const assetVersion = '20261022-sf-p5';
+      const assetVersion = '20261022-sf-p6';
       return [
         './js/sf-geodata.js',
         './js/city-config.js',
@@ -24,6 +24,7 @@
         './js/pedestrians.js',
         './js/lighting.js',
         './js/terrain-mesh.js',
+        './js/region.js',
         './js/sf-ground.js',
         './js/sf-style.js',
         './js/buildings.js',
@@ -157,6 +158,11 @@
         </button>
       </div>
       <span class="toolbar-divider" aria-hidden="true"></span>
+      <label class="tool-btn" title="Weather and visibility">Fog
+        <select id="fog-preset" aria-label="Fog preset">
+          <option value="clear">Clear</option><option value="haze" selected>Light haze</option><option value="marine">Marine layer</option>
+        </select>
+      </label>
       <button id="btn-teleport" class="tool-btn" type="button" popovertarget="teleport-popover" title="Teleport the active player">
         <svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg><span class="tool-label">Teleport</span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg>
       </button>

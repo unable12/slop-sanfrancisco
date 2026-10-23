@@ -1,0 +1,8 @@
+{
+  "twin-peaks-clear": "cam=-4020,320,3810,20,-8&fog=clear&time=midday&hud=0",
+  "twin-peaks-marine-layer": "cam=-4020,320,3810,20,-8&fog=marine&time=midday&hud=0",
+  "ocean-beach-fog": "cam=-9595,12,2744,0,-4&fog=marine&time=midday&hud=0",
+  "embarcadero-clear": "cam=760,1.7,-480,-67,2&camGround=1&fog=clear&time=midday&hud=0",
+  "golden-gate-from-crissy-fog": "cam=-5896,50,-2100,40,0&fog=marine&time=midday&hud=0",
+  "bay-bridge-night": "cam=1700,300,0,-29,-7&fog=clear&time=midnight&hud=0"
+}

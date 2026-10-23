@@ -364,6 +364,8 @@ function buildSFBridges(scene) {
   return {
     group, colliders, bridgeDeckAt,
     update(camera) {
+      const glow = window.NYC.cityUniforms?.uInteriorGlow?.value || 0;
+      mats.lamp.color.setHex(0xffd9a0).multiplyScalar(0.25 + Math.max(0, glow - 0.5) * 2.5);
       camera.getWorldPosition(_c);
       for (const { dg, centre: c } of detail) dg.visible = Math.hypot(_c.x - c.x, _c.z - c.z) - c.r < FAR_DETAIL;
     }

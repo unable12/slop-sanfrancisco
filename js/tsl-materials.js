@@ -2709,7 +2709,11 @@ function createWaterMaterial() {
     const gustA = noise2D(p.mul(0.0047).add(vec2(t.mul(0.011), t.mul(-0.007))));
     const gustB = noise2D(p.mul(0.0135).add(vec2(t.mul(-0.009), t.mul(0.013))).add(31.7));
     const gust = smoothstep(0.18, 0.82, gustA.mul(0.62).add(gustB.mul(0.38)));
-    const energy = mix(float(0.45), float(1.3), gust).mul(mix(float(1.0), float(0.42), pond)).toVar();
+    const towers = window.NYC.GEO?.bridges?.goldenGate?.towers || [];
+    const gateX = towers.length ? towers.reduce((s,t)=>s+t.c[0],0)/towers.length : 0;
+    const gateZ = towers.length ? towers.reduce((s,t)=>s+t.c[1],0)/towers.length : 0;
+    const gateChop = towers.length ? float(1).sub(smoothstep(700, 2400, length(p.sub(vec2(gateX, gateZ))))).mul(.65).add(1) : float(1);
+    const energy = mix(float(0.45), float(1.3), gust).mul(gateChop).mul(mix(float(1.0), float(0.42), pond)).toVar();
 
     const slope = vec2(0.0, 0.0).toVar();
     const variance = energy.mul(energy).mul(0.0022).toVar(); // capillary ripples, always below a pixel

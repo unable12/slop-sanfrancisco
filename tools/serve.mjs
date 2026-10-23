@@ -3,6 +3,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import { gzip } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -20,7 +21,12 @@ http.createServer((req, res) => {
   if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
   fs.readFile(file, (err, data) => {
     if (err) { res.writeHead(404).end('not found'); return; }
-    res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
-    res.end(data);
+    const headers = { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store', Vary: 'Accept-Encoding' };
+    if (file.endsWith('.bin') && /\bgzip\b/.test(req.headers['accept-encoding'] || '')) {
+      gzip(data, (error, zipped) => {
+        if (error) { res.writeHead(500).end('compression failed'); return; }
+        res.writeHead(200, { ...headers, 'Content-Encoding': 'gzip' }); res.end(zipped);
+      });
+    } else { res.writeHead(200, headers); res.end(data); }
   });
 }).listen(PORT, '127.0.0.1', () => console.log(`serving ${ROOT} on http://127.0.0.1:${PORT}`));

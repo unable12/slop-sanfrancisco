@@ -6,7 +6,7 @@
 
 const { THREE } = window.NYC;
 const {
-  Fn, float, vec3, vec4, uniform, mix, fog, pmremTexture, positionWorld, cameraPosition, length, normalize, max, exp, abs, select
+  Fn, float, vec3, vec4, uniform, mix, pmremTexture, length, normalize, max, min, exp, abs, select, clamp, smoothstep, sin, If
 } = window.NYC.TSL;
 const { SkyMesh } = window.NYC.Addons;
 const { SunLight } = window.NYC.Addons;
@@ -207,32 +207,62 @@ class LightingSystem {
     this.hemiLight.position.set(0, 300, 0);
     this.scene.add(this.hemiLight);
 
-    this.applyPreset('golden');
-
     // Sky-matched aerial perspective (replaces the flat FogExp2 colour): distant surfaces fade into the baked sky
     // radiance just above the horizon in their view direction (sun glow included), through an exponential haze layer
     // so helicopter / observatory views stay clearer than the horizon.
     this.uFogDensity = uniform(TIME_PRESETS.golden.fogDensity);
     this.uFogHeight = uniform(900.0);
-    if (this.envRenderTarget) this.scene.fogNode = this.createAerialFogNode();
+    this.uMarine = uniform(0.0);
+    this.uLayerTop = uniform(200.0);
+    this.uFogTime = uniform(0.0);
+    this.fogPreset = 'haze';
+    this.applyPreset('golden');
+    // Fog is composed from resolved depth in the final image graph and bloom prefilter.
+    this.scene.fog = null;
   }
 
-  createAerialFogNode() {
+  createAerialFogNode(worldPosition, viewPosition) {
+    const positionWorld = worldPosition, cameraPosition = viewPosition;
     const toFrag = positionWorld.sub(cameraPosition);
     const dist = length(toFrag);
     const dir = toFrag.div(max(dist, 0.001));
     const horizonDir = normalize(vec3(dir.x, max(dir.y, 0.015), dir.z));
-    const skyColor = pmremTexture(this.envRenderTarget.texture, horizonDir, float(0.3)).rgb;
-    // Mean haze density exp(-y / H) along the ray between the fragment and the camera
-    const H = this.uFogHeight;
-    const ya = max(positionWorld.y, 0.0);
-    const yb = max(cameraPosition.y, 0.0);
-    const dy = yb.sub(ya);
-    const ea = exp(ya.div(H).negate());
-    const eb = exp(yb.div(H).negate());
-    const meanDensity = select(abs(dy).greaterThan(1.0), ea.sub(eb).mul(H).div(dy), ea);
-    const tau = this.uFogDensity.mul(dist).mul(meanDensity);
-    return fog(skyColor, float(1.0).sub(exp(tau.mul(tau).negate())));
+    // Dense fog is lit diffusely: avoid the filtered environment lookup while inside the marine preset.
+    // The original sky-matched aerial colour remains for clear and haze views.
+    const skyColor = Fn(() => {
+      const color = vec3(0.7, 0.76, 0.8).mul(float(1).sub(this.uNightFactor.mul(0.93))).toVar();
+      If(this.uMarine.lessThan(0.5), () => {
+        color.assign(pmremTexture(this.envRenderTarget.texture, horizonDir, float(0.3)).rgb);
+      });
+      return color;
+    })();
+    const amount = Fn(() => {
+      const ya = max(positionWorld.y, 0.0), yb = max(cameraPosition.y, 0.0), dy = yb.sub(ya);
+      const opticalDepth = float(0).toVar();
+      If(this.uMarine.greaterThan(0.5), () => {
+        // Integrate the smooth 80 m ceiling along the ray; only the marine branch pays for this work.
+        const primitive = y => {
+          const lo = this.uLayerTop.sub(40), t = clamp(y.sub(lo).div(80), 0, 1).toVar();
+          return min(y, lo).add(t.mul(float(1).sub(t.mul(t).mul(float(1).sub(t.mul(0.5))))).mul(80));
+        };
+        const layerMean = select(abs(dy).greaterThan(1), primitive(yb).sub(primitive(ya)).div(dy),
+          float(1).sub(smoothstep(this.uLayerTop.sub(40), this.uLayerTop.add(40), ya)));
+        const west = float(1).sub(smoothstep(-7000, -500, positionWorld.x.add(cameraPosition.x).mul(0.5)));
+        const drift = sin(positionWorld.x.mul(0.0008).sub(this.uFogTime.mul(0.018)))
+          .mul(sin(positionWorld.z.mul(0.0011).add(this.uFogTime.mul(0.005)))).mul(0.18).add(0.82);
+        // Thin haze above the marine deck uses a cheap rational height falloff.
+        const haze = this.uFogDensity.mul(dist).mul(float(900).div(yb.add(900)));
+        opticalDepth.assign(dist.mul(layerMean).mul(mix(0.0015, 0.006, west)).mul(drift).add(haze.mul(haze)));
+      }).Else(() => {
+        // Original sky-matched aerial fog, unchanged for clear and haze presets.
+        const H = this.uFogHeight, ea = exp(ya.div(H).negate()), eb = exp(yb.div(H).negate());
+        const meanDensity = select(abs(dy).greaterThan(1.0), ea.sub(eb).mul(H).div(dy), ea);
+        const tau = this.uFogDensity.mul(dist).mul(meanDensity);
+        opticalDepth.assign(tau.mul(tau));
+      });
+      return float(1).sub(exp(opticalDepth.negate()));
+    })();
+    return { color: skyColor, amount };
   }
 
   bakeEnvironmentMap() {
@@ -265,8 +295,10 @@ class LightingSystem {
     this.hemiLight.groundColor.setHex(p.hemiGround);
     this.hemiLight.intensity = p.hemiIntensity;
 
-    this.scene.fog.color.setHex(p.fogColor);
-    this.scene.fog.density = p.fogDensity;
+    if (this.scene.fog) {
+      this.scene.fog.color.setHex(p.fogColor);
+      this.scene.fog.density = p.fogDensity;
+    }
     if (this.uFogDensity) this.uFogDensity.value = p.fogDensity;
 
     // Update physical Preetham SkyMesh uniforms
@@ -292,9 +324,23 @@ class LightingSystem {
 
     this.scene.environmentIntensity = p.envIntensity;
     this.bakeEnvironmentMap();
+    this.setFogPreset(this.fogPreset);
   }
 
-  update(focusPos) {
+  setFogPreset(id) {
+    this.fogPreset = ['clear', 'haze', 'marine'].includes(id) ? id : 'haze';
+    this.uMarine.value = this.fogPreset === 'marine' ? 1 : 0;
+    const p = TIME_PRESETS[this.activePresetId] || TIME_PRESETS.golden;
+    this.uFogDensity.value = p.fogDensity * (this.fogPreset === 'clear' ? 0.25 : this.fogPreset === 'marine' ? 0.35 : 1);
+  }
+
+  update(focusPos, elapsed = 0) {
+    this.uFogTime.value = elapsed;
+    this.uLayerTop.value = 200 + Math.sin(elapsed * 0.006) * 40;
+    const p = TIME_PRESETS[this.activePresetId] || TIME_PRESETS.golden;
+    const within = this.fogPreset === 'marine' && focusPos ? 1 - Math.max(0, Math.min(1, (focusPos.y - this.uLayerTop.value + 40) / 80)) : 0;
+    this.sunLight.intensity = p.sunIntensity * (1 - within * 0.68);
+    this.sky.showSunDisc.value = 1 - within * 0.8;
     // SunLightShadow automatically fits & texel-snaps its 2 cascades to the view camera frustum
     // every frame inside SunShadowNode.renderShadow(), splitting [near, far] halfway between a uniform and a
     // logarithmic split (the near cascade ends at ~far / 4). Keep far at 300 m at street level so the near cascade

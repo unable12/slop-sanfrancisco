@@ -20,5 +20,19 @@
     "lonW": -122.53,
     "lonE": -122.29,
     "derivation": "Hand-set (P5.1): a box round San Francisco's land and both bridges end to end (the Golden Gate Bridge to its Marin anchorage, the Bay Bridge to its Oakland touchdown), for the named landmark query (tools/queries/landmarks-named.overpassql) and the DEM tiles under landmarks outside the core. Not a build box: nothing else is fetched for it."
+  },
+  "city": {
+    "latS": 37.7,
+    "latN": 37.84,
+    "lonW": -122.53,
+    "lonE": -122.35,
+    "derivation": "P6 city coverage: SF peninsula to its southern boundary, Treasure and Yerba Buena islands. Full DataSF geometry is retained for intersecting features."
+  },
+  "horizon": {
+    "latS": 37.65,
+    "latN": 37.95,
+    "lonW": -122.65,
+    "lonE": -122.1,
+    "derivation": "P6 horizon extent covering Marin Headlands, Angel Island and the East Bay, within USGS 1/3 arc-second tile n38w123."
   }
 }

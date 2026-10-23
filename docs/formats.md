@@ -84,3 +84,34 @@ a fixed record size.
 
 **Payload.** Uint8, `w * h` values, row-major. Cell `(i, j)` covers x in `[originX + i * cell, originX + (i + 1) * cell)` and
 z likewise. Written by `tools/geo-groundmask.mjs`; sampled with nearest filtering by the terrain material (`js/terrain-mesh.js`).
+
+## Phase 6: `data/region/`
+
+`manifest.json` version 1 lists all assets, grid bounds, source DEM filenames, building exclusions/counts,
+mask classes, trees, ferry polylines, cargo scenery anchors and the shared water datum. World axes and metres
+are the same as the core. Tiles load with at most eight concurrent requests.
+
+| Asset | Payload | Interpretation |
+|---|---|---|
+| `city-<x>-<z>.bin` | Uint16, row-major | `sf-terrain`, 8 m cells, 1 km tiles, 126×126 samples including shared edges |
+| `horizon-<x>-<z>.bin` | Uint16, row-major | `sf-terrain`, 32 m cells, 4 km tiles, 126×126 samples |
+| `buildings-<x>-<z>.bin` | Int32, seven values per box | local x, local z, base, roof, width, depth, yaw; header origin and scales convert to world metres/radians |
+| `groundmask.bin` | Uint32 runs | high 24 bits = run length; low 8 bits = class index; row-major R8 mask at 4 m |
+| `trees.bin` | Float32, four values per tree | world x, ground elevation, world z, estimated height |
+| `roads.bin` | Float32, four values per segment | world ax, az, bx, bz from DataSF centrelines; runtime drapes estimated dashed paint on the regional terrain |
+
+Terrain height = `-100 + q * 0.05` metres NAVD88. Omitted tiles are entirely water and reconstruct at
+`manifest.waterLevel`. City terrain takes precedence over horizon terrain; the core and fine landmark
+patches retain their existing priority. Coastlines classify water before quantization.
+
+Building scales are `[0.1,0.1,0.1,0.1,0.1,0.1,0.0001]`; x/z origins are 1,200 m cell origins.
+Core-touching boxes are excluded with a 60 m safety margin, as are modelled landmark centres and tiny masses.
+The source snapshot still contains all 177,023 footprints; exclusions are counted, not silently lost.
+
+Mask classes: urban, asphalt, park, sand, rock, forest, cemetery, industrial, water (indices 0–8).
+Headers include class counts and measured/fallback road-width segment counts. Runtime rejects invalid runs
+and incomplete coverage. The development server gzip-compresses binary responses when supported by the client.
+
+Regenerate with `node --max-old-space-size=8192 tools/geo-region.mjs`; source fetch commands are in
+`docs/data-sources.md`. The 366 outputs total 18.16 MB; the largest is 2.48 MB. A repeat build was byte-identical.
+The old `data/terrain-region.bin` remains a reproducible Phase 5 artifact; the runtime no longer loads it.

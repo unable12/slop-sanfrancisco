@@ -72,6 +72,44 @@ All benches plus `heli-city`, `twin-peaks-view`. Gallery `docs/review/p6/`.
 ---------------------------------------------------------------------------------------------------------------------
 
 ## Gate (P6)
-- [ ] Whole-city views within budgets; fog states captured.
-- [ ] Tests green; data files < 50 MB each.
-- [ ] Logs and handover.
+- [x] Whole-city frame rate and memory within budgets; fog states captured.
+- [x] Marine-layer GPU cost < 1 ms versus fog off (P6.3 acceptance).
+- [x] Tests green; data files < 50 MB each.
+- [x] Logs and handover.
+
+
+## Implementation and verification (2026-10-22)
+
+P6.1 is implemented and data-validated. The city snapshot contains 177,023 footprints; 154,870 regional
+buildings become 161,645 oriented boxes after core/landmark/tiny-mass exclusions. There are 109,192 inventory
+trees outside the core and two canopy densities. City terrain is 8 m in 1 km tiles; the horizon is 32 m in
+4 km tiles from the pinned USGS national DEM. OSM directed coastlines flatten tidal water without removing
+low coastal land. The 366 assets total 18.16 MB, largest 2.48 MB, and rebuild byte-identically.
+
+P6.2 uses `js/region.js`: the former borough facade shader and 1,200 m instancing cells, terrain LOD,
+mask-driven ground and night glow. Regional LOD geometries are cached after first use. Flight bounds now
+cover the measured horizon; ground modes remain in the core. `boroughs.js` is deleted. Oakland's terrain
+is included; its buildings are omitted because no Oakland footprint source was fetched.
+
+P6.3 adds Clear / Light haze / Marine layer and URL presets. An analytic integral handles rays crossing
+the 200 ± 40 m ceiling; two advected sine fields vary density without volumetric marching. Sun intensity
+and its disc dim below the layer. The equations are composed from resolved depth in the final image graph and bloom prefilter,
+with marine horizon haze for sky pixels (decision P6-5). `?fog=off` skips the composition.
+
+P6.4 adds four ferries on OSM routes, one water-checked cargo ship with instanced containers, pier foam,
+stronger chop near the Golden Gate and night bridge lamps. Vessel sizes/speeds/motion are visual estimates.
+
+**P6.5 passed on 2026-10-23.** Fog is composed from resolved reversed-Z depth instead of every
+scene material. Same-page ABBA comparisons at three fixed viewpoints give upper-median GPU deltas of
++0.262 ms (Twin Peaks), +0.852 ms (Crissy/Golden Gate) and -0.655 ms (Ocean Beach, within timer noise).
+The worst paired median is below the unchanged <1 ms target. Individual pairs remain noisy; all are retained.
+Whole-city flight reaches 120 fps, with 855 MB retained heap after idle. Tests: 160/160. All six gallery images
+were refreshed. Headless initialization remains unreliable, so the documented in-app browser fallback is used.
+See `docs/perf-log.md`, `docs/review/p6/fog-final-benchmarks.json` and the gallery. Phase 6 is complete.
+
+Implementation notes:
+- The core terrain now dithers over its outer 50 m into regional ground. Interior regional quads are excluded;
+  boundary vertices sample core heights and sit 0.15 m lower. Horizon/city edges use a 0.2 m inset and LOD skirts.
+- Regional dashed centre paint follows mapped DataSF road segments, is clipped to the asphalt mask, and is
+  culled by distance. Its markings are a visual estimate; detailed lane paint remains in the core.
+- Regional boxes and trees are visual scenery, without new ground traffic or building collision meshes.
