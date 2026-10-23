@@ -264,9 +264,9 @@ async function initApp() {
   // Keyboard guide for each mode: [keys, action] (the arrow keys work as W A S D, controllers.js bindKeyboard)
   const WS = ['W ↑', 'S ↓'], AD = ['A ←', 'D →'];
   const controlHints = {
-    person: [[WS, 'Walk'], [AD, 'Turn'], [['Shift'], 'Sprint'], [['Space'], 'Jump'], [['Drag'], 'Orbit']],
-    car: [[WS, 'Drive / Reverse'], [AD, 'Steer'], [['Shift'], 'Boost'], [['Drag'], 'Orbit']],
-    cyclist: [[WS, 'Pedal / Brake'], [AD, 'Lean & Turn'], [['Shift'], 'Sprint'], [['Drag'], 'Orbit']],
+    person: [[WS, 'Walk'], [AD, 'Turn'], [['Shift'], 'Sprint'], [['Space'], 'Jump'], [['R'], 'Reset to road'], [['Drag'], 'Orbit']],
+    car: [[WS, 'Drive / Reverse'], [AD, 'Steer'], [['Shift'], 'Boost'], [['R'], 'Reset to road'], [['Drag'], 'Orbit']],
+    cyclist: [[WS, 'Pedal / Brake'], [AD, 'Lean & Turn'], [['Shift'], 'Sprint'], [['R'], 'Reset to road'], [['Drag'], 'Orbit']],
     helicopter: [[WS, 'Pitch'], [AD, 'Yaw'], [['Space', 'E'], 'Ascend'], [['Q', 'C'], 'Descend'], [['Shift'], 'Boost']]
   };
   // Boosted top speeds in mph (controllers.js caps them at 8.2, 36, 19 & 52 m/s): full scale of the speed meter
@@ -543,6 +543,13 @@ async function initApp() {
       case 'Digit0':
         selectCamera('chryslerGCT', true);
         break;
+      case 'KeyR': {
+        if (e.repeat || e.ctrlKey || e.metaKey || e.altKey || mapSystem.isFullMapOpen) break;
+        e.preventDefault();
+        const road = controllerManager.findRoadReset();
+        if (road) teleportTo(road.x, road.z, road.heading);
+        break;
+      }
       case 'KeyV':
         cycleCamera(e.shiftKey ? -1 : 1);
         break;

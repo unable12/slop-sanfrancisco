@@ -263,3 +263,21 @@ test('follow cameras stay at least 0.5 m above the terrain on a hill (P2.6)', ()
     }
   }
 });
+
+
+test('SF scenic presets target landmark data and stay above terrain', () => {
+  const h = cameraHarness();
+  h.window.NYC.Terrain = { loaded: true, groundAt: () => 100 };
+  h.window.NYC.LANDMARK_SITES = Object.fromEntries([
+    'Coit Tower', 'Transamerica Pyramid', 'San Francisco Ferry Building',
+    'San Francisco City Hall', 'Lombard Street', 'Oracle Park'
+  ].map(name => [name, { x: 1200, z: -1700, base: 100 }]));
+  for (const preset of h.window.NYC.CAMERA_PRESETS.filter(p => p.category === 'scenic' && p.id !== 'drone')) {
+    h.camera.setCameraPreset(preset.id, true);
+    h.camera.update(1 / 60, 0);
+    assert.equal(h.camera.currentLookAt.x, 1200);
+    assert.equal(h.camera.currentLookAt.z, -1700);
+    assert.ok(h.camera.currentPos.y > 100);
+    assert.ok(!/central park|times square|empire state|chrysler|bryant|east river/i.test(preset.name));
+  }
+});

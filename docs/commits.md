@@ -133,3 +133,17 @@ a probe ran, 5/5 alone), probe 0 errors.
 ```bash
 git add -- README.md css/style.css docs/commits.md docs/landmarks/salesforce-park.md index.html js/buildings.js js/controllers.js js/grade-separation.js js/landmarks.js js/main.js && git commit -m "stop the car hitting invisible walls on the street, san francisco loading screen and title, arrow keys in the hints, readme for san francisco" -- README.md css/style.css docs/commits.md docs/landmarks/salesforce-park.md index.html js/buildings.js js/controllers.js js/grade-separation.js js/landmarks.js js/main.js
 ```
+
+
+## 2026-10-22: road recovery and San Francisco cameras/map labels
+
+Adds R recovery to a nearby clear surface road, using the existing teleport reset and camera handling.
+Replaces seven NYC scenic views with georeferenced SF landmark views, updates their menu labels,
+and replaces the hard-coded NYC map area labels and initial waypoint. Legacy camera IDs remain compatible.
+README and HUD explain R. Tests: 146/146 pass with `--test-concurrency=1`, including recovery and camera-target coverage.
+The headless browser probe stalled during WebGPU renderer initialization, before scene construction;
+visual checks and a live Market Street drive remain unverified. No new performance numbers claimed.
+
+```bash
+git add -- README.md docs/commits.md index.html js/cameras.js js/controllers.js js/main.js js/nyc-map.js tests/cameras.test.cjs tests/controllers.test.cjs && git commit -m "recover to a clear road with r, san francisco camera views and map labels" -- README.md docs/commits.md index.html js/cameras.js js/controllers.js js/main.js js/nyc-map.js tests/cameras.test.cjs tests/controllers.test.cjs
+```

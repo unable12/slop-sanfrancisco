@@ -447,3 +447,23 @@ test('the helicopter cannot go below 2 m over the ground', () => {
     assert.ok(h.position.y >= ground(h.position.x, h.position.z) + 2 - 1e-9, `frame ${f}`);
   }
 });
+
+
+test('road recovery skips restricted roads, checks clearance and respects one-way direction', () => {
+  const road = (z, flags = 0, dir = 1) => ({ flags, dir, pts: [{ x: 0, z }, { x: 100, z }] });
+  const { controller } = keyboardHarness({ ROADS: [road(0, 1), road(1, 2), road(2, 8), road(3), road(10, 0, -1)] });
+  controller.activeMode = 'car';
+  controller.getActiveEntity = () => ({ position: { x: 40, z: 0 } });
+  const checked = [];
+  controller.findTeleportPosition = (x, z) => {
+    checked.push(z);
+    return { x, z: z === 3 ? z + 4 : z };
+  };
+  const result = controller.findRoadReset();
+  assert.deepEqual(checked, [3, 10]);
+  assert.equal(result.x, 40);
+  assert.equal(result.z, 10);
+  assert.equal(result.heading, Math.PI * 1.5);
+  controller.findTeleportPosition = () => null;
+  assert.equal(controller.findRoadReset(), null, 'no clear road leaves recovery unavailable');
+});

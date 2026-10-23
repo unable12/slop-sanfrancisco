@@ -7,7 +7,7 @@ through the city's north-east quarter on its real hills. The streets, curbs and 
 the cars stop at the real signals and stop signs.
 
 A port of [Slop New York](https://github.com/mrdoob/slop-newyork) by mrdoob. Work in progress: phase 5 of 7 is done. The
-landmarks and both bridges are in. The rest of the city is still bare ground, and the map and some camera presets still show New York.
+landmarks and both bridges are in. The rest of the city is still bare ground, and the wider region and final UI polish are still in progress.
 
 ## Run it
 
@@ -29,6 +29,7 @@ Then open http://127.0.0.1:8080. three.js loads from a CDN, so the first start n
 | `Space` / `E`, `Q` / `C` | Helicopter up and down |
 | `V` | Change camera |
 | `M` | Map |
+| `R` | Reset to a nearby clear road |
 
 Use the Teleport menu (top right) to jump to the Ferry Building, Coit Tower, Lombard Street, Oracle Park and other landmarks.
 

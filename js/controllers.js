@@ -237,6 +237,30 @@ class ThirdPersonControllerManager {
     return { x: ent.position.x, z: ent.position.z };
   }
 
+  // Recover to a nearby surface street, using the same clearance checks as teleports.
+  findRoadReset() {
+    const ent = this.getActiveEntity();
+    const candidates = [];
+    for (const road of window.NYC.ROADS || []) {
+      if (road.flags & (1 | 2 | 4 | 8 | 16)) continue;
+      for (let i = 1; i < road.pts.length; i++) {
+        const a = road.pts[i - 1], b = road.pts[i];
+        const dx = b.x - a.x, dz = b.z - a.z, length2 = dx * dx + dz * dz;
+        if (!length2) continue;
+        const t = Math.max(0, Math.min(1, ((ent.position.x - a.x) * dx + (ent.position.z - a.z) * dz) / length2));
+        const x = a.x + t * dx, z = a.z + t * dz;
+        candidates.push({ x, z, heading: Math.atan2(dx, dz) + (road.dir < 0 ? Math.PI : 0), distance: Math.hypot(x - ent.position.x, z - ent.position.z) });
+      }
+    }
+    candidates.sort((a, b) => a.distance - b.distance);
+    for (const p of candidates.slice(0, 64)) {
+      const safe = this.findTeleportPosition(p.x, p.z, p.heading, this.activeMode === 'helicopter' ? terrainY(p.x, p.z) + 92 : 0);
+      // The teleport search may find a courtyard: recovery must stay on the chosen road.
+      if (safe && Math.hypot(safe.x - p.x, safe.z - p.z) < 1) return p;
+    }
+    return null;
+  }
+
   // Find a fully clear arrival before moving the player. Sequential collision pushes can leave a player trapped
   // between overlapping buildings, so test whole candidate footprints instead; retain the old position if none fits.
   findTeleportPosition(x, z, heading, altitude) {
