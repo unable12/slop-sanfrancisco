@@ -374,6 +374,14 @@ function drawRoute(ctx, x0, y0, x1, y1, width) {
   ctx.stroke();
 }
 
+// Active rides draw measured lanes and legal junction curves, not a direct bearing.
+function drawRideRoute(ctx, points, view, width) {
+  ctx.beginPath();
+  points.forEach((p,i) => { if(i)ctx.lineTo(view.toX(p.x),view.toY(p.z));else ctx.moveTo(view.toX(p.x),view.toY(p.z)); });
+  ctx.lineJoin='round';ctx.lineCap='round';ctx.strokeStyle=MAP.halo;ctx.lineWidth=width+3;ctx.stroke();
+  ctx.strokeStyle='#ffbd79';ctx.lineWidth=width;ctx.stroke();
+}
+
 // Waypoint: a taxi-yellow target
 function drawWaypoint(ctx, x, y, r) {
   ctx.fillStyle = MAP.halo;
@@ -999,7 +1007,8 @@ class NYCMapSystem {
     if (this.waypoint) {
       const wx = toX(this.waypoint.x);
       const wy = toY(this.waypoint.z);
-      drawRoute(ctx, 0, 0, wx, wy, 3);
+      if (this.rideRoute) drawRideRoute(ctx, this.rideRoute, v, 3);
+      else drawRoute(ctx, 0, 0, wx, wy, 3);
       drawWaypoint(ctx, wx, wy, 4.5);
     }
 
@@ -1089,7 +1098,8 @@ class NYCMapSystem {
     if (this.waypoint) {
       const wx = toX(this.waypoint.x);
       const wy = toY(this.waypoint.z);
-      drawRoute(ctx, toX(ent.position.x), toY(ent.position.z), wx, wy, 4);
+      if (this.rideRoute) drawRideRoute(ctx, this.rideRoute, v, 4);
+      else drawRoute(ctx, toX(ent.position.x), toY(ent.position.z), wx, wy, 4);
       drawWaypoint(ctx, wx, wy, 7);
     }
 

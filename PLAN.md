@@ -335,3 +335,21 @@ Everything else: decide, log the decision (section 10), continue. Visual reviews
 | 2026-10-23 | P7.1–P7.8 implementation; P7.9 review open | SF terrain map, official neighborhoods and flight destinations; pause/settings, quality presets, WebGPU recovery; tests, attribution, architecture and local package | 171/171; final UI checks 20/20 | All seven High paths 119–120 fps; Low/Medium city 120 fps; idle heap 709–863 MB; startup 5.183–5.972 s; no observed console errors | unknown | Final visual/driving acceptance and local tag belong to Kamil; no Git writes or publication |
 
 - [x] P1 · [x] P2 · [x] P3 · [x] P4 · [x] P5 · [x] P6 · [ ] P7 (implementation ready; acceptance/tag open)
+
+| 2026-10-23 | P8 checkpoint: route/ride/audio implementation; reliability gate open | Featured Ferry Building → Nob Hill trip, pickup/drop-off state machine, actual map route, manual takeover/recovery, shared four-mode procedural audio and responsive controls | Expanded suite 176/177 initially; unchanged timing failure passed on retry; final affected-area 68/68 including new full-city test (178 unique tests) | Zero wall contacts across 62,650 colliders; live-traffic completion 516.6 s with 3 contacts; no new GPU claim | unknown | P8.2/P8.6 open: integrate shared junction priority, then full browser completion and perf/listening review; no Git writes |
+
+Phase 8 scope and completed gate: [the first robotaxi ride](docs/phases/phase-8-first-ride.md).
+
+| 2026-10-23 | P8.1–P8.6 complete | Shared grouped-junction right-of-way, curved-path traffic clearance, full Ferry → Nob Hill ride and four-mode sound | 182/182 pass; three full-city traffic seeds and actual browser ride all zero contacts/overlaps; static package passes | Browser 463.494 s; observed 85–120 fps at 984×853 High; assist CPU 0.611–0.661 ms/update; no console errors | unknown | No manual intervention/recovery; map pause and pickup/drop-off verified; final batch waiting for Kamil, no Git writes |
+
+- [x] P8 — first robotaxi ride complete; commit pending.
+
+| 2026-10-23 | README / cinematic showcase | Two real-engine Waymo/helicopter captures, 720p MP4 Desktop delivery, compact GIFs and sourced building counts in README | 7 boot/teleport tests; syntax and whitespace clean; encoded frames inspected | 1280×720, 30 fps, ~14 s MP4; 576×324, 10 fps, 5 s GIF; no performance claim | unknown | Capture-only camera/vehicle staging; no publishing; folded into pending P8 batch |
+
+| 2026-10-23 | P9 collision realism proposal | Inspected buildings, trees and pedestrians; reproduced a 0.250 m false corner push; prioritized exact contact, trunk colliders, pedestrian reactions and impact feedback | Read-only production-resolver reproduction; no gameplay changes or full-suite rerun | No new performance claim; proposed p95 collision budget in phase file | unknown | [Phase 9 plan](docs/phases/phase-9-collision-realism.md); implementation not started |
+
+| 2026-10-23 | Player Waymo detail | Dedicated crossover profile, layered sensors, grille/DRLs, split-spoke wheels and clearcoat; refreshed cinematic | 39/39 targeted checks; static build and visual gallery | 40,804 triangles / 27 meshes; no new GPU timing claim | unknown | Player only; chassis unchanged; procedural interpretation; pending P8 batch |
+
+| 2026-10-23 | Waymo cinematic framing | Replaced sidewalk orbit with closer road-facing tracking camera; refreshed MP4 and README GIF | 28 sampled frames clear of tree occlusion; syntax/whitespace checks | 1280×720, 30 fps, 13.933 s | unknown | Desktop `-clear-view` delivery; pending batch unchanged |
+
+| 2026-10-23 | Waymo body/roof cohesion | Roof-following single fairing; unified hood/cabin, smoother arches and matching paint; ten-angle gallery and refreshed clip | 41/41 targeted; full 184/186 initially, both unchanged timing checks passed separately at original limits | 46,370 triangles / 28 meshes; no new GPU timing claim | unknown | Car only; pending P8 batch updated; no Git writes |

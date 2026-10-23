@@ -89,10 +89,10 @@ async function initApp() {
     trackTimestamp: new URLSearchParams(location.search).has('gpuTiming')
   });
   renderer.setPixelRatio(1.0);
-  const benchmarkResolution = ['bench', 'capture'].some(key => new URLSearchParams(location.search).has(key));
+  const benchmarkResolution = ['bench', 'capture', 'showcase'].some(key => new URLSearchParams(location.search).has(key));
   const renderSize = () => benchmarkResolution ? [1280, 720] : [window.innerWidth, window.innerHeight];
   renderer.setSize(...renderSize());
-  if (benchmarkResolution) { renderer.domElement.style.width = '100%'; renderer.domElement.style.height = '100%'; }
+  if (benchmarkResolution) { renderer.domElement.style.width = '100%'; renderer.domElement.style.height = '100%'; renderer.domElement.style.objectFit = 'contain'; }
   renderer.shadowMap.enabled = true;
   if (ClusteredLighting) {
     renderer.lighting = new ClusteredLighting(256, 32, 28, 48);
@@ -322,7 +322,9 @@ async function initApp() {
     modeSwitch.style.setProperty('--ind-w', `${active.offsetWidth}px`);
   }
 
+  let rideExperience = null;
   function selectMode(mode) {
+    if (mode !== 'car') rideExperience?.cancel();
     controllerManager.setMode(mode);
     touchControls.setMode(controllerManager.activeMode);
     modeButtons.forEach((btn) => {
@@ -480,6 +482,7 @@ async function initApp() {
 
   // No heading: face along the nearest street (controllers.js roadHeading)
   function teleportTo(x, z, heading = NaN) {
+    rideExperience?.cancel();
     const box = window.NYC.GEO?.box;
     if (box && (x < box.x0 || x > box.x1 || z < box.z0 || z > box.z1)) selectMode('helicopter');
     const destination = controllerManager.teleportActiveTo(x, z, heading);
@@ -499,6 +502,7 @@ async function initApp() {
     cameraSystem,
     trafficSystem,
     onToggle: (open) => {
+      rideExperience?.setPaused(open || paused);
       controllerManager.resetInput();
       touchControls.setEnabled(!open);
       const mapHint = document.getElementById('fullmap-hover-info');
@@ -635,7 +639,7 @@ async function initApp() {
   }
 
   const settings = window.NYC.createSettings({
-    onPause(value) { paused=value; pauseDirty=true; controllerManager.resetInput(); touchControls.setEnabled(!value && !mapSystem.isFullMapOpen); },
+    onPause(value) { rideExperience?.setPaused(value); paused=value; pauseDirty=true; controllerManager.resetInput(); touchControls.setEnabled(!value && !mapSystem.isFullMapOpen); },
     onTime(id) { selectTime(id); pauseDirty=true; },
     onFog(id) { lightingSystem.setFogPreset(id); fogSelect.value=id; pauseDirty=true; },
     onQuality: applyQuality,
@@ -648,6 +652,12 @@ async function initApp() {
   const requestedQuality = window.NYC.QUALITY_PRESETS[qualityParam] ? qualityParam : null;
   if (requestedQuality) settings.setQuality(requestedQuality);
   const autoFrames = []; let autoSeconds=0, autoDone=Boolean(requestedQuality || urlParams.has('bench') || urlParams.has('capture'));
+
+  rideExperience = window.NYC.createRideExperience({
+    scene, controller: controllerManager, map: mapSystem, traffic: trafficSystem,
+    startAt(x,z,heading) { selectMode('car'); teleportTo(x,z,heading); }
+  });
+  document.addEventListener('visibilitychange', () => rideExperience.setPaused(document.hidden || paused || mapSystem.isFullMapOpen));
 
   // Debug & screenshot harness state (URL: ?cam=x,y,z,yawDeg,pitchDeg  ?freeze=1  ?bench=name):
   // `camera` pins the view to a fixed pose, `freeze` stops traffic, `bench` flies a scripted path (BENCH_PATHS) and logs
@@ -700,6 +710,7 @@ async function initApp() {
         region: region.stats(),
         gpuMB: gpuMegabytes()
       }),
+      ride: () => rideExperience.summary(),
       heightAt: (x, z) => window.NYC.Terrain.heightAt(x, z),
       groundAt: (x, z) => window.NYC.Terrain.groundAt(x, z),
       teleport: (x, z, headingDeg = 180) => teleportTo(x, z, (headingDeg * Math.PI) / 180),
@@ -870,6 +881,10 @@ async function initApp() {
     setCameraPose(pose);
   }
 
+  // Local, opt-in media tool; normal gameplay does not load the capture module.
+  const showcase = urlParams.has('showcase')
+    ? (await import('../tools/dev/showcase.mjs')).createShowcase({renderer,controller:controllerManager,cameraSystem,traffic:trafficSystem,selectMode})
+    : null;
   let gpuTimingPending = false;
   renderer.setAnimationLoop((now) => {
     const rawDt = (now - lastTime) * 0.001;
@@ -878,13 +893,19 @@ async function initApp() {
       if (pauseDirty) { region.update(cameraSystem.camera, elapsed); lightingSystem.update(cameraSystem.currentPos, elapsed); renderPipeline.render(); pauseDirty=false; }
       return;
     }
+    // Inspecting the route pauses the whole crossing, including AI traffic.
+    // Braking only the taxi here could leave it rolling into a turning conflict.
+    if (mapSystem.isFullMapOpen) { mapSystem.update(); return; }
     const dt = Math.min(Math.max(rawDt, 0.001), 0.05);
     elapsed = fogCompare ? 10 : elapsed + dt;
 
     // Update 3rd-person controllers, camera, signals, traffic & vehicle collisions, building LODs, and dynamic shadow focus
+    rideExperience.update(dt, elapsed);
     controllerManager.update(dt, elapsed);
+    showcase?.update(dt);
     cameraSystem.update(dt, elapsed);
     updateDebugCamera(rawDt);
+    showcase?.camera();
     // traffic divides by its step (traffic.js), so a frozen city still steps by a negligible 0.1 ms
     const trafficDt = debugState.freeze ? 1e-4 : dt;
     streetDetails.signalClock.value = elapsed;
@@ -929,6 +950,7 @@ async function initApp() {
       autoSeconds += rawDt; autoFrames.push(rawDt * 1000);
       if (autoSeconds >= 3) { autoDone=true; settings.setAutomatic(window.NYC.chooseQuality(autoFrames)); }
     }
+    showcase?.afterRender(window.__NYC_APP.ready);
     const timedBench = debugState.bench;
     if (warmedUp && renderer.backend.trackTimestamp && timedBench && !timedBench.done && !gpuTimingPending) {
       gpuTimingPending = true;

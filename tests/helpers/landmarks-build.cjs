@@ -55,8 +55,8 @@ function buildLandmarksHeadless() {
   for (const f of ['js/landmarks.js', 'js/sf-bridges.js']) vm.runInContext(readFileSync(join(root, f), 'utf8'), context);
   const landmarks = NYC.buildLandmarks(stub());
   const bridges = NYC.buildSFBridges(stub());
-  built = { NYC, landmarks, bridges };
+  built = { NYC, landmarks, bridges, context };
   return built;
 }
 
-module.exports = { buildLandmarksHeadless, available };
+module.exports = { buildLandmarksHeadless, available, stub, readBin };

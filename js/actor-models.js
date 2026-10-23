@@ -494,18 +494,21 @@ function bodyHalfProfile(s, detail, spec = {}) {
   const n1 = spec.lowerRound || BODY_LOWER_ROUND;
   const n2 = spec.upperRound || BODY_UPPER_ROUND;
   const right = [];
-  const low = detail ? [0, 0.32, 0.64, 1] : [0, 1];
+  const low = detail ? (spec.hero ? [0,.15,.3,.45,.6,.75,.87,1] : [0, 0.32, 0.64, 1]) : [0, 1];
   const up = detail ? spec.upperSamples || [0.38, 0.72, 1] : [1];
-  const top = detail ? [0.66, 0.33] : [0.5];
+  const top = detail ? (spec.hero ? [.9,.76,.6,.4,.2] : [0.66, 0.33]) : [0.5];
   for (const a of low) {
     const th = (a * Math.PI) / 2;
-    right.push([s.xB + (s.W - s.xB) * Math.pow(Math.sin(th), 2 / n1), s.yS - (s.yS - s.yB) * Math.pow(Math.cos(th), 2 / n1)]);
+    right.push([s.xB + (s.W - s.xB) * Math.pow(Math.sin(th), 2 / n1) - (spec.hero ? .025 * Math.sin(th * 2) ** 2 : 0), s.yS - (s.yS - s.yB) * Math.pow(Math.cos(th), 2 / n1)]);
   }
   for (const a of up) {
     const th = (a * Math.PI) / 2;
     right.push([s.xE + (s.W - s.xE) * Math.pow(Math.cos(th), 2 / n2), s.yS + (s.yE - s.yS) * Math.pow(Math.sin(th), 2 / n2)]);
   }
-  for (const f of top) right.push([s.xE * f, s.yE + (s.yT - s.yE) * (1 - f * f)]);
+  for (const f of top) {
+    const hoodCrease = spec.hero ? .014 * Math.exp(-(((f-.76)/.12)**2)) * Math.max(0,Math.min(1,(s.z-1)*3)) : 0;
+    right.push([s.xE*f,s.yE+(s.yT-s.yE)*(1-f*f)+hoodCrease]);
+  }
   return right;
 }
 
@@ -522,7 +525,7 @@ function bodyStations(spec, detail) {
     add(spec.zRear + tailLen * (1 - u));
   }
   const archR = spec.wheelRadius + spec.archGap;
-  const k = detail ? 8 : 4;
+  const k = detail ? (spec.hero ? 24 : 8) : 4;
   for (const axle of [spec.wheelZ, -spec.wheelZ]) {
     for (let i = 0; i <= k; i++) add(axle + archR * Math.cos((i / k) * Math.PI));
     add(axle + archR + 0.006);
@@ -596,7 +599,7 @@ function carBodyHalfWidthAt(spec, z, y) {
   const pts = [];
   for (let i = 0; i <= 16; i++) {
     const th = ((i / 16) * Math.PI) / 2;
-    pts.push([s.xB + (s.W - s.xB) * Math.pow(Math.sin(th), 2 / n1), s.yS - (s.yS - s.yB) * Math.pow(Math.cos(th), 2 / n1)]);
+    pts.push([s.xB + (s.W - s.xB) * Math.pow(Math.sin(th), 2 / n1) - (spec.hero ? .025 * Math.sin(th * 2) ** 2 : 0), s.yS - (s.yS - s.yB) * Math.pow(Math.cos(th), 2 / n1)]);
   }
   for (let i = 1; i <= 16; i++) {
     const th = ((i / 16) * Math.PI) / 2;
@@ -1113,7 +1116,7 @@ function createLoftedCarMaterial(spec, fixedColorHex = null) {
   const plates = max(plateFront, plateRear);
   const cladding =
     spec.cladding > 0
-      ? max(smoothstep(spec.cladding + 0.01, spec.cladding - 0.01, p.y), smoothstep(archR + 0.075, archR + 0.06, wheelDist))
+      ? max(smoothstep(spec.cladding + 0.01, spec.cladding - 0.01, p.y), smoothstep(archR + (spec.hero ? 0.028 : 0.075), archR + (spec.hero ? 0.018 : 0.06), wheelDist))
         .mul(isBody)
         .mul(one.sub(lamp))
         .mul(one.sub(plates))
@@ -1246,11 +1249,11 @@ function createLoftedCarMaterial(spec, fixedColorHex = null) {
   const turn = color(0xff9a14).mul(max(turnFront, turnRear).mul(blink).mul(2.2));
   const sign = color(0xffe28a).mul(signFace.mul(one.sub(signGlyph.mul(0.9))).mul(1.65));
 
-  const mat = new THREE.MeshStandardNodeMaterial();
+  const mat = spec.hero ? new THREE.MeshPhysicalNodeMaterial({clearcoat:.55,clearcoatRoughness:.22}) : new THREE.MeshStandardNodeMaterial();
   if (fixed) mat.userData.carState = stateUniform;
   mat.colorNode = col;
   mat.roughnessNode = rough;
-  mat.metalnessNode = metal;
+  mat.metalnessNode = spec.hero ? mix(metal, float(.12), one.sub(max(glass, max(lamp, max(isTyre, isAlloy))))) : metal;
   mat.emissiveNode = headlamps.add(tail).add(stop).add(turn).add(sign);
 
   _carMaterialCache.set(cacheKey, mat);

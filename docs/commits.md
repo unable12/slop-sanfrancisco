@@ -195,3 +195,16 @@ The array below is supported by bash and zsh and keeps this one command limited 
 ```
 
 After accepting and committing, Kamil may run `git tag v0.1.0`; do not tag the earlier Phase 6 commit.
+
+
+## 2026-10-23: Phase 8 + showcase final batch — supersedes the uncommitted checkpoint
+
+Phase 7 is committed as `2254186`. The earlier Phase 8 checkpoint command is superseded by this one batch,
+including junction right-of-way, zero-contact regression coverage, sound for all four movement modes,
+the subsequent cinematic README showcase, unobstructed camera angle and unified player Waymo body/roof. The user has not yet committed Phase 8. The later collision-realism proposal is included as documentation only.
+The final car pass has 41/41 targeted checks. Full regression: 184/186 initially; both unchanged timing checks passed separately at their original limits. Review evidence is in `docs/review/p8/`. Kamil commits; no Git writes,
+push, tag or deployment were performed. The path array works in bash and zsh.
+
+```bash
+(phase8_paths=(js/actor-models.js js/waymo-detail.js tests/waymo-detail.test.cjs docs/vehicles/waymo.md docs/review/waymo docs/phases/phase-9-collision-realism.md docs/media tools/dev/showcase.mjs tools/dev/export-showcase.sh PLAN.md README.md css/style.css docs/ARCHITECTURE.md docs/commits.md docs/handover.md docs/perf-log.md docs/phases/phase-8-first-ride.md docs/review/p8 index.html js/controllers.js js/main.js js/ride-audio.js js/ride-ui.js js/ride.js js/sf-map.js js/traffic.js tests/boot.test.cjs tests/helpers/landmarks-build.cjs tests/helpers/ride-world.cjs tests/helpers/traffic-harness.cjs tests/ride-audio.test.cjs tests/ride.test.cjs tests/teleports.test.cjs); git add -- "${phase8_paths[@]}" && git commit -m "finish the robotaxi ride with sound, a cohesive waymo and clear city previews (P8)" -- "${phase8_paths[@]}")
+```

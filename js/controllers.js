@@ -385,8 +385,8 @@ class ThirdPersonControllerManager {
     const chassisPivot = new THREE.Group();
     root.add(chassisPivot);
 
-    const spec = BODY_SPECS.taxi;
-    const taxiLoftMat = createLoftedCarMaterial(spec, 0xf1f3f5);
+    const spec = window.NYC.createWaymoHeroSpec();
+    const taxiLoftMat = createLoftedCarMaterial(spec, 0xd2d8dd);
 
     // 1. 3D Lofted Robotaxi Body + Curved Windscreens + Crowned Roof + Side Mirrors + Lidar Dome & Sensor Pods
     const carBodyGeo = buildCarGeometry(spec, false);
@@ -395,7 +395,9 @@ class ThirdPersonControllerManager {
     carBodyMesh.receiveShadow = true;
     chassisPivot.add(carBodyMesh);
 
-    // 3. High-Detail NY Empire Gold License Plates on the bumpers
+    window.NYC.addWaymoHeroDetails(chassisPivot, spec);
+
+    // California license plates on the bumpers
     const nyPlateTex = createCALicensePlateTexture();
     const nyPlateMat = new THREE.MeshStandardNodeMaterial({ map: nyPlateTex, roughness: 0.28 });
     const rearPlate = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.14, 0.02), nyPlateMat);
@@ -410,8 +412,7 @@ class ThirdPersonControllerManager {
     const carState = taxiLoftMat.userData.carState;
 
     // 4. Steerable & Spinning 3D LatheGeometry Tyres + Recessed 5-Spoke Alloy Wheels
-    const leftWheelGeo = buildSteerableWheelGeo(spec, -1);
-    const rightWheelGeo = buildSteerableWheelGeo(spec, 1);
+    // The hero wheels use modeled split spokes, brake discs and lug nuts.
 
     const wheels = [];
     const wheelCoords = [
@@ -423,7 +424,7 @@ class ThirdPersonControllerManager {
     for (const wc of wheelCoords) {
       const steerPivot = new THREE.Group();
       steerPivot.position.set(wc.side * spec.wheelX, spec.wheelRadius, wc.z);
-      const tire = new THREE.Mesh(wc.side < 0 ? leftWheelGeo : rightWheelGeo, taxiLoftMat);
+      const tire = window.NYC.buildWaymoHeroWheel(spec, wc.side);
       tire.castShadow = true;
       tire.receiveShadow = true;
       steerPivot.add(tire);
@@ -1096,6 +1097,7 @@ class ThirdPersonControllerManager {
 
   updateCar(dt) {
     const c = this.entities.car;
+    const assist = this.carAssist;
     const maxSpeed = this.keys.boost ? 36.0 : 23.5;
     const accel = this.keys.boost ? 21.0 : 14.0;
 
@@ -1103,7 +1105,11 @@ class ThirdPersonControllerManager {
     if (this.keys.forward) throttle = this.keys.forward;
     else if (this.keys.backward) throttle = -this.keys.backward;
 
-    if (throttle !== 0) {
+    if (assist) {
+      const delta = assist.speed - c.speed;
+      throttle = delta > .1 ? .2 : delta < -.1 ? -.3 : 0;
+      c.speed += Math.max(-3.6 * dt, Math.min(2.2 * dt, delta));
+    } else if (throttle !== 0) {
       c.speed += throttle * accel * dt;
       c.speed = Math.max(-maxSpeed * 0.45, Math.min(maxSpeed, c.speed));
     } else {
@@ -1112,7 +1118,7 @@ class ThirdPersonControllerManager {
     }
     // Grade: gravity along the slope (scaled down: the engine & brakes do the rest); a car left without throttle
     // below walking pace holds on the brake instead of rolling
-    if (c.terrainPitch !== undefined && (throttle !== 0 || Math.abs(c.speed) > 1)) {
+    if (!assist && c.terrainPitch !== undefined && (throttle !== 0 || Math.abs(c.speed) > 1)) {
       c.speed -= GRAVITY * Math.sin(c.terrainPitch) * CAR_GRADE * dt;
     }
 
@@ -1120,7 +1126,7 @@ class ThirdPersonControllerManager {
     if (this.keys.left) steerInput = this.keys.left;
     if (this.keys.right) steerInput = -this.keys.right;
 
-    c.steerAngle += (steerInput * 0.52 - c.steerAngle) * Math.min(1, dt * 10);
+    c.steerAngle += ((assist ? assist.steer : steerInput * 0.52) - c.steerAngle) * Math.min(1, dt * 10);
 
     if (Math.abs(c.speed) > 0.2) {
       const dirSign = c.speed >= 0 ? 1 : -1;
@@ -1140,7 +1146,9 @@ class ThirdPersonControllerManager {
     c.vx *= tireGripDamp;
     c.vz *= tireGripDamp;
 
+    const proposedX=c.position.x,proposedZ=c.position.z;
     this.resolveHorizontalCollision(c.position, 1.35, c.position.y + 1.0, c);
+    if(c.rideMetrics && Math.hypot(c.position.x-proposedX,c.position.z-proposedZ)>.05)c.rideMetrics.worldContacts++;
     this.settleOnTerrain(c, false, dt);
 
     // 3-DOF Spring-Damper Chassis Suspension (Pitch, Roll & Vertical Heave)

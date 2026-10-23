@@ -175,3 +175,37 @@ Draw-call/triangle counters read zero after the render pipeline's counter reset,
 Low uses no SSR graph and no sun shadows; regional building/tree culling distances are reduced. All presets rendered
 without console warnings/errors in the recorded runs. Phase 6's final fog shader and <1 ms paired-cost evidence remain
 unchanged; these refresh-capped tests are not a replacement fog GPU-cost measurement.
+
+## 2026-10-23 — Phase 8 checkpoint, no new GPU claim
+
+Route planning in the actual WebGPU app checked the full city at 1.55 m clearance and selected a 2.153 km route.
+Production car physics completes the static-world test against 62,650 colliders with no wall contacts; maximum
+route-center deviation is 4.862 m at turns. Seeded live traffic completes in 516.6 simulated seconds, with three
+low-speed traffic contacts: the reliability gate remains open. This is simulation evidence, not a rendered FPS bench.
+The visible preview showed no console warnings/errors; hidden WebGPU initialization stalled and was closed.
+Full-suite curb construction exceeded its existing 10 s budget once (11.764 s) while the live preview was running;
+the unchanged test passed separately at 9.635 s. No performance threshold was relaxed. Final GPU/ride-overhead
+benchmarks and subjective audio listening remain outstanding. Phase 7's numbers have not been relabeled as Phase 8 results.
+
+## 2026-10-23 — Phase 8 final driving regression
+
+The final 2.146 km route is Embarcadero → Washington → Sansome → California. The full regression suite
+passes **182/182** in 207.0 seconds with serial test scheduling; no retries or relaxed thresholds in this run.
+All three production-controller runs include live cars, buses, pedestrians, hills/signals and 62,650 static
+colliders. Each completes pickup through passenger exit within the original 720-second limit, with zero
+world contacts, traffic impacts and traffic overlaps. These results supersede the three-contact checkpoint.
+
+| Seed | Simulated driving time | Max route-center deviation | Mean assisted-control CPU time per update |
+|---|---:|---:|---:|
+| 3 | 561.0 s | 4.268 m | 0.661 ms |
+| 8 | 589.2 s | 4.549 m | 0.649 ms |
+| 21 | 462.7 s | 4.590 m | 0.611 ms |
+
+These CPU timings measure route control in the regression harness, not total frame or GPU time.
+Static packaging and whitespace checks pass. Browser evidence is recorded in the Phase 8 gallery.
+Phase 6 fog-cost measurements remain unchanged; no new fog/GPU-cost claim is made here.
+
+Actual WebGPU browser acceptance: 463.494 driving seconds, maximum deviation 4.859 m, zero world contacts,
+traffic impacts or overlaps. Normal traffic, High/midday, actual 984 × 853 preview. Sampled HUD readings
+85–120 fps; no percentile or GPU-cost inference. No console warnings/errors. Full-map pause held progress
+unchanged and resumed. Screenshots and console evidence: `docs/review/p8/`.

@@ -1,0 +1,38 @@
+{
+  "command": "node --test --test-concurrency=1 tests/*.test.cjs tests/*.test.mjs",
+  "tests": 182,
+  "passed": 182,
+  "failed": 0,
+  "durationMs": 207042.96925,
+  "staticColliders": 62650,
+  "completionLimitSeconds": 720,
+  "trafficRuns": [
+    {
+      "seed": 3,
+      "seconds": 561.0,
+      "maxDeviationMeters": 4.268401160910242,
+      "controlMeanMs": 0.6612,
+      "worldContacts": 0,
+      "trafficContacts": 0,
+      "trafficOverlaps": 0
+    },
+    {
+      "seed": 8,
+      "seconds": 589.2,
+      "maxDeviationMeters": 4.549468876689122,
+      "controlMeanMs": 0.6486,
+      "worldContacts": 0,
+      "trafficContacts": 0,
+      "trafficOverlaps": 0
+    },
+    {
+      "seed": 21,
+      "seconds": 462.7,
+      "maxDeviationMeters": 4.589836444311627,
+      "controlMeanMs": 0.6105,
+      "worldContacts": 0,
+      "trafficContacts": 0,
+      "trafficOverlaps": 0
+    }
+  ]
+}

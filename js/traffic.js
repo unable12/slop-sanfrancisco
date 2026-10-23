@@ -709,6 +709,10 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
     return m && m.out[j] >= 0 ? m : null;
   }
 
+  // A held approach has surrendered right-of-way to the draining set. It still
+  // occupies physical space, but must not win a wait-time or merge-priority vote.
+  const heldByRide = v => v.edge?.to.rideReservation && !v.edge.to.rideReservation.draining.has(v) && !v.conn && !v.commit;
+
   // Could the vehicle of lane entry o, approaching the end of edge a, still stop easily before its line? Vehicles
   // already standing can; drivers who have been waiting a while accept any gap it can still stop for comfortably.
   function canStop(o, a, impatient) {
@@ -727,7 +731,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
     if (o.to.signal && phaseOf(o) === 'red') return false;
     for (const list of o.occ) {
       const lead = leadOf(list);
-      if (!lead || (lead.v.edge === o && lead.v.move.turn === 'L')) continue;
+      if (!lead || heldByRide(lead.v) || (lead.v.edge === o && lead.v.move.turn === 'L')) continue;
       if (!canStop(lead, o, impatient)) return true;
       const u = lead.v;
       const j = u.edge === o ? u.move.out[u.lane] : -1;
@@ -758,7 +762,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
       if (e.stop ? a.stop || a.axisIndex === e.axisIndex : a.axisIndex !== 0) continue;
       for (const list of a.occ) {
         const lead = leadOf(list);
-        if (lead && !canStop(lead, a, v.wait > 8)) return true;
+        if (lead && !heldByRide(lead.v) && !canStop(lead, a, v.wait > 8)) return true;
       }
     }
     return false;
@@ -802,7 +806,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
     let w = 0;
     for (const list of a.occ) {
       const o = leadOf(list);
-      if (o && !o.v.claimed && o.v.move && o.v.move.to === f && o.v.move.out[o.v.lane] === j) w = Math.max(w, o.v.wait);
+      if (o && !heldByRide(o.v) && !o.v.claimed && o.v.move && o.v.move.to === f && o.v.move.out[o.v.lane] === j) w = Math.max(w, o.v.wait);
     }
     return w;
   }
@@ -814,7 +818,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
       const first = a !== v.edge && roadWait(a, f, j) > ownWait;
       for (const list of a.occ) {
         const o = leadOf(list);
-        if (!o || o.v.claimed || !o.v.move || o.v.move.to !== f || o.v.move.out[o.v.lane] !== j) continue;
+        if (!o || heldByRide(o.v) || o.v.claimed || !o.v.move || o.v.move.to !== f || o.v.move.out[o.v.lane] !== j) continue;
         if (a === v.edge ? precedence(o.v, o.s) > precedence(v, v.s) : first) free -= 2 * o.v.half + o.v.driver.s0;
       }
     }
@@ -863,7 +867,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
     merger.v = null;
     for (let i = 0; i < e.lanes.length; i++) {
       const o = i === v.lane ? null : leadOf(e.occ[i]);
-      if (!o || o.v === v || o.v.claimed || o.v.move.to !== f || precedence(o.v, o.s) <= precedence(v, v.s)) continue;
+      if (!o || heldByRide(o.v) || o.v === v || o.v.claimed || o.v.move.to !== f || precedence(o.v, o.s) <= precedence(v, v.s)) continue;
       if (o.v.bus && besideTail(o.v)) continue; // it waits for the bus beside its tail
       const oj = o.v.move.out[o.v.lane];
       if (oj < 0 || (oj !== j && !(Math.abs(oj - j) === 1 && v.move.turn !== 'S' && (v.bus || o.v.bus)))) continue;
@@ -888,7 +892,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
       if (a === v.edge || !a.stop) continue;
       for (const list of a.occ) {
         const lead = leadOf(list);
-        if (lead && lead.v.stopDone && !lead.v.claimed && lead.v.stopAt < v.stopAt) return false;
+        if (lead && !heldByRide(lead.v) && lead.v.stopDone && !lead.v.claimed && lead.v.stopAt < v.stopAt) return false;
       }
     }
     return true;
@@ -904,6 +908,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
     const stoppable = canStopBefore(v, d) || (phase !== 'green' && v.speed * v.speed < 2 * v.driver.b * d);
     if (stoppable) v.commit = null; // could stop after all: decide afresh
     if (v.commit === n) return true;
+    if (n.rideReservation && !n.rideReservation.draining.has(v)) return false;
     if (v.move.out[v.lane] < 0) {
       // missed the lane for the planned move: go wherever this lane goes instead
       if (d > 12) return false;
@@ -1377,6 +1382,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
     const hit = overlapWithPlayer(relX, relZ, rotY, halfW, halfL, pe.heading || 0, player.halfW, player.halfL);
     if (!hit) return;
     const { nx, nz, pen, localX, localZ, pSin, pCos } = hit;
+    if(pe.rideMetrics && pen>.01)pe.rideMetrics.trafficOverlaps=(pe.rideMetrics.trafficOverlaps||0)+1;
     const massRatio = v.bus ? 0.15 : v.isSUV ? 0.58 : 1.0 - player.push;
     const pPush = 1.0 - massRatio;
     pe.position.x += nx * pen * pPush;
@@ -1393,6 +1399,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
     const cvz = v.tz * v.speed + v.vz;
     const approachSpeed = (pvx - cvx) * (-nx) + (pvz - cvz) * (-nz);
     if (approachSpeed <= 0) return;
+    if(pe.rideMetrics && approachSpeed>.5){pe.rideMetrics.trafficContacts++;if(pe.rideMetrics.contacts?.length<10)pe.rideMetrics.contacts.push({road:v.edge?.name,approachSpeed,playerSpeed:pe.speed,trafficSpeed:v.speed,playerHeading:pe.heading,trafficHeading:rotY,relX,relZ});}
 
     const jImpulse = (1.0 + 0.28) * approachSpeed;
     const cImpulse = v.bus ? approachSpeed * 0.22 : jImpulse * massRatio * 0.92;
@@ -1477,7 +1484,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
   function spawnVehicle(v, rMin, rMax, hidden) {
     for (let attempt = 0; attempt < 12; attempt++) {
       const e = nearEdges[Math.floor(Math.random() * nearEdges.length)];
-      if (!e || (v.bus && e.axis !== 'ave') || e.len < 2 * v.half + 10) continue;
+      if (!e || e.from.rideReservation || e.to.rideReservation || (v.bus && e.axis !== 'ave') || e.len < 2 * v.half + 10) continue;
       const lane = Math.floor(Math.random() * e.lanes.length);
       const s = v.half + 5 + Math.random() * (e.len - 2 * v.half - 10);
       const x = e.sx + e.dx * s + e.rx * e.lanes[lane];
@@ -2130,9 +2137,48 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
     updateTrafficLights();
   }
 
+  // One shared reservation drains existing/committed traffic before the ride enters.
+  // New arrivals wait at their normal stop lines; nobody is teleported or made intangible.
+  function requestRideJunction(junctions, owner) {
+    if(junctions.some(n=>n.rideReservation&&n.rideReservation.owner!==owner))return false;
+    let reservation=junctions[0].rideReservation;
+    const inside=v=>v.edge&&(junctions.includes(v.edge.from)&&v.s<v.half+5 ||
+      junctions.includes(v.edge.to)&&(v.conn||v.commit===v.edge.to));
+    if(!reservation){
+      reservation={owner,draining:new Set(),granted:false};
+      for(const v of vehicles){
+        if(v.disabled||!v.edge)continue;
+        // Vehicles between two closely spaced nodes must be allowed to leave the
+        // whole crossing, not trapped by a second stop line inside our reservation.
+        if((v.edge===owner.reservation?.edge && v.s>v.edge.len-(owner.reservation.entry-owner.progress)-3)||inside(v)||(junctions.includes(v.edge.from)&&junctions.includes(v.edge.to))||
+          (junctions.includes(v.edge.to)&&v.speed>.3&&!canStopBefore(v,v.edge.len-v.s-v.half)))reservation.draining.add(v);
+      }
+      for(const n of junctions)n.rideReservation=reservation;
+    }
+    for(const v of reservation.draining){
+      if(v.disabled||!v.edge||(!inside(v)&&!(junctions.includes(v.edge.from)&&junctions.includes(v.edge.to))&&
+        !junctions.includes(v.edge.to)))reservation.draining.delete(v);
+    }
+    // A leader using exactly the same lane and connector can be followed through
+    // the crossing. Conflicting drainers retain exclusive priority until clear.
+    reservation.granted=[...reservation.draining].every(v=>{
+      const i=owner.route.states.findIndex(s=>s.e===v.edge&&s.lane===v.lane);
+      if(i<0)return false;
+      if(!junctions.includes(v.edge.to))return true;
+      const next=owner.route.states[i+1];
+      return next&&v.move?.to===next.e&&v.move.out[v.lane]===next.lane;
+    });
+    return reservation.granted;
+  }
+  function releaseRideJunction(junctions, owner) {
+    for(const node of junctions)if(node.rideReservation?.owner===owner)delete node.rideReservation;
+  }
+
   return {
     group,
     update,
+    requestRideJunction,
+    releaseRideJunction,
     cars,
     buses,
     peds,

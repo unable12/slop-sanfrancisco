@@ -29,10 +29,12 @@ function stub() {
   });
 }
 
-function loadTraffic() {
+function loadTraffic({ seed } = {}) {
+  const randomMath = Object.create(Math);
+  if (seed !== undefined) randomMath.random = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
   const NYC = {};
   const window = { NYC };
-  const context = vm.createContext({ window, document: stub(), console: { info() {}, log: console.log, warn() {} }, Math, performance: { now: () => 0 } });
+  const context = vm.createContext({ window, document: stub(), console: { info() {}, log: console.log, warn() {} }, Math: randomMath, performance: { now: () => 0 } });
   for (const f of ['js/sf-geodata.js', 'js/city-config.js', 'js/terrain.js']) vm.runInContext(readFileSync(join(root, f), 'utf8'), context);
   const buf = readFileSync(terrainFile);
   const n = buf.readUInt32LE(4);

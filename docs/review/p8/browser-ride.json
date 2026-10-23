@@ -1,0 +1,30 @@
+{
+  "start": [
+    {
+      "level": "info",
+      "message": "[ride-start] {\"length\":2146,\"staticClearance\":1.55,\"roads\":[\"THE EMBARCADERO\",\"WASHINGTON ST\",\"SANSOME ST\",\"CALIFORNIA ST\"]}",
+      "timestamp": "2026-10-23T18:46:23.581Z",
+      "url": "http://127.0.0.1:8081/js/ride-ui.js?v=20261023-sf-p8"
+    }
+  ],
+  "complete": [
+    {
+      "level": "info",
+      "message": "[ride-complete] {\"seconds\":463.4938999999568,\"maxDeviation\":4.859250791913411,\"worldContacts\":0,\"trafficContacts\":0,\"trafficOverlaps\":0}",
+      "timestamp": "2026-10-23T18:57:14.540Z",
+      "url": "http://127.0.0.1:8081/js/ride-ui.js?v=20261023-sf-p8"
+    }
+  ],
+  "warningsAndErrors": [],
+  "mapPauseProgressPercent": 9.396158983818085,
+  "observedHudFpsRange": [
+    85,
+    120
+  ],
+  "quality": "high",
+  "time": "midday",
+  "viewport": {
+    "width": 984,
+    "height": 853
+  }
+}
