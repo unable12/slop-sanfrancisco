@@ -210,7 +210,7 @@ push, tag or deployment were performed. The path array works in bash and zsh.
 ```
 
 
-## 2026-10-23: P9.1 + responsive toolbar — final pending batch
+## 2026-10-23: P9.1 + responsive toolbar — committed as 2237c78
 
 Phase 8 is committed as `e17d6c8`. This batch includes building contact and the subsequent responsive toolbar fix; trees/pedestrians are deferred under the demo-first scope.
 It replaces the building-only command previously shown. Nine viewport widths checked; 5/5 boot/settings tests pass after UI changes.
@@ -220,4 +220,17 @@ Kamil commits; no Git writes, tag, deployment or publication performed. Bash/zsh
 
 ```bash
 (p9_paths=(docs/media/README.md css/style.css docs/review/hud-responsive PLAN.md docs/ARCHITECTURE.md docs/commits.md docs/handover.md docs/perf-log.md docs/phases/phase-9-collision-realism.md docs/review/p9-buildings docs/reports/p9-building-collisions.json index.html js/world-collision.js js/buildings.js js/controllers.js js/main.js js/ride.js js/ride-ui.js tests/world-collision.test.cjs tests/buildings-runtime.test.cjs tests/controllers.test.cjs tests/boot.test.cjs tests/ride.test.cjs tools/dev/collision-review.mjs tools/dev/bench-collisions.cjs); git add -- "${p9_paths[@]}" && git commit -m "fix invisible building collisions and keep the toolbar clear on small screens (P9.1)" -- "${p9_paths[@]}")
+```
+
+
+## 2026-10-23: demo README, creator credit and license — pending
+
+P9.1/toolbar is committed as `2237c78`. Both GIFs already exist in committed media; they need no duplication.
+This documentation-only batch refreshes the README and MIT/NOTICE attribution. GitHub main was checked at
+`58dfcae`, five commits behind local main; the push below also sends those earlier commits and their GIFs.
+Verified local links, two 50-frame GIFs, preserved MIT grant/disclaimer text and static packaging.
+User runs the command; no Git writes were performed by the session. No force push or visibility change.
+
+```bash
+git add -- README.md LICENSE NOTICE.md PLAN.md docs/handover.md docs/commits.md && git commit -m "showcase san francisco with creator credit and clear mit licensing (docs)" -- README.md LICENSE NOTICE.md PLAN.md docs/handover.md docs/commits.md && git push origin main
 ```

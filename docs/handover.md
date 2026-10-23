@@ -1,9 +1,9 @@
-# Handover — 2026-10-23, P9.1 + responsive toolbar complete
+# Handover — 2026-10-23, demo README and licensing ready
 
 ## Next action
 
-Kamil committed Phase 8/showcase/car work as `e17d6c8`. P9.1 is implemented and verified, awaiting the new
-scoped command in `docs/commits.md`. No Git writes performed. Kamil now prioritizes finishing a polished demo. Defer tree trunks, pedestrian reactions and further impact
+Kamil committed Phase 8/showcase/car work as `e17d6c8` and building/toolbar fixes as `2237c78`.
+The README/license documentation batch is now pending in `docs/commits.md`. No Git writes performed. Kamil now prioritizes finishing a polished demo. Defer tree trunks, pedestrian reactions and further impact
 feedback; do not start them automatically. The Phase 9 plan remains an optional backlog, not a demo release
 requirement. Next: commit the pending batch; if an interactive public demo is wanted, publish and check the
 hosted URL. Road holes are also explicitly deferred.
@@ -63,3 +63,16 @@ Use the existing Desktop `Slop SF Showcase - 2026-10-23` exports: `slop-sf-waymo
 and `slop-sf-helicopter-salesforce.mp4`. Earlier Waymo variants are superseded. README GIFs and showcase
 code were committed in `e17d6c8`; full MP4s are intentionally outside Git. Clips are silent staged engine
 captures. User wants a nice demo soon, not completion of all realism backlog items. No publication performed.
+
+
+## README / GitHub request — 2026-10-23
+
+README now starts with @unable0_ credit and both existing animated GIFs, describes a playable demo rather
+than the obsolete Phase 5 WIP, explains the data/rendering/ride architecture, and includes setup, package,
+controls, tests and honest limits. MIT body unchanged; original Mr.doob notice retained and Kamil's SF
+contribution notice added. NOTICE separates code/dependency licenses from geographic data terms.
+Both GIFs verified as 50-frame, 576×324, five-second animations. Relative doc/image links checked.
+Remote GitHub main was verified through the API at `58dfcae` (five commits behind local `2237c78`); its README
+still described Phase 5 and had no showcase GIFs. Repository is private and homepage is unset. User owns
+commit/push; latest docs command includes a normal push to update the old remote and existing media together.
+No public demo deployment or repository visibility change is part of this task.
