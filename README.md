@@ -1,11 +1,11 @@
 # Slop San Francisco
 
-**Made by [@unable0_](https://x.com/unable0_)** — the San Francisco adaptation of [mrdoob’s Slop New York](https://github.com/mrdoob/slop-newyork).
+**Made by [@unable0_](https://x.com/unable0_)**. A San Francisco adaptation of [mrdoob’s Slop New York](https://github.com/mrdoob/slop-newyork).
 
 **Walk the hills. Drive Market Street. Fly above the skyline.**
 
 A data-built San Francisco running in your browser with [three.js](https://threejs.org/), WebGPU and TSL.
-Explore on foot, by bike, in a Waymo robotaxi or by helicopter—or take the assisted ride from the Ferry Building to Nob Hill.
+Explore on foot, by bike, in a Waymo robotaxi or by helicopter. Or take the assisted ride from the Ferry Building to Nob Hill.
 
 **Status: playable demo.** The downtown ride, city exploration, sound and responsive controls are implemented.
 See [known limitations](#known-limitations) for the remaining simplifications. Run it locally using the steps below;

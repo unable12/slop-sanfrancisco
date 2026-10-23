@@ -223,7 +223,7 @@ Kamil commits; no Git writes, tag, deployment or publication performed. Bash/zsh
 ```
 
 
-## 2026-10-23: demo README, creator credit and license — pending
+## 2026-10-23: demo README, creator credit and license — committed as b98677b
 
 P9.1/toolbar is committed as `2237c78`. Both GIFs already exist in committed media; they need no duplication.
 This documentation-only batch refreshes the README and MIT/NOTICE attribution. GitHub main was checked at
@@ -233,4 +233,14 @@ User runs the command; no Git writes were performed by the session. No force pus
 
 ```bash
 git add -- README.md LICENSE NOTICE.md PLAN.md docs/handover.md docs/commits.md && git commit -m "showcase san francisco with creator credit and clear mit licensing (docs)" -- README.md LICENSE NOTICE.md PLAN.md docs/handover.md docs/commits.md && git push origin main
+```
+
+
+## 2026-10-23: README punctuation cleanup
+
+Removed both em dashes from the README, as requested. Documentation only; whitespace check passes.
+GitHub repository remains private at this check; an open-source launch tweet should wait until it is public.
+
+```bash
+git add -- README.md docs/commits.md && git commit -m "remove em dashes from the readme (docs)" -- README.md docs/commits.md
 ```
