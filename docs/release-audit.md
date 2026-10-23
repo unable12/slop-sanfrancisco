@@ -52,3 +52,24 @@ All three full-city traffic seeds retained zero contacts/overlaps. The exact Pag
 Packaged app loaded successfully at `/dist/` in the actual WebGPU browser with no warnings/errors.
 Documentation links, syntax, artifact checks and whitespace checks passed. Hosted verification follows the
 first successful deployment; its workflow/run status is the authoritative publication record.
+
+
+## Hosted verification: live on 2026-10-23
+
+Release commit `1472125` was pushed after the user-authorized repository visibility change to public.
+[GitHub Actions run 40042304299](https://github.com/unable12/slop-sanfrancisco/actions/runs/40042304299)
+completed build and deployment successfully. Pages serves https://unable12.github.io/slop-sanfrancisco/
+with HTTPS enforced. Repository About and README both link to it.
+
+Actual hosted WebGPU browser check: city loaded, driving input reached 17 mph, helicopter mode selected,
+map and Settings opened/closed, and First ride generated the route and reached passenger pickup. Pickup
+completed, assisted driving started and the card showed the Washington Street turn with 2,100 m remaining
+at 25 mph. No console warnings/errors observed. The ride was ended and the page reset for the user.
+This is a hosted smoke check, not a second full hosted ride; full route completion remains covered by the
+198-test suite and earlier uninterrupted browser acceptance. Proof screenshot saved locally in ignored
+`shots/release/github-pages-live.png`.
+
+The Actions runner emitted upstream Node.js 20 action-runtime deprecation notices (forced Node.js 24 execution)
+and an ubuntu-latest image migration notice. Both jobs passed; these were not application/browser errors.
+Keep the pinned official action revisions current during future maintenance. No paid service or custom domain
+was added. No release tag was created; historical Phase 7 subjective acceptance items remain historical.

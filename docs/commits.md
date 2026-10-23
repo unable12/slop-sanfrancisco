@@ -254,3 +254,8 @@ Kamil committed the punctuation cleanup separately as `81aa46d` while release pr
 This release adds the live demo link, contribution guide, clean static packaging,
 artifact verification and a pinned official GitHub Pages workflow. No history rewrite or force push.
 This batch is executed by the release session; do not rerun older pending commands.
+
+
+Public-demo release committed and pushed as `1472125`; GitHub Pages run `40042304299` passed.
+The follow-up release evidence commit records the successful hosted smoke check. Both commits are executed
+under Kamil's explicit publication authorization; no additional user commit command is required.

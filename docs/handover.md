@@ -1,13 +1,18 @@
 # Handover — 2026-10-23, demo README and licensing ready
 
-## Current release task
+## Live release complete
 
-Kamil explicitly requested public source and a hosted GitHub Pages demo, authorizing commit/push and repository
-visibility change for this release. This overrides the usual user-commit-only convention for this task only.
-Kamil committed README punctuation cleanup separately as `81aa46d`. Pages is configured via `.github/workflows/pages.yml`; the artifact
-is built from scratch and verified by `tools/check-static.mjs`. See `docs/deployment.md` and the newest release
-audit for evidence. Further tree/pedestrian realism work and road-hole repairs remain deferred. The priority
-is a playable demo and focused bug fixes, not finishing every historical phase checklist.
+Source is public at https://github.com/unable12/slop-sanfrancisco and the playable demo is live at
+https://unable12.github.io/slop-sanfrancisco/. Release commit `1472125`, successful workflow run
+`40042304299`. Hosted startup, driving input, helicopter mode, map/settings and pickup-to-assisted-departure
+were verified with no browser errors. Full local regression 198/198, focused CI 16/16, packaged assets 415.
+Detailed evidence and remaining limits are in `docs/release-audit.md`; maintenance in `docs/deployment.md`.
+README, About link and contribution guide are published. No custom domain or paid service configured.
+
+Kamil explicitly authorized commit/push/publication for this release. For later unrelated work, return to the
+usual user-commit convention unless instructed otherwise. Tree/pedestrian realism work and road-hole repairs
+remain deferred. Prioritize demo bug reports and focused fixes. The live preview was reset to its start for
+Kamil; the local server remains available at localhost:8081.
 
 ## What changed
 
