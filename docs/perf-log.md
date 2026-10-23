@@ -144,3 +144,34 @@ All seven paths rerun with the final fog shader, 1280×720, no concurrent tests 
 Core paths use light haze; city flight uses Clear; Twin Peaks uses Marine at midday. All meet the
 frame-rate and heap budgets. No console errors or warnings. Raw evidence: `docs/review/p6/final-runtime-benchmarks.json`.
 Phase 6 gate passed; Phase 7 is next.
+
+## Phase 7 final pass — 2026-10-23
+
+Same machine and IAB fallback used for Phase 6, fixed 1280×720, one animated page at a time, no concurrent tests.
+The browser is refresh-capped at 120 Hz: these results prove the frame-rate floors, not an uncapped maximum.
+Headless renderer initialization remained an established limitation from P6; no new headless result is claimed.
+Raw chronological console evidence (including interrupted setup attempts): `docs/review/p7/browser-benchmarks.json`.
+
+| Quality / path | Median ms | p95 ms | FPS | Raw heap MB | After idle MB |
+|---|---:|---:|---:|---:|---:|
+| High / street | 8.3 | 8.6 | 120 | 956 | 825 |
+| High / car | 8.3 | 16.7 | 120 | 1101 | 839 |
+| High / heli | 8.4 | 16.8 | 119 | 2281 | 837 |
+| High / hill | 8.4 | 16.7 | 119 | 1687 | 820 |
+| High / russian-hill-view | 8.4 | 16.7 | 119 | 1783 | 819 |
+| High / heli-city, Clear | 8.3 | 16.7 | 120 | 937 | 863 |
+| High / twin-peaks-view, Marine/midday | 8.3 | 9.4 | 120 | 869 | 827 |
+| Low / heli-city, Clear | 8.3 | 9.3 | 120 | 745 | 709 |
+| Medium / heli-city, Clear | 8.3 | 16.6 | 120 | 1492 | 862 |
+
+The retained heap is below 1.2 GB in every run. The largest observed raw end-of-bench reading is **2,281 MB**;
+this includes uncollected transient allocations and can include the previous navigation's world. It is not a measured
+peak and must not be reported as below budget. As in P6, the retained-scene budget is checked after 20 seconds idle;
+a strict peak-allocation budget would remain unproven. Startup phase totals are approximately 5–6 seconds, below 25 seconds.
+
+Scene geometry/material-array GPU estimates are 379–383 MB. High/Medium report 38 textures; Low reports 34.
+The estimate excludes render targets, shadow maps and node-owned textures and is not total GPU residency.
+Draw-call/triangle counters read zero after the render pipeline's counter reset, so those counters are not useful evidence.
+Low uses no SSR graph and no sun shadows; regional building/tree culling distances are reduced. All presets rendered
+without console warnings/errors in the recorded runs. Phase 6's final fog shader and <1 ms paired-cost evidence remain
+unchanged; these refresh-capped tests are not a replacement fog GPU-cost measurement.

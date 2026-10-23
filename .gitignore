@@ -4,3 +4,4 @@ node_modules/
 tools/node_modules/
 shots/
 *.tmp.*
+dist/

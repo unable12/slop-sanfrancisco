@@ -123,3 +123,20 @@ test('pedestrians walk the sidewalks and enter the roadway only on crosswalks (P
   assert.ok(crossed > 10, `${crossed} crossings`);
   assert.deepEqual(off.slice(0, 5), [], `${off.length} pedestrian-steps off the sidewalks outside crosswalks`);
 });
+
+test('traffic density clears disabled lane occupancy and can restore normal traffic', {skip:!available},()=>{
+  const {system}=loadTraffic();const vehicles=system.cars.concat(system.buses);
+  const focus={x:-330,y:0,z:-560};
+  system.update(.05,0,focus,null,'car',null);
+  system.setDensity(0);
+  system.update(.05,.05,focus,null,'car',null);
+  assert.ok(vehicles.every(v=>v.disabled && !v.edge && !v.conn && !v.commit));
+  system.setDensity(.5);
+  system.update(.05,.1,focus,null,'car',null);
+  assert.equal(vehicles.filter(v=>!v.disabled).length,Math.round(vehicles.length/2));
+  assert.ok(vehicles.filter(v=>v.disabled).every(v=>!v.edge));
+  system.setDensity(1);
+  system.update(.05,.15,focus,null,'car',null);
+  assert.ok(vehicles.every(v=>!v.disabled));
+  assert.ok(vehicles.some(v=>v.edge));
+});

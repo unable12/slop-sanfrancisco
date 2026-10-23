@@ -324,6 +324,7 @@ for (const [key, [at, along, toward]] of Object.entries(TELEPORT_DEFS)) {
 // block instead: where its one-way traffic enters it (Hyde St)
 const LANDMARK_TELEPORTS = {
   ferry: 'San Francisco Ferry Building',
+  salesforce: 'Salesforce Tower',
   transamerica: 'Transamerica Pyramid',
   coit: 'Coit Tower',
   lombard: 'Lombard Street',
@@ -361,8 +362,10 @@ for (const [key, name] of Object.entries(LANDMARK_TELEPORTS)) {
   }
   if (at) TELEPORT_LOCATIONS[key] = { x: at.x, z: at.z, heading: Math.atan2(lm.x - at.x, lm.z - at.z), landmark: name };
 }
+Object.assign(TELEPORT_LOCATIONS, window.NYC.PLACE_DATA?.regional || {});
 // Named places for labels & the map search: [id, display, short, OSM name, district]
 const NYC_LANDMARKS = [
+  ['salesforce', 'Salesforce Tower', 'Salesforce Tower', 'Salesforce Tower', 'Financial District'],
   ['transamerica', 'Transamerica Pyramid', 'Transamerica', 'Transamerica Pyramid', 'Financial District'],
   ['ferrybuilding', 'Ferry Building', 'Ferry Building', 'San Francisco Ferry Building', 'Embarcadero'],
   ['gracecathedral', 'Grace Cathedral', 'Grace Cathedral', 'Grace Cathedral', 'Nob Hill'],
@@ -377,6 +380,16 @@ const NYC_LANDMARKS = [
   .filter(([, , , osm]) => LANDMARK_SITES[osm])
   .map(([id, name, short, osm, district]) => ({ id, name, short, x: LANDMARK_SITES[osm].x, z: LANDMARK_SITES[osm].z, district }));
 
+for (const [id,p] of Object.entries(window.NYC.PLACE_DATA?.regional || {})) NYC_LANDMARKS.push({id,name:p.name,short:p.name,x:p.x,z:p.z,district:'San Francisco'});
+const NEIGHBORHOODS = (window.NYC.PLACE_DATA?.neighborhoods || []).map(n=>({...n,polygons:n.polygons.map(p=>p.map(r=>r.map(([x,z])=>({x,z}))))}));
+function neighborhoodAt(x,z) {
+  for(const n of NEIGHBORHOODS) {
+    const [x0,z0,x1,z1]=n.bounds;if(x<x0||x>x1||z<z0||z>z1)continue;
+    if(n.polygons.some(p=>pointInPoly(p[0],x,z)&&!p.slice(1).some(h=>pointInPoly(h,x,z))))return n.name;
+  }
+  return null;
+}
+
 /**
  * The place's name at any world (x, z): a landmark within 80 m, else the two nearest streets ("A & B"), else the nearest
  */
@@ -386,13 +399,15 @@ function getLocationLabel(x, z) {
   for (const lm of NYC_LANDMARKS) {
     if (Math.hypot(x - lm.x, z - lm.z) < 80) return `${lm.name}${pair ? ` · ${pair}` : ''}`;
   }
+  const neighborhood = neighborhoodAt(x,z);
+  if (neighborhood) return pair ? `${neighborhood} · ${pair}` : neighborhood;
   if (pair) return pair;
   return 'San Francisco Bay';
 }
 
 // Keyboard shortcuts are ignored while typing into a form field (e.g. the map's street search box)
 function isTypingInField(e) {
-  return e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT');
+  return e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable);
 }
 
 // Traffic signal cycle shared by the signal heads (street-details.js) and the traffic (traffic.js), in seconds:
@@ -469,6 +484,7 @@ Object.assign(window.NYC, {
   nearestRoads,
   getBlockBounds,
   getLocationLabel,
+  neighborhoodAt,
   fromOldFrame,
   isTypingInField,
   prettyName,

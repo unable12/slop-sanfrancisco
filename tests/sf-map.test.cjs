@@ -4,7 +4,7 @@ const { join } = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
 
-const source = readFileSync(join(__dirname, '../js/nyc-map.js'), 'utf8');
+const source = readFileSync(join(__dirname, '../js/sf-map.js'), 'utf8');
 
 for (const [width, height, dpr] of [[500, 300, 1], [320, 180, 1.5], [1920, 1080, 2]]) {
   test(`map clicks match rendered world positions at ${width}x${height}, DPR ${dpr}`, () => {
@@ -197,4 +197,53 @@ test('mouse hover and zoom buttons remain available without a pan', () => {
   assert.equal(h.map.viewZoom, 1.45);
   h.zoomOut.dispatch('click');
   assert.equal(h.map.viewZoom, 1);
+});
+
+test('regional map arrivals retain west-side coordinates and clamp to loaded terrain bounds',()=>{
+  const window={NYC:{GEO:{},ROADS:[],DATA:{fullRegion:{city:{x0:-12000,x1:5000,z0:-6000,z1:10000}}}}};
+  vm.runInNewContext(source,{window});
+  const map=Object.create(window.NYC.NYCMapSystem.prototype);
+  const p=map.clampToRegion({x:-6564,z:-2429});
+  assert.equal(p.x,-6564);assert.equal(p.z,-2429);
+  assert.equal(map.clampToRegion({x:1e6,z:-1e6}).x,4975);
+  assert.equal(map.clampToRegion({x:1e6,z:-1e6}).z,-5975);
+});
+
+test('hillshade is built once, keeps water transparent and shades land',()=>{
+  const start=source.indexOf('let RELIEF = null;'),end=source.indexOf('let LAYERS = null;',start);
+  let builds=0,pixels;
+  const context={createImageData:(w,h)=>({data:new Uint8ClampedArray(w*h*4)}),putImageData:image=>{pixels=image.data;builds++;}};
+  const g={w:3,h:3,step:8,x0:0,z0:0,heights:[0,0,0,0,10,0,0,0,0]};
+  const env={window:{NYC:{DATA:{fullRegion:{city:g}},Terrain:{waterLevel:0}}},document:{createElement:()=>({getContext:()=>context})}};
+  const get=vm.runInNewContext(source.slice(start,end)+';mapRelief',env);
+  const first=get();assert.equal(get(),first);assert.equal(builds,1);
+  assert.equal(pixels[3],0);assert.equal(pixels[4*4+3],255);
+  assert.equal(first.width,16);assert.equal(first.height,16);
+});
+
+test('missing landmark labels do not break map initialization or search',()=>{
+  const window={NYC:{GEO:{},ROADS:[],NYC_LANDMARKS:[{x:1,z:2}]}};
+  vm.runInNewContext(source,{window});
+  const map=Object.create(window.NYC.NYCMapSystem.prototype);
+  map.renderFullMap=()=>{};
+  assert.doesNotThrow(()=>map.search('absent'));
+});
+
+test('map keyboard events cannot drive the player and Escape closes the map',()=>{
+  const h=mapHarness();let stopped=0,prevented=0;
+  const event=code=>({code,preventDefault(){prevented++;},stopImmediatePropagation(){stopped++;}});
+  h.window.dispatch('keydown',event('KeyW'));
+  assert.equal(stopped,1);assert.equal(h.map.isFullMapOpen,true);
+  h.window.dispatch('keydown',event('Escape'));
+  assert.equal(stopped,2);assert.equal(prevented,1);assert.equal(h.map.isFullMapOpen,false);
+});
+
+test('map Tab wraps at each end of its controls',()=>{
+  const h=mapHarness();let focused,prevented=0;
+  const first={focus(){focused=first;}},last={focus(){focused=last;}};
+  h.map.modal.querySelectorAll=()=>[first,last];
+  const tab=shiftKey=>({code:'Tab',shiftKey,preventDefault(){prevented++;},stopImmediatePropagation(){}});
+  h.document.activeElement=last;h.window.dispatch('keydown',tab(false));assert.equal(focused,first);
+  h.document.activeElement=first;h.window.dispatch('keydown',tab(true));assert.equal(focused,last);
+  assert.equal(prevented,2);
 });

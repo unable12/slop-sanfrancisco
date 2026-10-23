@@ -518,7 +518,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
     for (const v of vehicles) v.claimed = false;
     for (const v of vehicles) {
       const e = v.edge;
-      if (!e) continue;
+      if (!e || v.disabled) continue;
       if (!v.conn) {
         occupy(e.occ[v.lane], v, v.s);
         const side = straddle(v);
@@ -2027,6 +2027,7 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
     let budget = jump ? Infinity : 4;
     for (let i = 0; i < vehicles.length; i++) {
       const v = vehicles[i];
+      if (v.disabled) continue;
       const d = v.edge ? Math.hypot(v.x - focusX, v.z - focusZ) : Infinity;
       if (!v.edge || (jump && d > NEAR_RADIUS)) {
         spawnVehicle(v, 0, NEAR_RADIUS, false);
@@ -2135,7 +2136,11 @@ function createTrafficSystem(scene, sidewalks, obstacles, opts = {}) {
     cars,
     buses,
     peds,
-    network
+    network,
+    setDensity(fraction) {
+      const count = Math.round(vehicles.length * Math.max(0, Math.min(1, fraction)));
+      vehicles.forEach((v,i) => { v.disabled = i >= count; if(v.disabled) { v.edge=null; v.conn=null; v.commit=null; } });
+    }
   };
 }
 

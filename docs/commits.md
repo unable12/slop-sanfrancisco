@@ -181,3 +181,17 @@ p6_files=(
   tools/geo-region.mjs tools/queries/ferries.overpassql
 ) && git rm --cached -q -- js/boroughs.js && git add -- "${p6_files[@]}" && git commit -m "fill out san francisco and the bay with fast marine fog and ferries (P6.1-P6.5)" -- "${p6_files[@]}" js/boroughs.js
 ```
+
+
+## 2026-10-23: P7.1–P7.8 — implementation ready; P7.9 acceptance open
+
+Phase 6 is committed as `5620d05`. All shared integration files belong to one batch.
+171/171 tests pass; final map/dialog checks also pass. All seven High benches 119–120 fps;
+Low/Medium city 120 fps. Review `docs/acceptance.md` before tagging. No Git writes performed.
+The array below is supported by bash and zsh and keeps this one command limited to the listed paths.
+
+```bash
+(phase7_paths=(.gitignore NOTICE.md PLAN.md README.md css/style.css index.html js/city-config.js js/main.js js/region.js js/traffic.js js/settings.js js/sf-map.js js/sf-places.js tests/boot.test.cjs tests/teleports.test.cjs tests/traffic-sim.test.cjs tests/no-nyc-text.test.cjs tests/settings.test.cjs tests/sf-map.test.cjs tests/smoke-sf.test.cjs tools/build-static.mjs tools/geo-neighborhoods.mjs docs/ARCHITECTURE.md docs/acceptance.md docs/release-audit.md docs/data-sources.md docs/file-disposition.md docs/perf-log.md docs/phases/phase-7-ui-polish-release.md docs/handover.md docs/commits.md docs/review/p7); git rm --cached -q -- js/nyc-map.js tests/nyc-map.test.cjs && git add -- "${phase7_paths[@]}" && git commit -m "add the san francisco terrain map, settings and release checks (P7.1-P7.8)" -- "${phase7_paths[@]}" js/nyc-map.js tests/nyc-map.test.cjs)
+```
+
+After accepting and committing, Kamil may run `git tag v0.1.0`; do not tag the earlier Phase 6 commit.

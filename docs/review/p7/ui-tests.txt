@@ -1,0 +1,28 @@
+✔ city script preloads start before stylesheets can block the loader (0.428458ms)
+✔ preloaded URLs match ordered scripts and execution waits for Three.js imports (1.462542ms)
+✔ visible HTML and assigned UI text contain no inherited city names (18.664125ms)
+✔ map clicks match rendered world positions at 500x300, DPR 1 (2.418834ms)
+✔ map clicks match rendered world positions at 320x180, DPR 1.5 (0.382166ms)
+✔ map clicks match rendered world positions at 1920x1080, DPR 2 (0.28825ms)
+✔ unrelated touches cannot move or release the map pan (1.019917ms)
+✔ a normal map tap teleports once and releases capture (1.078167ms)
+✔ pointercancel cancels a map tap without teleporting or leaving a drag active (0.378125ms)
+✔ lostpointercapture cancels a map tap without teleporting or leaving a drag active (0.3225ms)
+✔ blur cancels a map tap without teleporting or leaving a drag active (0.31775ms)
+✔ hidden cancels a map tap without teleporting or leaving a drag active (0.335083ms)
+✔ close cancels a map tap without teleporting or leaving a drag active (0.326667ms)
+✔ a pointer released outside the map or far from its start does not teleport (0.294667ms)
+✔ mouse hover and zoom buttons remain available without a pan (0.265417ms)
+✔ regional map arrivals retain west-side coordinates and clamp to loaded terrain bounds (0.228625ms)
+✔ hillshade is built once, keeps water transparent and shades land (0.3665ms)
+✔ missing landmark labels do not break map initialization or search (0.309209ms)
+✔ map keyboard events cannot drive the player and Escape closes the map (0.30575ms)
+✔ map Tab wraps at each end of its controls (0.281417ms)
+ℹ tests 20
+ℹ suites 0
+ℹ pass 20
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 63.309

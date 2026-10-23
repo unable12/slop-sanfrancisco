@@ -330,8 +330,8 @@ function buildSFRegion(scene) {
   foamMat.opacityNode=sin(positionWorld.x.mul(.8).add(positionWorld.z.mul(.7)).add(cityUniforms.uTime || window.NYC.TSL.time)).mul(.1).add(.16);
   const foamGeo=new THREE.BufferGeometry();foamGeo.setAttribute('position',new THREE.Float32BufferAttribute(foamPos,3));group.add(new THREE.Mesh(foamGeo,foamMat));
 
-  let last=-Infinity;
-  return {group,stats:()=>({buildings:buildingCount,trees:data.trees.length/4,terrainTiles:terrain.length}),update(camera,elapsed){
+  let last=-Infinity, buildingDistance=8500, treeDistance=6000;
+  return {group,setQuality(distance, trees){buildingDistance=distance;treeDistance=trees;last=-Infinity;},stats:()=>({buildings:buildingCount,trees:data.trees.length/4,terrainTiles:terrain.length}),update(camera,elapsed){
     for(const b of boats){
       const cycle=(elapsed*b.route.speed+b.length*b.phase)%(2*b.length),forward=cycle<b.length,d=forward?cycle:2*b.length-cycle;
       let i=1;while(i<b.lengths.length-1&&b.lengths[i]<d)i++;
@@ -343,8 +343,8 @@ function buildSFRegion(scene) {
     if(elapsed-last<0.75)return;last=elapsed;
     for(const item of terrain){if(item.far)continue;const d=Math.hypot(camera.position.x-item.t.x-item.t.size/2,camera.position.z-item.t.z-item.t.size/2);const stride=d<1600?1:d<4500?2:4;if(stride!==item.stride){if(!item.geometries.has(stride))item.geometries.set(stride,geometry(item.g,item.t,stride,false));item.mesh.geometry=item.geometries.get(stride);item.stride=stride;}}
     for(const mesh of roadMeshes){const c=mesh.geometry.boundingSphere.center;mesh.visible=Math.hypot(camera.position.x-c.x,camera.position.z-c.z)<3000;}
-    for(const mesh of buildingMeshes){const c=mesh.boundingSphere.center;mesh.visible=Math.hypot(camera.position.x-c.x,camera.position.z-c.z)<8500;}
-    for(const mesh of treeMeshes){const c=mesh.boundingSphere.center;mesh.visible=Math.hypot(camera.position.x-c.x,camera.position.z-c.z)<6000;}
+    for(const mesh of buildingMeshes){const c=mesh.boundingSphere.center;mesh.visible=Math.hypot(camera.position.x-c.x,camera.position.z-c.z)<buildingDistance;}
+    for(const mesh of treeMeshes){const c=mesh.boundingSphere.center;mesh.visible=Math.hypot(camera.position.x-c.x,camera.position.z-c.z)<treeDistance;}
   }};
 }
 Object.assign(window.NYC,{loadSFRegion,installRegionTerrain,buildSFRegion,decodeRegionRLE});

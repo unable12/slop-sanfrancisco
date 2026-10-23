@@ -1,6 +1,6 @@
 (function () {
 // js/main.js
-// Main entry point for New York City (Midtown Manhattan) in Three.js WebGPURenderer & TSL (three.js dev, see index.html)
+// Main entry point for San Francisco in Three.js WebGPURenderer & TSL (three.js dev, see index.html)
 
 const { THREE } = window.NYC;
 const {
@@ -12,6 +12,7 @@ const {
   metalness,
   roughness,
   vec2,
+  vec4,
   smoothstep
 } = window.NYC.TSL;
 const { ssr } = window.NYC.PostFX;
@@ -22,7 +23,6 @@ const { getLocationLabel, isTypingInField } = window.NYC;
 const { buildSFRegion } = window.NYC;
 const { buildLandmarks } = window.NYC;
 const { buildCityBlocks } = window.NYC;
-const { buildStreetDetails } = window.NYC;
 const { createTrafficSystem, createHighwayTraffic } = window.NYC;
 const { buildRoadPaint } = window.NYC;
 const { ThirdPersonControllerManager } = window.NYC;
@@ -31,20 +31,7 @@ const { CameraSystem, CAMERA_PRESETS } = window.NYC;
 const { LightingSystem } = window.NYC;
 const { NYCMapSystem } = window.NYC;
 const { setupSceneCulling, updateSceneCulling } = window.NYC;
-const { loadCityData, buildSFGround, buildSFBuildingsV0, buildRoadNetwork, buildSFStreetDetails, buildGradeSeparation } = window.NYC;
-
-// Subsystems on / off while San Francisco replaces the New York city builders phase by phase (PLAN.md, docs/phases):
-// the NYC builders still exist but expect Manhattan's tables, which are empty here (city-config.js)
-const FEATURES = {
-  ground: 'sf', // sf-ground.js on js/terrain-mesh.js (New York's city-grid.js was dropped in P2.12)
-  buildings: 'v1', // 'v1' (buildings.js on the real footprints) | 'v0' (sf-buildings.js extrusions) | 'nyc' (buildings.js)
-  waterTowers: false, // New York's rooftop water towers (the v1 path never builds them)
-  landmarks: true, // js/landmarks.js (P5): San Francisco's landmarks on their OSM sites
-  details: 'sf', // 'sf' (sf-street-details.js, on the road network) | true (street-details.js, New York's) | false
-  traffic: true,
-  highway: true, // on the freeway decks (grade-separation.js)
-  transit: true // streetcars, light rail & cable cars (sf-transit.js)
-};
+const { loadCityData, buildSFGround, buildRoadNetwork, buildSFStreetDetails, buildGradeSeparation } = window.NYC;
 
 // Scripted camera paths for ?bench=name: keyframes [x, y, z, yawDeg, pitchDeg] spread evenly over BENCH_SECONDS
 // (yaw 0 looks north, -z). Coordinates are in the current city's world frame.
@@ -87,6 +74,11 @@ async function initApp() {
 
   if (loadingStatus) {
     loadingStatus.textContent = `Initializing Three.js r${THREE.REVISION} WebGPURenderer & TSL Shaders...`;
+  }
+
+  if (!navigator.gpu || new URLSearchParams(location.search).get('webgpu') === '0') {
+    showBootError('WebGPU is unavailable. Use a WebGPU-enabled browser with hardware acceleration, and open this site over HTTPS or localhost.');
+    return;
   }
 
   // 1. Initialize Three.js WebGPURenderer with 32-bit float reversedDepthBuffer
@@ -133,18 +125,18 @@ async function initApp() {
     loadingStatus.textContent = 'Building San Francisco streets & buildings...';
   }
 
-  // 3. Build the city: ground & curb islands, buildings, street details & traffic (FEATURES above)
+  // 3. Build the city: ground & curb islands, buildings, street details & traffic
   const cityGrid = buildSFGround(scene);
   markInit('cityGrid');
   const region = buildSFRegion(scene);
   markInit('region');
-  const { colliders: landmarkColliders } = FEATURES.landmarks ? buildLandmarks(scene) : { colliders: [] };
+  const { colliders: landmarkColliders } = buildLandmarks(scene);
   // The Golden Gate and Bay bridges (sf-bridges.js, P5.2); the Bay Bridge's decks carry the I-80 freeway (grade-separation.js)
-  const bridges = FEATURES.landmarks ? window.NYC.buildSFBridges(scene) : { colliders: [], update() {} };
+  const bridges = window.NYC.buildSFBridges(scene);
   window.NYC.bridgeDeckAt = bridges.bridgeDeckAt;
   landmarkColliders.push(...bridges.colliders);
   markInit('landmarks');
-  const cityBlocks = FEATURES.buildings === 'v0' ? buildSFBuildingsV0(scene) : buildCityBlocks(scene, { sf: FEATURES.buildings === 'v1' });
+  const cityBlocks = buildCityBlocks(scene, { sf: true });
   markInit('blocks');
   const allColliders = [...landmarkColliders, ...cityBlocks.colliders, ...(cityGrid.colliders || [])];
 
@@ -154,17 +146,11 @@ async function initApp() {
   // The street network and everything on it stand on the core's terrain only: the regional terrain patches
   // must not turn streets past its edge into land
   window.NYC.Terrain.patchesEnabled = false;
-  const roadNetwork = FEATURES.traffic || FEATURES.details === 'sf'
-    ? buildRoadNetwork(cityGrid.sidewalks, [...cityGrid.footprints, ...allColliders.filter((c) => !c.obb)])
-    : null;
+  const roadNetwork = buildRoadNetwork(cityGrid.sidewalks, [...cityGrid.footprints, ...allColliders.filter((c) => !c.obb)]);
   markInit('roads');
-  const streetDetails = FEATURES.details === 'sf'
-    ? buildSFStreetDetails(scene, roadNetwork)
-    : FEATURES.details ? buildStreetDetails(scene) : { footprints: [], signalClock: { value: 0 } };
+  const streetDetails = buildSFStreetDetails(scene, roadNetwork);
   markInit('streetDetails');
-  const trafficSystem = FEATURES.traffic
-    ? createTrafficSystem(scene, cityGrid.sidewalks, [], { network: roadNetwork })
-    : { update() {}, network: null, cars: [] };
+  const trafficSystem = createTrafficSystem(scene, cityGrid.sidewalks, [], { network: roadNetwork });
   markInit('traffic');
   // Tunnels, bridges and freeway decks (grade-separation.js): their floors for the player and the cameras, their walls
   // and columns as colliders, the freeways' lanes for the highway traffic
@@ -174,9 +160,9 @@ async function initApp() {
   window.NYC.GradeSeparation = gradeSeparation;
   if (cityGrid.terrain) cityGrid.terrain.rebuild(); // the portals carved
   markInit('grade');
-  const highwayTraffic = FEATURES.highway ? createHighwayTraffic(scene, gradeSeparation.highwayLanes) : { update() {} };
+  const highwayTraffic = createHighwayTraffic(scene, gradeSeparation.highwayLanes);
   // Streetcars, light rail & cable cars on the Muni route runs (sf-transit.js, P4.6)
-  const transit = FEATURES.transit ? window.NYC.buildSFTransit(scene) : { update() {} };
+  const transit = window.NYC.buildSFTransit(scene);
   // ?debug=roads: the road network's lanes, junction curves, arms & control drawn over the ground (road-network.js)
   if (new URLSearchParams(location.search).get('debug') === 'roads') {
     scene.add(window.NYC.buildRoadDebug(roadNetwork || buildRoadNetwork(cityGrid.sidewalks, [])));
@@ -245,9 +231,40 @@ async function initApp() {
   ssrPass.intensity.value = 0.50;
   ssrPass.screenEdgeFadeBlack = true;
 
-  const colorGrade = createPostProcessing(renderer, scenePassColor, ssrPass, scenePassDepth, cameraSystem.camera, lightingSystem);
-  const { bloomPass } = colorGrade;
-  const renderPipeline = new THREE.RenderPipeline(renderer, colorGrade.outputNode);
+  let colorGrade = createPostProcessing(renderer, scenePassColor, ssrPass, scenePassDepth, cameraSystem.camera, lightingSystem);
+  let { bloomPass } = colorGrade;
+  let renderPipeline = new THREE.RenderPipeline(renderer, colorGrade.outputNode);
+
+  const pipelineCache = new Map([[true, { colorGrade, bloomPass, renderPipeline }]]);
+  let paused = false, pauseDirty = false;
+  function setShadows(enabled) {
+    if (lightingSystem.sunLight.castShadow === enabled) return;
+    lightingSystem.sunLight.castShadow = enabled;
+    scene.traverse(object => {
+      for (const material of [].concat(object.material || [])) material.needsUpdate = true;
+    });
+    pauseDirty = true;
+  }
+  function applyQuality(id) {
+    const q = window.NYC.QUALITY_PRESETS[id];
+    region.setQuality?.(q.distance, q.trees);
+    ssrPass.resolutionScale = q.reflectionScale;
+    setShadows(q.shadows);
+    if (!pipelineCache.has(q.reflections)) {
+      const grade = createPostProcessing(renderer, scenePassColor, vec4(0), scenePassDepth, cameraSystem.camera, lightingSystem);
+      pipelineCache.set(false, { colorGrade: grade, bloomPass: grade.bloomPass, renderPipeline: new THREE.RenderPipeline(renderer, grade.outputNode) });
+    }
+    const fogEnabled = colorGrade.fogEnabled.value;
+    ({ colorGrade, bloomPass, renderPipeline } = pipelineCache.get(q.reflections));
+    colorGrade.fogEnabled.value = fogEnabled;
+    colorGrade.applyPreset(lightingSystem.activePresetId);
+    document.body.dataset.quality = id;
+    if (window.__NYC_APP) {
+      window.__NYC_APP.renderPipeline = renderPipeline;
+      Object.assign(window.__NYC_APP.postFX, { colorGrade, bloomPass });
+    }
+    pauseDirty = true;
+  }
 
   // 6. Wire UI Controls (Strictly using safe DOM APIs: textContent, classList, addEventListener)
   const modeButtons = document.querySelectorAll('[data-mode]');
@@ -463,6 +480,8 @@ async function initApp() {
 
   // No heading: face along the nearest street (controllers.js roadHeading)
   function teleportTo(x, z, heading = NaN) {
+    const box = window.NYC.GEO?.box;
+    if (box && (x < box.x0 || x > box.x1 || z < box.z0 || z > box.z1)) selectMode('helicopter');
     const destination = controllerManager.teleportActiveTo(x, z, heading);
     touchControls.reset();
     cameraSystem.resetForTeleport();
@@ -495,6 +514,7 @@ async function initApp() {
       const key = btn.getAttribute('data-teleport');
       const loc = window.NYC.TELEPORT_LOCATIONS[key];
       if (loc) {
+        if (loc.mode) selectMode(loc.mode);
         teleportTo(loc.x, loc.z, loc.heading);
       }
       closePopovers();
@@ -600,7 +620,7 @@ async function initApp() {
     // a named destination (TELEPORT_LOCATIONS) or x,z,headingDeg
     const named = window.NYC.TELEPORT_LOCATIONS[urlParams.get('teleport')];
     const [tx, tz, th = 180] = urlParams.get('teleport').split(',').map(Number);
-    if (named) teleportTo(named.x, named.z, named.heading);
+    if (named) { if(named.mode) selectMode(named.mode); teleportTo(named.x, named.z, named.heading); }
     else if (Number.isFinite(tx) && Number.isFinite(tz)) teleportTo(tx, tz, (th * Math.PI) / 180);
   }
   if (urlParams.get('hud') === '0') document.body.classList.add('hud-minimized');
@@ -613,6 +633,21 @@ async function initApp() {
   if (loadingStatus) {
     loadingStatus.textContent = 'Compiling Shaders & Render Pipelines...';
   }
+
+  const settings = window.NYC.createSettings({
+    onPause(value) { paused=value; pauseDirty=true; controllerManager.resetInput(); touchControls.setEnabled(!value && !mapSystem.isFullMapOpen); },
+    onTime(id) { selectTime(id); pauseDirty=true; },
+    onFog(id) { lightingSystem.setFogPreset(id); fogSelect.value=id; pauseDirty=true; },
+    onQuality: applyQuality,
+    onShadows: setShadows,
+    onTraffic(value) { trafficSystem.setDensity?.(value); pauseDirty=true; },
+    getTime: () => lightingSystem.activePresetId,
+    getFog: () => lightingSystem.fogPreset
+  });
+  const qualityParam = urlParams.get('quality');
+  const requestedQuality = window.NYC.QUALITY_PRESETS[qualityParam] ? qualityParam : null;
+  if (requestedQuality) settings.setQuality(requestedQuality);
+  const autoFrames = []; let autoSeconds=0, autoDone=Boolean(requestedQuality || urlParams.has('bench') || urlParams.has('capture'));
 
   // Debug & screenshot harness state (URL: ?cam=x,y,z,yawDeg,pitchDeg  ?freeze=1  ?bench=name):
   // `camera` pins the view to a fixed pose, `freeze` stops traffic, `bench` flies a scripted path (BENCH_PATHS) and logs
@@ -820,6 +855,7 @@ async function initApp() {
         }
         document.body.dataset.benchResult = JSON.stringify(window.__NYC_APP.bench);
         console.log(`[bench-details] ${JSON.stringify(window.__NYC_APP.bench)}`);
+        console.log(`[bench-stats] ${JSON.stringify(window.__NYC_APP.debug.stats())}`);
         console.log(`[bench] ${b.name} median_ms=${median.toFixed(2)} p95_ms=${p95.toFixed(2)} fps=${Math.round(1000 / median)}`);
         if (urlParams.get('benchIdle') === '1') {
           renderer.setAnimationLoop(null);
@@ -838,6 +874,10 @@ async function initApp() {
   renderer.setAnimationLoop((now) => {
     const rawDt = (now - lastTime) * 0.001;
     lastTime = now;
+    if (paused) {
+      if (pauseDirty) { region.update(cameraSystem.camera, elapsed); lightingSystem.update(cameraSystem.currentPos, elapsed); renderPipeline.render(); pauseDirty=false; }
+      return;
+    }
     const dt = Math.min(Math.max(rawDt, 0.001), 0.05);
     elapsed = fogCompare ? 10 : elapsed + dt;
 
@@ -885,6 +925,10 @@ async function initApp() {
       markInit('warmup');
     }
     renderPipeline.render();
+    if (warmedUp && window.__NYC_APP.ready && !autoDone) {
+      autoSeconds += rawDt; autoFrames.push(rawDt * 1000);
+      if (autoSeconds >= 3) { autoDone=true; settings.setAutomatic(window.NYC.chooseQuality(autoFrames)); }
+    }
     const timedBench = debugState.bench;
     if (warmedUp && renderer.backend.trackTimestamp && timedBench && !timedBench.done && !gpuTimingPending) {
       gpuTimingPending = true;
@@ -951,6 +995,17 @@ async function initApp() {
   });
 }
 
-initApp();
+function showBootError(message) {
+  const overlay = document.getElementById('loading-overlay');
+  overlay?.classList.remove('hidden');
+  overlay?.classList.add('boot-error');
+  for (const hud of document.querySelectorAll('.hud')) hud.inert = true;
+  const status = document.getElementById('loading-status');
+  if (status) { status.textContent=message; status.setAttribute('role','alert'); }
+  const track = overlay?.querySelector('.loader-track'); if(track) track.hidden=true;
+  const retry = document.createElement('button'); retry.textContent='Try again'; retry.type='button'; retry.className='tool-btn';
+  retry.addEventListener('click', () => location.reload()); status?.after(retry);
+}
+initApp().catch(error => { console.error('City initialization failed:', error); showBootError('The city could not start. Check your connection and WebGPU support, then try again.'); });
 
 })();

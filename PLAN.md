@@ -309,6 +309,14 @@ Everything else: decide, log the decision (section 10), continue. Visual reviews
 | P6-5 | 2026-10-23 | Compose the existing aerial/analytic marine equations from resolved reversed-Z depth in the final colour graph and bloom prefilter. Add marine horizon haze only to sky pixels. Use same-page ABBA GPU comparisons, with fixed camera and atmosphere, instead of separate-page timings | User requested the fog performance fix and completion of Phase 6. This removes per-material fog/overdraw without a new render target or ray marching; transparent effects inherit the underlying opaque depth |
 
 
+### Phase 7 decisions (2026-10-23)
+
+- **P7-1:** Low disables sun shadows instead of requesting one cascade. The pinned Three.js `SunLightShadow` hardcodes two cascades in its implementation and shaders; there is no supported count setter. Low also removes SSR from the postprocessing graph, rather than setting its visible intensity to zero while still running it.
+- **P7-2:** Official DataSF neighborhood polygons replace nearest-street neighborhood guesses. Western destinations and map arrivals outside the core switch to helicopter; regional scenery remains outside the ground-driving scope agreed in Phase 6.
+- **P7-3:** The inherited map’s right-angle “GPS route” was not road routing. It is now a direct waypoint bearing and labelled accordingly. Map input traps focus and blocks driving keys; native settings dialog pauses simulation.
+- **P7-4:** Local release tagging belongs to Kamil under RUNBOOK §8. The final acceptance gate remains open for visual/driving review; no tag, commit, push or deployment is performed by the agent.
+
+
 ---------------------------------------------------------------------------------------------------------------------
 
 ## 11. Progress log (update at the end of every session; RUNBOOK §4)
@@ -324,4 +332,6 @@ Everything else: decide, log the decision (section 10), continue. Visual reviews
 | 2026-10-22 | P6.1–P6.4 implementation; P6.5 open | Real city and horizon terrain, 161,645 regional building boxes, trees, land cover, mapped road paint, 50 m core fade, marine presets, ferries/cargo and night water/bridge lighting; region replaces boroughs. Gallery saved. Fog-cost gate remains open after two optimisations | 157/157 | IAB 1280×720: whole-city 120 fps; idle heap 817–874 MB in recorded checks; startup ~5.1 s; no errors. Latest fog GPU delta +2.622 ms, fails <1 ms target | unknown | Headless renderer initialization stalled; fallback method and failed target documented; no Phase 7 work |
 | 2026-10-23 | P6.3 performance and P6.5 gate | Depth-composited fog, reversed-Z sky handling, numerical fog/depth regression tests; final six-image gallery refreshed. Phase 6 complete; Phase 7 not started | 160/160 | Worst paired-median fog delta +0.852 ms (<1 ms); city flight 120 fps, idle heap 855 MB; no shader errors | unknown | All ABBA blocks retained, including noise/outliers. Full evidence in docs/perf-log.md; one pending commit batch |
 
-- [x] P1 · [x] P2 · [x] P3 · [x] P4 · [x] P5 · [x] P6 · [ ] P7
+| 2026-10-23 | P7.1–P7.8 implementation; P7.9 review open | SF terrain map, official neighborhoods and flight destinations; pause/settings, quality presets, WebGPU recovery; tests, attribution, architecture and local package | 171/171; final UI checks 20/20 | All seven High paths 119–120 fps; Low/Medium city 120 fps; idle heap 709–863 MB; startup 5.183–5.972 s; no observed console errors | unknown | Final visual/driving acceptance and local tag belong to Kamil; no Git writes or publication |
+
+- [x] P1 · [x] P2 · [x] P3 · [x] P4 · [x] P5 · [x] P6 · [ ] P7 (implementation ready; acceptance/tag open)

@@ -80,3 +80,17 @@ Ferry dimensions, 9 m/s speed, departures, cargo anchorage/motion, building colo
 are scenery estimates, not operating schedules or surveyed measurements. Cargo candidates are derived
 from the Oakland path and checked against water; currently one qualifies. Oakland building footprints
 are absent from DataSF and are omitted; its real terrain is present.
+
+## Phase 7 neighborhood labels and arrivals
+
+The 41 Analysis Neighborhoods polygons come from the City and County of San Francisco / DataSF
+[Analysis Neighborhoods dataset](https://data.sfgov.org/Geographic-Locations-and-Boundaries/Analysis-Neighborhoods/p5b7-5n3h),
+[GeoJSON endpoint](https://data.sfgov.org/resource/j2bu-swwd.geojson), fetched 2026-10-23.
+`tools/geo-neighborhoods.mjs` transforms the snapshot into the north-up local frame, retains polygon holes,
+rounds vertices to 0.1 m and chooses interior label points. `js/sf-places.js` embeds the source URL and SHA-256.
+The ignored raw snapshot is `data/raw/neighborhoods-p7.geojson`. Re-fetching the live endpoint may produce a newer snapshot.
+
+Regional flight destinations project onto measured DataSF city street segments: Steiner St (Painted Ladies), Marine Dr
+(Golden Gate viewpoint), and the highest sampled Twin Peaks Blvd segment midpoint. OSM landmark anchors determine the
+first two headings; Twin Peaks faces the downtown world origin. These are flight arrivals because regional roads do not
+have the core’s driving network. No landmark coordinate or terrain elevation is invented.

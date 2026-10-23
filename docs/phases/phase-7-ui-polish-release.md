@@ -35,7 +35,7 @@ All tests green, performance verified, repo clean. The user accepts the build.
 3. A pause menu with fog setting, time of day, traffic density, quality preset (draw distance for region buildings, shadows on/off).
 
 ### P7.4 Quality presets and fallback
-1. Presets: Low (no SSR, no region buildings beyond 3 km, 1 cascade), Medium, High. Auto-select by measured frame time at startup (3 s sample), allow override.
+1. Presets: Low (no SSR, no region buildings beyond 3 km, sun shadows disabled; see decision P7-1), Medium, High. Auto-select by measured frame time at startup (3 s sample), allow override.
 2. If WebGPU is unavailable: show a clear message and instructions (browser support), do not crash. (NYC likely requires WebGPU; verify behaviour and keep a graceful screen.)
 
 ### P7.5 Tests, lint, cleanliness
@@ -54,7 +54,7 @@ Run all benches on the same machine as the baseline. Update `docs/perf-log.md`. 
 ### P7.8 Release prep (no publishing)
 1. Repo size audit; ensure `data/raw` is ignored; derived data sizes recorded. Ask (🛑) if hosting limits require splitting or compression.
 2. Optional static build script `tools/build-static.mjs`: copies `index.html`, `css`, `js`, `data` to `dist/` and (if safe) gzips `.bin` files. No deploy.
-3. Tag `v0.1.0` locally (no push).
+3. Kamil tags `v0.1.0` locally after accepting and committing (no push; RUNBOOK §8 prohibits agent Git writes).
 
 ### P7.9 Acceptance run
 Execute the success criteria from `PLAN.md` section 1 as a checklist with evidence (screenshots, bench numbers, test output). Present to the user. 🛑 wait for acceptance.
@@ -72,6 +72,15 @@ Final UI, map, README, notices, tests, perf log, acceptance report `docs/accepta
 | Presets cause regressions | Test each preset with the bench harness |
 
 ## Handoff checklist
-- [ ] `docs/acceptance.md` complete
-- [ ] All logs updated; `PLAN.md` progress tick-boxes complete
-- [ ] Local tag created; nothing pushed
+- [x] `docs/acceptance.md` written with evidence and explicit open acceptance items
+- [x] Logs updated; `PLAN.md` records implementation ready and P7 acceptance still open
+- [ ] Kamil accepts the build and creates the local tag after committing; nothing pushed
+
+## Implementation notes (2026-10-23)
+
+P7.1–P7.5 and P7.7–P7.8 implementation is present. Final performance evidence and review are recorded in
+`docs/acceptance.md`. P7.9 remains open until Kamil accepts the visual build and driving behavior.
+The optional full-pipeline hash checker was not added: existing generated-data integration tests cover the core pipeline;
+the new neighborhood generator was independently rerun and compared byte-for-byte. The optional static build is provided.
+`PLAN.md` no longer has a numbered §6.2 list; its current test requirements are covered by existing terrain, drape,
+facade, building, grade separation, traffic, region and fog suites, plus the new UI/map/neighborhood smoke coverage.

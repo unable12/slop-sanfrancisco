@@ -6,7 +6,7 @@ const vm = require('node:vm');
 
 const read = (path) => readFileSync(join(__dirname, '..', path), 'utf8');
 const context = vm.createContext({ window: { NYC: {} } });
-for (const path of ['js/sf-geodata.js', 'js/city-config.js']) vm.runInContext(read(path), context);
+for (const path of ['js/sf-geodata.js', 'js/sf-places.js', 'js/city-config.js']) vm.runInContext(read(path), context);
 const { TELEPORT_LOCATIONS, LANDMARK_SITES, blockAt, nearestRoads, getIslandBoundsAtZ } = context.window.NYC;
 
 test('every teleport button has a destination on a real roadway inside the detailed land', () => {
@@ -14,6 +14,12 @@ test('every teleport button has a destination on a real roadway inside the detai
   assert.deepEqual(Object.keys(TELEPORT_LOCATIONS).sort(), buttons.sort());
   for (const [name, point] of Object.entries(TELEPORT_LOCATIONS)) {
     assert.ok(Number.isFinite(point.heading), `${name} has a heading`);
+    if (point.mode === 'helicopter') {
+      const [ax,az]=point.a,[bx,bz]=point.b;
+      assert.ok(Math.abs((point.x-ax)*(bz-az)-(point.z-az)*(bx-ax)) / Math.max(1,Math.hypot(bx-ax,bz-az)) < 0.001, `${name} is above a measured roadway`);
+      assert.ok(point.x>=Math.min(ax,bx)-.01&&point.x<=Math.max(ax,bx)+.01&&point.z>=Math.min(az,bz)-.01&&point.z<=Math.max(az,bz)+.01);
+      continue;
+    }
     assert.equal(blockAt(point.x, point.z), null, `${name} lands outside building blocks`);
     const shore = getIslandBoundsAtZ(point.z);
     assert.ok(point.x > shore.westX + 8 && point.x < shore.eastX - 8, `${name} stays on the land`);
@@ -69,6 +75,7 @@ test('preset and map teleports share arrival resets and mark the resolved landin
     },
     touchControls: { reset: () => calls.push(['touch']) },
     cameraSystem: { resetForTeleport: () => calls.push(['camera']) },
+    selectMode: (...args) => calls.push(['selectMode', ...args]),
     selectCamera: (...args) => calls.push(['selectCamera', ...args]),
     getLocationLabel: (x, z) => `${x}, ${z}`,
     trafficSystem: {},
@@ -86,6 +93,7 @@ test('preset and map teleports share arrival resets and mark the resolved landin
     calls.length = 0;
     handlers.get(name)();
     assert.deepEqual(calls, [
+      ...(point.mode ? [['selectMode', point.mode]] : []),
       ['teleport', point.x, point.z, point.heading], ['touch'], ['camera'], ['selectCamera', 'chase', true]
     ]);
     assert.equal(map.waypoint.x, landed.x);

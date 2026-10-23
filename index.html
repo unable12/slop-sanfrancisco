@@ -5,14 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Slop San Francisco</title>
   <link rel="icon" href="data:," />
-  <meta name="description" content="San Francisco in the browser, built with three.js WebGPURenderer and TSL: walk, drive, cycle or fly the city's north-east quarter on its real hills, streets and buildings." />
+  <meta name="description" content="San Francisco in the browser, built with three.js WebGPURenderer and TSL: walk, drive and cycle the detailed downtown streets, or fly across the city and bay through marine fog." />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <script>
     // Download the city scripts while Three.js loads; execute them only after its imports are ready below.
     const nycAppScripts = (() => {
-      const assetVersion = '20261022-sf-p6';
+      const assetVersion = '20261023-sf-p7';
       return [
         './js/sf-geodata.js',
+        './js/sf-places.js',
         './js/city-config.js',
         './js/data-loader.js',
         './js/terrain.js',
@@ -41,9 +42,10 @@
         './js/controllers.js',
         './js/touch-controls.js',
         './js/cameras.js',
-        './js/nyc-map.js',
+        './js/sf-map.js',
         './js/scene-culling.js',
         './js/post-processing.js',
+        './js/settings.js',
         './js/main.js'
       ].map((src) => `${src}?v=${assetVersion}`);
     })();
@@ -127,6 +129,22 @@
   <!-- 3D WebGPU Viewport Container -->
   <main id="canvas-container" aria-label="3D Interactive Slop San Francisco Viewport"></main>
 
+  <dialog id="settings-dialog" aria-labelledby="settings-title">
+    <form method="dialog" class="settings-panel">
+      <p class="settings-eyebrow">SLOP SAN FRANCISCO</p>
+      <h2 id="settings-title">Take a moment</h2>
+      <p>The city is paused. Make yourself at home.</p>
+      <label>Time of day<select id="settings-time"><option value="golden">Golden hour</option><option value="midday">Midday</option><option value="twilight">Blue hour</option><option value="midnight">Night</option></select></label>
+      <label>Atmosphere<select id="settings-fog"><option value="clear">Clear</option><option value="haze">Light haze</option><option value="marine">Marine layer</option></select></label>
+      <label>Downtown traffic<select id="settings-traffic"><option value="1">Normal</option><option value="0.5">Light</option><option value="0">None</option></select></label>
+      <label>Graphics quality<select id="settings-quality"><option value="auto">Automatic</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></label>
+      <label class="settings-check"><input type="checkbox" id="settings-shadows" checked> Sun shadows</label>
+      <p id="settings-status" role="status">Automatic quality: measuring…</p>
+      <button id="settings-resume" type="button">Resume exploring</button>
+      <p class="settings-credit">Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> · City and County of San Francisco / DataSF · USGS</p>
+    </form>
+  </dialog>
+
   <!-- Top-Left: Brand & Renderer Telemetry -->
   <header class="hud hud-top-left">
     <div class="panel brand">
@@ -157,6 +175,7 @@
           <svg class="icon" aria-hidden="true"><use href="#i-moon"/></svg><span class="seg-label">Night</span>
         </button>
       </div>
+      <button id="btn-settings" type="button" class="tool-btn" aria-haspopup="dialog">Settings <kbd>Esc</kbd></button>
       <span class="toolbar-divider" aria-hidden="true"></span>
       <label class="tool-btn" title="Weather and visibility">Fog
         <select id="fog-preset" aria-label="Fog preset">
@@ -180,6 +199,10 @@
   <div id="teleport-popover" class="popover" popover data-side="below" data-anchor="hud-toolbar" aria-label="Teleport the active player">
     <div class="pop-title">Teleport to</div>
     <button id="tp-ferry" class="pop-item tp-btn" data-teleport="ferry" type="button"><span class="pop-name">Ferry Building</span><span class="pop-sub">The Embarcadero · Embarcadero</span></button>
+    <button class="pop-item tp-btn" data-teleport="salesforce" type="button"><span class="pop-name">Salesforce Tower</span><span class="pop-sub">Financial District</span></button>
+    <button class="pop-item tp-btn" data-teleport="paintedladies" type="button"><span class="pop-name">Painted Ladies · Fly</span><span class="pop-sub">Steiner St · Regional scenery</span></button>
+    <button class="pop-item tp-btn" data-teleport="twinpeaks" type="button"><span class="pop-name">Twin Peaks · Fly</span><span class="pop-sub">Twin Peaks Blvd · Regional scenery</span></button>
+    <button class="pop-item tp-btn" data-teleport="goldengate" type="button"><span class="pop-name">Golden Gate viewpoint · Fly</span><span class="pop-sub">Marine Dr · Regional scenery</span></button>
     <button id="tp-market" class="pop-item tp-btn" data-teleport="market" type="button"><span class="pop-name">Market &amp; Montgomery</span><span class="pop-sub">Market St · Financial District</span></button>
     <button id="tp-transamerica" class="pop-item tp-btn" data-teleport="transamerica" type="button"><span class="pop-name">Transamerica Pyramid</span><span class="pop-sub">Montgomery St · Financial District</span></button>
     <button id="tp-chinatown" class="pop-item tp-btn" data-teleport="chinatown" type="button"><span class="pop-name">Chinatown Gate</span><span class="pop-sub">Grant Ave · Chinatown</span></button>
@@ -211,7 +234,7 @@
       <button id="mode-person" class="mode-btn" data-mode="person" type="button" title="Person [1]">
         <svg class="icon" aria-hidden="true"><use href="#i-walk"/></svg><span class="mode-label">Walk</span><kbd>1</kbd>
       </button>
-      <button id="mode-car" class="mode-btn active" data-mode="car" type="button" title="Car · Yellow Cab [2]">
+      <button id="mode-car" class="mode-btn active" data-mode="car" type="button" title="Car · Robotaxi [2]">
         <svg class="icon" aria-hidden="true"><use href="#i-car"/></svg><span class="mode-label">Drive</span><kbd>2</kbd>
       </button>
       <button id="mode-cyclist" class="mode-btn" data-mode="cyclist" type="button" title="Cyclist [3]">
@@ -221,6 +244,7 @@
         <svg class="icon" aria-hidden="true"><use href="#i-heli"/></svg><span class="mode-label">Fly</span><kbd>4</kbd>
       </button>
     </nav>
+    <small class="data-credit">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> · DataSF · USGS</small>
   </footer>
 
   <!-- Bottom-Right: Speed Cluster & Camera Switcher -->
@@ -289,7 +313,7 @@
   </div>
 
   <!-- Full-Screen Interactive San Francisco Street Map ([M]) -->
-  <section id="fullmap-modal" class="fullmap-modal hidden" role="dialog" aria-modal="true" aria-label="Full San Francisco Interactive Street Map">
+  <dialog id="fullmap-modal" class="fullmap-modal hidden" role="dialog" aria-modal="true" aria-label="Full San Francisco Interactive Street Map">
     <div id="fullmap-canvas-wrap" class="fullmap-canvas-wrap">
       <canvas id="fullmap-canvas"></canvas>
     </div>
@@ -333,18 +357,18 @@
 
     <div class="fullmap-footer">
       <div class="panel fullmap-status">
-        <span id="fullmap-hover-info">Click anywhere to teleport &amp; set your GPS route · Drag to pan · Scroll to zoom</span>
+        <span id="fullmap-hover-info">Click to teleport · Outside downtown, arrivals switch to flight · Drag to pan · Scroll to zoom</span>
       </div>
     </div>
 
     <div class="panel fullmap-legend">
       <span class="legend-item"><span class="legend-swatch player-swatch"></span>You</span>
       <span class="legend-item"><span class="legend-swatch landmark-swatch"></span>Landmark</span>
-      <span class="legend-item"><span class="legend-swatch gps-swatch"></span>GPS route</span>
+      <span class="legend-item"><span class="legend-swatch gps-swatch"></span>Waypoint bearing</span>
       <span class="legend-item"><span class="legend-swatch bridge-swatch"></span>Bridge / Hwy</span>
       <span id="fullmap-counts" class="legend-counts"></span>
     </div>
-  </section>
+  </dialog>
 
   <script type="module">
     import * as THREE from 'three/webgpu';

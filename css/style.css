@@ -1071,11 +1071,12 @@ body.is-boosting #hud-speed-meter {
    Full-screen interactive street map ([M])
    ------------------------------------------------------------------------------------------------------------------ */
 .fullmap-modal {
+  margin: 0; padding: 0; border: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; overflow: hidden; color: inherit;
   position: fixed;
   inset: 0;
   z-index: 90;
   background: #0a1118;
-  transition: opacity 0.25s ease, visibility 0.25s ease;
+  transition: opacity 0.25s ease;
 }
 
 .fullmap-modal.hidden {
@@ -1510,3 +1511,26 @@ body.touch-enabled .pop-item { min-height: 44px; }
 
 /* Weather control shares the toolbar's compact styling. */
 #fog-preset { color: var(--text-1); background: var(--bg-panel, #171c24); border: 0; border-radius: 4px; font: inherit; padding: 4px; }
+
+/* Pause/settings use native dialog focus trapping and inert background controls. */
+#settings-dialog { margin: auto; color: #edf0f4; background: #151b23; border: 1px solid #445061; border-radius: 20px; padding: 0; width: min(460px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); box-shadow: 0 24px 100px #0009; }
+#settings-dialog::backdrop { background: #050b13b8; backdrop-filter: blur(8px); }
+.settings-panel { padding: 28px; display: grid; gap: 16px; }
+.settings-panel h2, .settings-panel p { margin: 0; }
+.settings-panel h2 { font-size: 28px; }
+.settings-panel p { color: #bcc7d5; line-height: 1.5; }
+.settings-eyebrow { font-size: 11px; letter-spacing: 2px; }
+.settings-panel label { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-weight: 600; }
+.settings-panel select { max-width: 55%; color: #edf0f4; background: #252f3d; border: 1px solid #596577; border-radius: 8px; padding: 10px; font: inherit; }
+.settings-panel .settings-check { justify-content: flex-start; }
+.settings-check input { width: 20px; height: 20px; accent-color: #ec844f; }
+#settings-resume { background: #ef925f; color: #151b23; border: 0; border-radius: 10px; min-height: 46px; font: inherit; font-weight: 700; cursor: pointer; }
+.settings-credit { font-size: 11px; }
+.settings-credit a { color: #e8b797; }
+:focus-visible { outline: 3px solid #ffc58f; outline-offset: 3px; }
+
+.data-credit { display: block; margin-top: 5px; color: #ddd; font-size: 9px; text-align: center; text-shadow: 0 1px 3px #000; pointer-events: auto; }
+.data-credit a { color: inherit; }
+
+.boot-error #loading-status { max-width: 420px; margin: 24px 24px 16px; color: #e0e5ec; line-height: 1.6; text-align: center; }
+.boot-error .tool-btn { padding: 10px 22px; border: 1px solid #758296; border-radius: 8px; background: #263344; }

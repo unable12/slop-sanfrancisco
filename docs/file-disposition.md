@@ -26,7 +26,7 @@ The internal namespace `window.NYC` / `__NYC_APP` stays (D2).
 | `lighting.js` | 308 | Modify | Shadow far relative to ground (P2); marine layer extends the existing `fogNode` (P6). No sun lat/lon work (presets) | 2, 6 |
 | `main.js` | 707 | Modify | `FEATURES`, URL params, bench paths, `debug` API, data loading, build order | 1, 2 |
 | `nyc-geodata.js` | 10 (1.1 MB) | Replace → `sf-geodata.js` | Generated | 1 |
-| `nyc-map.js` | 1292 | Modify → `sf-map.js` | SF layers, hillshade, radar zoom by height above ground (P2), rename (P7) | 2, 7 |
+| `sf-map.js` (formerly `nyc-map.js`) | — | Renamed and adapted | Cached terrain hillshade, neighborhood labels, regional arrivals; obsolete NYC layers removed | 7 |
 | `pedestrians.js` | 1502 | Modify lightly | PersonRig `ground()` callback → terrain (already callback-based) | 2 |
 | `post-processing.js` | 74 | Keep | Check pass order with fog | 6 |
 | `road-network.js` | 1223 | Modify | Delete ~200 grid lines; `centrelineStreets()` becomes the only source; land polygon; edge height profiles; 3D curves; signal/stop control from data | 2 |
@@ -71,7 +71,7 @@ The internal namespace `window.NYC` / `__NYC_APP` stays (D2).
 | `controllers.test.cjs` | Extend: slope contact, pitch, heli clearance, `minY` |
 | `facade-projection.test.cjs` | Keep; add base-y parity (`facade-base`) |
 | `geodata.test.mjs` | Rewrite: loads `sf-geodata.js` (fast); slow rebuild test separate and skips without raw data |
-| `nyc-map.test.cjs` | Keep until P7 rename → `sf-map.test.cjs` |
+| `sf-map.test.cjs` | Renamed in P7; projection/input, regional bounds, hillshade cache and missing-label coverage |
 | `overpass.test.mjs` | Keep |
 | `smoke-texture.test.cjs` | Keep |
 | `teleports.test.cjs` | Rewrite destinations; same structure |
@@ -79,3 +79,5 @@ The internal namespace `window.NYC` / `__NYC_APP` stays (D2).
 | `traffic-performance.test.cjs`, `traffic.test.cjs` | Keep; may need updated regex extractions after refactors |
 | `vehicle-lights.test.cjs` | Keep |
 | new | `terrain-data`, `terrain`, `facade-base`, `road-network`, `traffic-sim`, `buildings-runtime`, `region-data`, `no-nyc-text` |
+
+P7 removes the obsolete `FEATURES` switches from main. Shared `street-details.js`, `sf-buildings.js` and procedural facade helpers remain because SF runtime modules import their functions. No broad deletion of shared renderer helpers.

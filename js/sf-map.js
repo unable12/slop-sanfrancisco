@@ -1,5 +1,5 @@
 (function () {
-// js/nyc-map.js
+// js/sf-map.js
 // Live radar and full-screen street map, using San Francisco geodata.
 // World metres: x east, z south; north is up. Legacy internal API names remain for compatibility.
 
@@ -10,37 +10,20 @@ const {
   NYC_LANDMARKS,
   LANDMARK_SITES,
   ISLAND_BOUNDS,
-  getIslandBoundsAtZ,
   MANHATTAN_COASTLINE,
   WATERFRONT_PIERS,
-  NJ_SHORELINE_POLYGON,
-  BROOKLYN_POLYGONS,
-  QUEENS_POLYGONS,
-  BRONX_POLYGONS,
-  STATEN_ISLAND_POLYGON,
-  UPPER_MANHATTAN_POLYGON,
-  WESTCHESTER_POLYGON,
-  NASSAU_POLYGON,
-  ROOSEVELT_ISLAND_POLYGON,
-  GOVERNORS_ISLAND_POLYGON,
-  RANDALLS_ISLAND_POLYGON,
-  LIBERTY_ISLAND_POLYGON,
-  ELLIS_ISLAND_POLYGON,
-  MILL_ROCK_POLYGON,
-  EAST_RIVER_BRIDGES,
-  OUTER_BRIDGES,
   getLocationLabel,
   isTypingInField
 } = window.NYC;
 
 const FONT = 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-const MIN_ZOOM = 0.015; // full map, pixels per metre: the whole harbour, Staten Island to the Bronx
+const MIN_ZOOM = 0.015; // full map, pixels per metre: the wider San Francisco bay
 const MAX_ZOOM = 3.0; // single lots
 const RADAR_SCALE = 0.32; // radar pixels per metre on the ground (zooms out with altitude)
-const GRID_BEARING = GEO.frame?.bearingDeg ?? 29.02; // Manhattan's grid north, degrees east of true north
+const GRID_BEARING = GEO.frame?.bearingDeg ?? 0; // SF world north is true north
 
 // Map palette, shared by the radar & the atlas (in step with css/style.css): graphite ground with the streets a shade
-// lighter than the blocks they run between, muted parks & water; a taxi-yellow GPS route, white landmarks & player,
+// lighter than the blocks they run between, muted parks & water; a yellow waypoint bearing, white landmarks & player,
 // cyan search hits and amber highways
 const MAP = {
   water: '#0a1118',
@@ -49,7 +32,7 @@ const MAP = {
   islands: '#162019',
   islandsEdge: '#26392c',
   piers: '#283039',
-  streets: '#363f4b', // Manhattan inside its bulkhead line: the roadway left between the blocks
+  streets: '#363f4b', // The core inside its coastline: the roadway left between the blocks
   shore: '#4f5b6b',
   park: '#19301f',
   parkEdge: '#24432f',
@@ -78,11 +61,11 @@ const MODELLED_LANDMARKS = Object.keys(window.NYC.LANDMARK_SITES || {});
 // Labels share the city's georeferenced landmark positions.
 const AREA_LABELS = [
   ['SAN FRANCISCO', -1800, 1800, 0], ['SAN FRANCISCO BAY', 3000, -1000, 1],
-  ...(NYC_LANDMARKS || []).map((l) => [l.name.toUpperCase(), l.x, l.z, 2])
+  ...(NYC_LANDMARKS || []).map((l) => [(l.name || 'Landmark').toUpperCase(), l.x, l.z, 2])
 ];
 
 // Shorter map names for a few real street names
-const LABEL_ALIAS = { 'Franklin D Roosevelt Dr': 'FDR Drive', 'Battery Park Underpass': 'Battery Underpass' };
+const LABEL_ALIAS = {};
 
 // ---------------------------------------------------------------------------------------------------------------------
 // World-space vector layers: built once into Path2D objects (world metres) and drawn through a canvas transform
@@ -185,30 +168,41 @@ class TiledLayer {
   }
 }
 
+// Lazy, once-per-session 8 m relief raster. Both maps retain their existing static-layer caches.
+let RELIEF = null;
+function mapRelief() {
+  if (RELIEF) return RELIEF;
+  const g = window.NYC.DATA?.fullRegion?.city;
+  if (!g) return null;
+  const canvas = document.createElement('canvas'); canvas.width = g.w; canvas.height = g.h;
+  const ctx = canvas.getContext('2d'), image = ctx.createImageData(g.w, g.h);
+  const water = window.NYC.Terrain.waterLevel;
+  for (let z = 1; z < g.h - 1; z++) for (let x = 1; x < g.w - 1; x++) {
+    const k = z * g.w + x, y = g.heights[k];
+    if (y <= water + 0.05) continue;
+    const dx = (g.heights[k+1] - g.heights[k-1]) / (2*g.step);
+    const dz = (g.heights[k+g.w] - g.heights[k-g.w]) / (2*g.step);
+    const light = Math.max(0, (-dx*0.5 + 0.7 - dz*0.5) / Math.hypot(dx, 1, dz));
+    const shade = 20 + light * 35;
+    image.data.set([shade*0.85, shade, shade*1.07, 255], k*4);
+  }
+  ctx.putImageData(image, 0, 0);
+  return RELIEF = { canvas, x:g.x0, z:g.z0, width:(g.w-1)*g.step, height:(g.h-1)*g.step };
+}
+
 let LAYERS = null;
 function mapLayers() {
   if (LAYERS) return LAYERS;
   const L = {};
   const rings = (list) => list.filter((p) => p && p.length > 2);
 
-  // Land around the harbour: New Jersey, Brooklyn, Queens, the Bronx, Staten Island and Upper Manhattan (outlined), the
-  // horizon fillers beyond the city line (not outlined); the East River & harbour islands
-  L.land = new Path2D();
-  for (const ring of rings([NJ_SHORELINE_POLYGON, ...(BROOKLYN_POLYGONS || []), ...(QUEENS_POLYGONS || []), ...(BRONX_POLYGONS || []),
-    STATEN_ISLAND_POLYGON, UPPER_MANHATTAN_POLYGON])) addRing(L.land, ring);
-  L.fillers = new Path2D();
-  for (const ring of rings([WESTCHESTER_POLYGON, NASSAU_POLYGON])) addRing(L.fillers, ring);
-  L.islands = new Path2D();
-  for (const ring of rings([RANDALLS_ISLAND_POLYGON, ROOSEVELT_ISLAND_POLYGON, GOVERNORS_ISLAND_POLYGON, LIBERTY_ISLAND_POLYGON,
-    ELLIS_ISLAND_POLYGON, MILL_ROCK_POLYGON])) addRing(L.islands, ring);
-
-  // Manhattan inside its bulkhead line, and its piers
+  // Detailed core coastline and piers. Regional land is drawn from the measured height field.
   L.manhattan = new Path2D();
   addRing(L.manhattan, MANHATTAN_COASTLINE);
   L.piers = new Path2D();
   for (const p of WATERFRONT_PIERS) if (p.ring) addRing(L.piers, p.ring);
 
-  // Parkland (NYC Parks properties), the curb islands (blocks: raised sidewalks & lots) and the park blocks, exactly
+  // San Francisco parkland, the curb islands (blocks: raised sidewalks & lots) and the park blocks, exactly
   // as city-grid.js / buildings.js treat them
   L.parkLand = new TiledLayer();
   for (const park of GEO.parks || []) for (const ring of park.rings || []) L.parkLand.ring(ring);
@@ -216,19 +210,7 @@ function mapLayers() {
   L.parkBlocks = new TiledLayer();
   for (const b of BLOCKS) (b.park > 0.6 && !b.median ? L.parkBlocks : L.blocks).ring(b.poly);
 
-  // Central Park: meadows, water bodies, the drives and the sunken transverse roads
-  const cp = GEO.centralPark || {};
-  L.cpBounds = cp.bounds || null;
-  L.cpLawns = new Path2D();
-  for (const l of cp.lawns || []) addRing(L.cpLawns, l.ring);
-  L.cpWater = new Path2D();
-  for (const w of cp.water || []) addRing(L.cpWater, w.ring);
-  L.cpDrives = new Path2D();
-  L.cpTransverses = new Path2D();
-  for (const d of cp.drives || []) addLine(d.transverse ? L.cpTransverses : L.cpDrives, d.pts);
-
-  // Street network at low zoom (avenues & wide streets, once the gaps between blocks are under a pixel) and the shore
-  // highways (FDR Drive, West St / West Side Hwy, Harlem River Dr, Henry Hudson Pkwy)
+  // Mapped arterial roads and freeway segments.
   L.mainRoads = new TiledLayer(1000);
   L.highways = new Path2D();
   for (const r of ROADS) {
@@ -244,13 +226,12 @@ function mapLayers() {
     if (s && s.ring) addRing(L.landmarks, s.ring);
   }
 
-  // Bridges, Manhattan landing to the far landing, deck width to scale
-  L.bridges = [...EAST_RIVER_BRIDGES, ...OUTER_BRIDGES].map((br) => {
-    const path = new Path2D();
-    path.moveTo(br.a.x, br.a.z);
-    path.lineTo(br.b.x, br.b.z);
+  // Real bridge deck paths from the same OSM geometry as the 3D landmarks.
+  L.bridges = Object.values(GEO.bridges || {}).flatMap(br => (br.decks || []).map(deck => {
+    const points = deck.pts;
+    const path = new Path2D(); addLine(path, points);
     return { path, width: br.width || 25 };
-  });
+  }));
 
   LAYERS = L;
   return L;
@@ -378,13 +359,12 @@ function drawPlayerArrow(ctx, tipY, halfWidth, tailY) {
   ctx.fill();
 }
 
-// GPS route from the player to the waypoint, along the grid (x first, then z): taxi yellow on a dark casing
+// Direct bearing to the waypoint; this is not street-by-street navigation.
 function drawRoute(ctx, x0, y0, x1, y1, width) {
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
   ctx.beginPath();
   ctx.moveTo(x0, y0);
-  ctx.lineTo(x1, y0);
   ctx.lineTo(x1, y1);
   ctx.strokeStyle = MAP.halo;
   ctx.lineWidth = width + 3;
@@ -429,7 +409,7 @@ class NYCMapSystem {
     const elCounts = document.getElementById('fullmap-counts');
     if (elCounts) elCounts.textContent = `${ROAD_NAME_COUNT} streets · ${BLOCKS.length.toLocaleString('en-US')} blocks`;
 
-    // The map is drawn grid north up; the compass needle points to true north, 29° to its left
+    // The map is north up; keep the compass aligned with its georeferenced frame.
     const needle = document.getElementById('map-compass-needle');
     if (needle) needle.setAttribute('transform', `rotate(${-GRID_BEARING} 22 22)`);
 
@@ -513,8 +493,9 @@ class NYCMapSystem {
     }
     if (fullIslandBtn) {
       fullIslandBtn.addEventListener('click', () => {
-        // Fits all of Manhattan, from the Harlem River to the Battery
-        const b = ISLAND_BOUNDS;
+        // Fit the full measured city, including regional flight destinations.
+        const city = window.NYC.DATA?.fullRegion?.city;
+        const b = city ? { minX:city.x0,maxX:city.x1,minZ:city.z0,maxZ:city.z1 } : ISLAND_BOUNDS;
         const { w, h } = this.fullSize();
         this.viewCenterX = (b.minX + b.maxX) * 0.5;
         this.viewCenterZ = (b.minZ + b.maxZ) * 0.5;
@@ -528,12 +509,20 @@ class NYCMapSystem {
     }
 
     window.addEventListener('keydown', (e) => {
-      if (e.code === 'Escape' && this.isFullMapOpen) {
-        this.toggleFullMap(false);
+      if (document.getElementById('settings-dialog')?.open) return;
+      const wasOpen = this.isFullMapOpen;
+      if (e.code === 'Escape' && wasOpen) {
+        e.preventDefault(); this.toggleFullMap(false);
       } else if (e.code === 'KeyM' && !isTypingInField(e)) {
-        this.toggleFullMap(!this.isFullMapOpen);
+        e.preventDefault(); this.toggleFullMap(!wasOpen);
+      } else if (e.code === 'Tab' && wasOpen) {
+        const focusable = [...this.modal.querySelectorAll('button, input')];
+        const first=focusable[0], last=focusable.at(-1);
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus(); }
       }
-    });
+      if (wasOpen || this.isFullMapOpen) e.stopImmediatePropagation();
+    }, true);
 
     if (this.fullCanvas) {
       this.fullCanvas.style.touchAction = 'none';
@@ -587,7 +576,7 @@ class NYCMapSystem {
           const mx = e.clientX - rect.left;
           const my = e.clientY - rect.top;
           if (mx >= 0 && mx <= rect.width && my >= 0 && my <= rect.height) {
-            const wPos = this.clampToManhattan(this.screenToWorld(mx, my, rect.width, rect.height));
+            const wPos = this.clampToRegion(this.screenToWorld(mx, my, rect.width, rect.height));
             this.waypoint = {
               x: wPos.x,
               z: wPos.z,
@@ -635,7 +624,7 @@ class NYCMapSystem {
     this.searchHighlight = q;
     this.searchPath = null;
     if (q.length > 0) {
-      const lmMatch = NYC_LANDMARKS.find((l) => l.name.toLowerCase().includes(q) || l.short.toLowerCase().includes(q));
+      const lmMatch = NYC_LANDMARKS.find((l) => (l.name || '').toLowerCase().includes(q) || (l.short || '').toLowerCase().includes(q));
       const roads = ROAD_LABELS.filter((l) => l.lower.includes(q) || l.raw.includes(q));
       if (roads.length) {
         this.searchPath = new Path2D();
@@ -678,7 +667,14 @@ class NYCMapSystem {
     if (!this.isFullMapOpen) this.cancelPan();
     if (this.onToggle) this.onToggle(this.isFullMapOpen);
     if (!this.modal) return;
+    if (this.isFullMapOpen) this.previousFocus = document.activeElement;
     this.modal.classList.toggle('hidden', !this.isFullMapOpen);
+    if (this.isFullMapOpen) this.modal.showModal?.(); else this.modal.close?.();
+    for (const hud of document.querySelectorAll('.hud')) hud.inert = this.isFullMapOpen;
+    if (this.isFullMapOpen) {
+      const focusSearch = () => { if (this.isFullMapOpen) this.elSearchInput?.focus(); };
+      if (window.requestAnimationFrame) window.requestAnimationFrame(focusSearch); else focusSearch();
+    } else this.previousFocus?.focus();
     if (this.isFullMapOpen) {
       // the HUD's popovers live in the top layer, above the map
       for (const pop of document.querySelectorAll('.popover[popover]')) {
@@ -717,11 +713,11 @@ class NYCMapSystem {
     };
   }
 
-  // Teleports land on Manhattan: inside the island's extent at that latitude
-  clampToManhattan(p) {
-    const z = Math.max(ISLAND_BOUNDS.minZ + 25, Math.min(ISLAND_BOUNDS.maxZ - 25, p.z));
-    const shore = getIslandBoundsAtZ(z);
-    return { x: Math.max(shore.westX + 12, Math.min(shore.eastX - 12, p.x)), z };
+  // Outside the detailed driving core, main.js switches arrivals to flight.
+  clampToRegion(p) {
+    const g = window.NYC.DATA?.fullRegion?.city;
+    if (g) return { x: Math.max(g.x0+25, Math.min(g.x1-25,p.x)), z: Math.max(g.z0+25, Math.min(g.z1-25,p.z)) };
+    return { x: Math.max(ISLAND_BOUNDS.minX+25,Math.min(ISLAND_BOUNDS.maxX-25,p.x)), z: Math.max(ISLAND_BOUNDS.minZ+25,Math.min(ISLAND_BOUNDS.maxZ-25,p.z)) };
   }
 
   textWidth(ctx, text) {
@@ -735,7 +731,7 @@ class NYCMapSystem {
   }
 
   /**
-   * The ground: land & water, Manhattan with its piers, parkland, blocks, Central Park, building footprints, landmark
+   * The ground: SF terrain and coastline, piers, parks, blocks, building footprints, landmark
    * lots, the main streets at low zoom, shore highways, bridges and the search highlight (world transform of view v)
    */
   drawWorld(ctx, v, isMinimap) {
@@ -746,21 +742,10 @@ class NYCMapSystem {
     ctx.lineJoin = 'round';
     ctx.lineCap = 'round';
 
-    // 1. Land around the harbour & the islands
-    ctx.fillStyle = MAP.land;
-    ctx.fill(L.fillers);
-    ctx.fill(L.land);
-    ctx.fillStyle = MAP.islands;
-    ctx.fill(L.islands);
-    if (!isMinimap) {
-      ctx.lineWidth = px(1.4);
-      ctx.strokeStyle = MAP.landEdge;
-      ctx.stroke(L.land);
-      ctx.strokeStyle = MAP.islandsEdge;
-      ctx.stroke(L.islands);
-    }
+    const relief = mapRelief();
+    if (relief) ctx.drawImage(relief.canvas, relief.x, relief.z, relief.width, relief.height);
 
-    // 2. Piers, then Manhattan (roadway deck colour: the streets are the gaps between the blocks) in its bulkhead line
+    // Detailed core roads and piers overlay the regional terrain.
     ctx.fillStyle = MAP.piers;
     ctx.fill(L.piers);
     ctx.fillStyle = MAP.streets;
@@ -787,22 +772,8 @@ class NYCMapSystem {
       L.parkBlocks.each(v, (p) => ctx.stroke(p));
     }
 
-    // 4. Central Park: meadows, drives & transverses, water bodies
-    if (v.sees(L.cpBounds)) {
-      ctx.fillStyle = MAP.lawn;
-      ctx.fill(L.cpLawns);
-      ctx.strokeStyle = MAP.drive;
-      ctx.lineWidth = Math.max(px(1), 7);
-      ctx.stroke(L.cpDrives);
-      ctx.strokeStyle = MAP.transverse;
-      ctx.lineWidth = Math.max(px(1), 10);
-      ctx.stroke(L.cpTransverses);
-      ctx.fillStyle = MAP.pond;
-      ctx.fill(L.cpWater);
-      ctx.strokeStyle = MAP.pondEdge;
-      ctx.lineWidth = px(1);
-      ctx.stroke(L.cpWater);
-    }
+    // Subtle relief over the core lots, with labels and streets still legible.
+    if (relief) { ctx.globalAlpha = 0.24; ctx.drawImage(relief.canvas, relief.x, relief.z, relief.width, relief.height); ctx.globalAlpha = 1; }
 
     // 5. Building footprints, lowest first
     if (s >= 0.18) {
@@ -1024,7 +995,7 @@ class NYCMapSystem {
       }
     }
 
-    // GPS route to the active waypoint
+    // Direct bearing to the active waypoint
     if (this.waypoint) {
       const wx = toX(this.waypoint.x);
       const wy = toY(this.waypoint.z);
@@ -1075,7 +1046,7 @@ class NYCMapSystem {
   }
 
   // =========================================================================
-  // 2. FULL NEW YORK CITY INTERACTIVE STREET MAP MODAL ([M])
+  // 2. FULL SAN FRANCISCO INTERACTIVE STREET MAP MODAL ([M])
   // =========================================================================
   renderFullMap() {
     if (!this.fullCtx || !this.fullCanvas || !this.isFullMapOpen) return;
@@ -1114,7 +1085,7 @@ class NYCMapSystem {
     const toX = (wx) => v.toX(wx);
     const toY = (wz) => v.toY(wz);
 
-    // GPS route on the full map
+    // Direct waypoint bearing on the full map
     if (this.waypoint) {
       const wx = toX(this.waypoint.x);
       const wy = toY(this.waypoint.z);
@@ -1152,7 +1123,7 @@ class NYCMapSystem {
     ctx.fillStyle = MAP.water;
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
 
-    // 2. The ground: boroughs, islands, Manhattan's blocks, parks, footprints, highways & bridges
+    // 2. SF terrain, coastline, blocks, parks, footprints, highways and bridges
     this.drawWorld(ctx, v, false);
 
     v.screen(ctx);
@@ -1167,7 +1138,7 @@ class NYCMapSystem {
       const lx = toX(lm.x);
       const ly = toY(lm.z);
       if (Math.abs(lx) > w * 0.48 || Math.abs(ly) > h * 0.48) continue;
-      const labelW = this.textWidth(ctx, lm.short) + 6;
+      const labelW = this.textWidth(ctx, lm.short || lm.name || 'Landmark') + 6;
       const box = [lx + 6, ly - 8, lx + 8 + labelW, ly + 7];
       const showLabel = !overlaps(placed, box);
       placed.push([lx - 6, ly - 6, lx + 6, ly + 6]);
@@ -1179,7 +1150,7 @@ class NYCMapSystem {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const tracking = 'letterSpacing' in ctx;
-    for (const [label, x, z, kind] of AREA_LABELS) {
+    for (const [label, x, z, kind] of [...AREA_LABELS, ...(window.NYC.PLACE_DATA?.neighborhoods || []).map(n=>[n.name.toUpperCase(),...n.label,2])]) {
       if (kind === 0 && s > 0.07) continue;
       if (kind === 2 && (s < 0.035 || s > 1.2)) continue;
       const dx = toX(x);
@@ -1225,9 +1196,9 @@ class NYCMapSystem {
       if (showLabel) {
         ctx.lineWidth = 3;
         ctx.strokeStyle = MAP.halo;
-        ctx.strokeText(lm.short, lx + 9, ly + 4);
+        ctx.strokeText(lm.short || lm.name || 'Landmark', lx + 9, ly + 4);
         ctx.fillStyle = '#ffffff';
-        ctx.fillText(lm.short, lx + 9, ly + 4);
+        ctx.fillText(lm.short || lm.name || 'Landmark', lx + 9, ly + 4);
       }
     }
 
