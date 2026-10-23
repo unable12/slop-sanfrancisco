@@ -40,7 +40,7 @@ const FEATURES = {
   buildings: 'v1', // 'v1' (buildings.js on the real footprints) | 'v0' (sf-buildings.js extrusions) | 'nyc' (buildings.js)
   waterTowers: false, // New York's rooftop water towers (the v1 path never builds them)
   boroughs: false,
-  landmarks: false,
+  landmarks: true, // js/landmarks.js (P5): San Francisco's landmarks on their OSM sites
   details: 'sf', // 'sf' (sf-street-details.js, on the road network) | true (street-details.js, New York's) | false
   traffic: true,
   highway: true, // on the freeway decks (grade-separation.js)
@@ -134,6 +134,10 @@ async function initApp() {
   const boroughs = FEATURES.boroughs ? buildBoroughs(scene, { sidewalks: cityGrid.sidewalks }) : { colliders: [] };
   markInit('boroughs');
   const { colliders: landmarkColliders } = FEATURES.landmarks ? buildLandmarks(scene) : { colliders: [] };
+  // The Golden Gate and Bay bridges (sf-bridges.js, P5.2); the Bay Bridge's decks carry the I-80 freeway (grade-separation.js)
+  const bridges = FEATURES.landmarks ? window.NYC.buildSFBridges(scene) : { colliders: [], update() {} };
+  window.NYC.bridgeDeckAt = bridges.bridgeDeckAt;
+  landmarkColliders.push(...bridges.colliders);
   markInit('landmarks');
   const cityBlocks = FEATURES.buildings === 'v0' ? buildSFBuildingsV0(scene) : buildCityBlocks(scene, { sf: FEATURES.buildings === 'v1' });
   markInit('blocks');
@@ -142,6 +146,9 @@ async function initApp() {
   // The road network (road-network.js), for the street furniture & the traffic built on it. Buildings turned along
   // non-grid streets have oriented colliders whose world bounds reach past their lots: they stay inside the property
   // line anyway, so the network (lanes & sidewalks) doesn't need them
+  // The street network and everything on it stand on the core's terrain only: the interim region ground (PLAN P5-1)
+  // must not turn streets past its edge into land
+  window.NYC.Terrain.patchesEnabled = false;
   const roadNetwork = FEATURES.traffic || FEATURES.details === 'sf'
     ? buildRoadNetwork(cityGrid.sidewalks, [...cityGrid.footprints, ...allColliders.filter((c) => !c.obb)])
     : null;
@@ -170,6 +177,7 @@ async function initApp() {
     scene.add(window.NYC.buildRoadDebug(roadNetwork || buildRoadNetwork(cityGrid.sidewalks, [])));
   }
   if (trafficSystem.network) buildRoadPaint(scene, trafficSystem.network);
+  window.NYC.Terrain.patchesEnabled = true;
   markInit('roadPaint');
 
   // 4. Initialize Third-Person Controllers (Person, Car, Cyclist, Helicopter) & Multi-Camera System
@@ -180,7 +188,7 @@ async function initApp() {
 
   // Island-wide static geometry: chunk & distance-cull the small props, shadow stand-ins for the big casters
   // (scene-culling.js)
-  const cullingRoots = ['ManhattanCityGrid', 'ManhattanCityBlocks', 'ManhattanStreetDetails', 'ManhattanLandmarks', 'Boroughs', 'SFGround', 'SFBuildings', 'SFStreetDetails']
+  const cullingRoots = ['ManhattanCityGrid', 'ManhattanCityBlocks', 'ManhattanStreetDetails', 'ManhattanLandmarks', 'Boroughs', 'SFGround', 'SFBuildings', 'SFStreetDetails', 'SFLandmarks', 'SFBridges']
     .map((name) => scene.getObjectByName(name))
     .filter(Boolean);
   const cullingStats = setupSceneCulling(scene, cullingRoots, lightingSystem.sunLight.shadow);
@@ -808,6 +816,7 @@ async function initApp() {
     );
     highwayTraffic.update(trafficDt, cameraSystem.camera, controllerManager.getActiveEntity(), controllerManager.activeMode);
     transit.update(debugState.freeze ? 0 : dt);
+    bridges.update(cameraSystem.camera);
     if (boroughs.update) boroughs.update(elapsed); // Roosevelt Island Tramway cabins
     cityBlocks.update(cameraSystem.currentPos.x, cameraSystem.currentPos.z);
     if (cityBlocks.updateLights) cityBlocks.updateLights(cameraSystem.camera);

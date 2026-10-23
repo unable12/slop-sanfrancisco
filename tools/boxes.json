@@ -13,5 +13,12 @@
     "lonW": -122.430023,
     "lonE": -122.384252,
     "derivation": "Union of the bounding boxes (SoQL extent(line)) of active centreline segments by analysis_neighborhood (DataSF 3psu-pn9h, 2026-10-22): Russian Hill, Nob Hill, Chinatown, Financial District/South Beach, North Beach (Telegraph Hill, Fisherman's Wharf), Tenderloin (Union Square, Civic Center), South of Market; expanded 300 m on every side (300/111132 deg lat, 300/(111320 cos 37.7896) deg lon). 4.03 x 5.35 km."
+  },
+  "landmarks": {
+    "latS": 37.7,
+    "latN": 37.84,
+    "lonW": -122.53,
+    "lonE": -122.29,
+    "derivation": "Hand-set (P5.1): a box round San Francisco's land and both bridges end to end (the Golden Gate Bridge to its Marin anchorage, the Bay Bridge to its Oakland touchdown), for the named landmark query (tools/queries/landmarks-named.overpassql) and the DEM tiles under landmarks outside the core. Not a build box: nothing else is fetched for it."
   }
 }

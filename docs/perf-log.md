@@ -36,3 +36,9 @@ Note: Chrome caches compiled shaders between runs (profiles are fresh, but the G
 | 2026-10-22 | P4 gate, `--bench heli` | 5.5–5.9 | 137, 139 fps; p95 22.7–22.8 ms | 658–720 (live 580–582) | 0 | p95 from tree instance uploads in fast flight (handover risk) |
 | 2026-10-22 | P4 gate, `--bench hill` | 5.2–5.5 | 123, 127 fps; p95 8.9–9.0 ms | 620–696 (live 579–580) | 0 | |
 | 2026-10-22 | P4 gate, `--bench russian-hill-view` | 5.5–5.6 | 127, 127 fps; p95 8.9–9.6 ms | 661–688 (live 577–580) | 0 | |
+| 2026-10-22 | P5 gate, `--bench street` (two runs) | 5.1–6.0 | 172, 172 fps; median 5.8 ms, p95 6.4–6.6 ms | 843–869 (live 689) | 0 | Landmarks (22 models, ~48k triangles, 65 draws), both bridges (~90k triangles, 12 draws), the interim region ground (~1M triangles in 2 km chunks, PLAN P5-1). A third pass in between ran ~20% slower on every bench (135 / 122 / 103 / 99 / 106 fps) while another shell loop ran; not counted |
+| 2026-10-22 | P5 gate, `--bench car` | 6.2–6.3 | 154, 147 fps; p95 9.6–9.8 ms | 1,019–1,377 (live 690–691) | 0 | |
+| 2026-10-22 | P5 gate, `--bench heli` | 6.3–6.5 | 145, 137 fps; p95 23.0–23.4 ms | 1,007–1,010 (live 688) | 0 | p95 still the tree uploads (P4 handover) |
+| 2026-10-22 | P5 gate, `--bench hill` | 6.5–7.0 | 125, 127 fps; p95 8.9–9.6 ms | 771–804 (live 686–687) | 0 | |
+| 2026-10-22 | P5 gate, `--bench russian-hill-view` | 6.2–6.6 | 116, 127 fps; p95 9.8–10.3 ms | 735–830 (live 687–691) | 0 | Looks over the region ground to Sutro Tower and the bridges |
+| 2026-10-22 | P5, A/B `--query region=0` (no interim region ground) `hill` / `russian-hill-view` / `heli` | 5.6–6.3 | 94 / 87 / 102 fps | live 650–653 | 0 | Slower than with it: the run-to-run noise on this machine is larger than the region ground's cost, so no measurable cost. The region ground adds ~35 MB live heap |

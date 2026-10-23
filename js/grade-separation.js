@@ -9,13 +9,15 @@
 // - Freeways and their ramps (I-80, US-101, I-280): decks on columns every COLUMN_STEP m. OSM says which stretches are
 //   bridges and their `layer`, not how high: the deck stands DECK_H_ESTIMATE[layer] m over the ground (an estimate,
 //   PLAN.md P3-3), eased along the road. Visual only for the player (they drive under them); highway traffic
-//   (traffic.js createHighwayTraffic) runs on the main lines.
+//   (traffic.js createHighwayTraffic) runs on the main lines. On the Bay Bridge the deck is the bridge's
+//   (sf-bridges.js bridgeDeckAt, P5.2): westbound on the upper deck, eastbound on the lower, the approach climbing to it.
 // Returns { group, colliders, highwayLanes, floorAt, roofAt, carveAt }: floorAt(x, z, y) is the tunnel floor or bridge
 // deck at (x, z) for something at height y (null: the ground), roofAt(x, z, y) a tunnel's ceiling over it (Infinity:
 // none), carveAt(x, z) how low the terrain mesh dips at a portal (null: not at all).
 
 const { THREE, Terrain } = window.NYC;
 const { createRoadSurfaceMaterial, createMarbleAshlarMaterial, boreY, edgeArc } = window.NYC;
+const bridgeDeckAt = (x, z, upper) => (window.NYC.bridgeDeckAt ? window.NYC.bridgeDeckAt(x, z, upper) : null);
 
 const STEP = 2; // metres between floor height samples (and geometry stations, x2)
 const LANE_HALF = 1.75;
@@ -216,7 +218,16 @@ function buildGradeSeparation(scene, network) {
         for (let d = 1; d < layers.length; d++) for (const j of [k - d, k + d]) if (layers[j] >= 0) return layers[j];
         return 0;
       });
-      return { li, a, b, lanes: Math.max(1, lanes), dir, ramp: (flags & 4) !== 0, pts, target: pts.map((p, k) => ground(p.x, p.z) + DECK_H_ESTIMATE[Math.min(3, lay[k])]) };
+      // the Bay Bridge (sf-bridges.js bridgeDeckAt, P5.2): westbound on its upper deck, eastbound on the lower; its
+      // approach climbs to it
+      const upper = /WESTBOUND/.test(RG.names[RG.links[li][2]]);
+      const deckAt = (p) => (bridgeDeckAt && !(flags & 4) ? bridgeDeckAt(p.x, p.z, upper) : null);
+      const target = pts.map((p, k) => {
+        const est = ground(p.x, p.z) + DECK_H_ESTIMATE[Math.min(3, lay[k])];
+        const bd = deckAt(p);
+        return bd ? (bd.onBridge ? bd.y : Math.max(est, bd.y)) : est;
+      });
+      return { li, a, b, lanes: Math.max(1, lanes), dir, ramp: (flags & 4) !== 0, pts, target, deckAt };
     });
     // a junction's height: the highest any freeway meeting there wants, so the decks meet; a ramp meets a street on
     // the ground
@@ -241,12 +252,17 @@ function buildGradeSeparation(scene, network) {
       dense.push({ x: last.x, z: last.z, y: w.target[w.target.length - 1] });
       dense[0].y = nodeY.get(w.a);
       dense[dense.length - 1].y = nodeY.get(w.b);
+      // on a bridge the deck is the bridge's (fixed: not eased); on its approach at least as high as the climb to it
+      for (const d of dense) {
+        const bd = w.deckAt(d);
+        if (bd && bd.onBridge) { d.y = bd.y; d.bridge = true; } else if (bd) d.y = Math.max(d.y, bd.y);
+      }
       for (let pass = 0; pass < 6; pass++) {
-        for (let i = 1; i + 1 < dense.length; i++) dense[i].y = (dense[i - 1].y + dense[i].y + dense[i + 1].y) / 3;
+        for (let i = 1; i + 1 < dense.length; i++) if (!dense[i].bridge) dense[i].y = (dense[i - 1].y + dense[i].y + dense[i + 1].y) / 3;
       }
       for (let i = 1; i < dense.length; i++) dense[i].s = Math.hypot(dense[i].x - dense[i - 1].x, dense[i].z - dense[i - 1].z);
-      for (let i = 1; i + 1 < dense.length; i++) dense[i].y = Math.min(dense[i].y, dense[i - 1].y + DECK_GRADE * dense[i].s);
-      for (let i = dense.length - 2; i > 0; i--) dense[i].y = Math.min(dense[i].y, dense[i + 1].y + DECK_GRADE * dense[i + 1].s);
+      for (let i = 1; i + 1 < dense.length; i++) if (!dense[i].bridge) dense[i].y = Math.min(dense[i].y, dense[i - 1].y + DECK_GRADE * dense[i].s);
+      for (let i = dense.length - 2; i > 0; i--) if (!dense[i].bridge) dense[i].y = Math.min(dense[i].y, dense[i + 1].y + DECK_GRADE * dense[i + 1].s);
       for (const d of dense) d.y = Math.max(d.y, ground(d.x, d.z) + 0.05);
       w.dense = dense;
       const width = w.lanes * FREEWAY_LANE + 2;
@@ -261,6 +277,7 @@ function buildGradeSeparation(scene, network) {
         const h = width / 2;
         const at = (r, o, dy = 0) => [r.x + rx * o, r.y + dy, r.z + rz * o];
         quad(geo.road, at(p, -h), at(p, h), at(q, h), at(q, -h));
+        if (p.bridge && q.bridge) continue; // the bridge's truss carries it (sf-bridges.js)
         quad(geo.concrete, at(p, h, -DECK_T), at(p, -h, -DECK_T), at(q, -h, -DECK_T), at(q, h, -DECK_T));
         quad(geo.concrete, at(p, h, -DECK_T), at(q, h, -DECK_T), at(q, h), at(p, h));
         quad(geo.concrete, at(q, -h, -DECK_T), at(p, -h, -DECK_T), at(p, -h), at(q, -h));

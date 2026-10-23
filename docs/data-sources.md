@@ -7,7 +7,7 @@
 | Source | How | Notes |
 |---|---|---|
 | DataSF | `https://data.sf.gov/resource/<id>.geojson` with `$where=within_box(<geom>, latN, lonW, latS, lonE)`, `$order=:id`, `$limit=50000`, `$offset` | The old host `data.sfgov.org` redirects (`curl -L`). Metadata: `/api/views/<id>.json`. Search: `/api/search/views.json?q=` |
-| USGS DEM | TNM API `https://tnmaccess.nationalmap.gov/api/v1/products?datasets=Digital%20Elevation%20Model%20(DEM)%201%20meter&bbox=lonW,latS,lonE,latN` → `items[].downloadURL` | Prefer project `CA_SanFrancisco_B23` |
+| USGS DEM (P5.1: the `landmarks` box also fetched the x54y418 and x54y419 `CA_SanFrancisco_B23` tiles, 289 MB, for the sites west of the core and the interim region ground) | TNM API `https://tnmaccess.nationalmap.gov/api/v1/products?datasets=Digital%20Elevation%20Model%20(DEM)%201%20meter&bbox=lonW,latS,lonE,latN` → `items[].downloadURL` | Prefer project `CA_SanFrancisco_B23` |
 | OSM | Overpass via `tools/overpass.sh` (3 endpoints, retries, validation; from NYC) | Set a descriptive User-Agent |
 
 ## Datasets and the geometry column used in `within_box`
@@ -34,6 +34,7 @@ Check each geometry column name against `/api/views/<id>.json` once in P1.5. The
 - `piers.overpassql`: `man_made=pier` ways and relations.
 - `landuse.overpassql`: `leisure=park|golf_course`, `landuse=forest|grass|cemetery|industrial`, `natural=wood|scrub|beach|cliff|water`.
 - `landmarks.overpassql`: names in the phase 5 tiers (`building`, `man_made`, `leisure=stadium`, `tourism`), with `out geom tags`.
+- `landmarks-named.overpassql` (P5.1): fetched for the `landmarks` box only (`node tools/fetch-geodata.mjs --box landmarks --only osm --osm landmarks-named`): the modelled landmarks by exact name, Sutro Tower's relations, every `building:part` (OSM's 3D drawings), the bridges' supports, towers (`tower:type=bridge`), outlines and deck ways, baseball pitches, the buildings on Alcatraz and round the Painted Ladies, the Powell & Market turntable node; `(._; >>;)` and `out geom`, so building relations keep their parts. `tools/geo-landmarks.mjs` reads it (report: `docs/reports/landmarks.md`).
 - `rail.overpassql`: `railway=tram|light_rail|funicular|rail` ways, plus `route=tram|light_rail|trolleybus` relations; `trolley_wire=yes` ways. It ends `out geom` (P4.6), so the relations keep their members: the transit runs and stops are built from them.
 - `roads-tags.overpassql`: `highway=*` ways with `lanes|width|bridge|tunnel|layer|oneway` tags, used to enrich DataSF links.
 - `peaks.overpassql`: `natural=peak` with `ele`, used for terrain checks.

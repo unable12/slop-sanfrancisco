@@ -151,7 +151,54 @@ Special cases as above.
 | Large far landmarks cost fill rate with SSR/bloom | Exclude from SSR layers; check performance at the Crissy Field vantage |
 | Copyright of reference imagery | Reference only, never embed; models are original geometry |
 
+## Gate (P5)
+PLAN.md §5: "Tier 1 landmarks present; gallery", with the tasks' acceptance checks.
+- [x] P5.1: every landmark in the list resolves to one site on land; unresolved names logged. (`tests/landmarks-data.test.mjs`:
+      22/22 sites, ground from the 1 m DEM within 3 m of OSM's `ele` where tagged; `docs/reports/landmarks.md`. None
+      unresolved.)
+- [x] P5.2: bridge shots from Crissy Field, the helicopter over the bridge and Twin Peaks (silhouette).
+      (`docs/review/p5/`: `gg-crissy`, `gg-heli`, `gg-from-marina`, `baybridge-*`; from Twin Peaks the default haze
+      hides the bridge, so no shot from there until phase 6's fog work; spans check against the data:
+      1,280 m Golden Gate main span, 704 m Bay Bridge spans, in `tests/landmarks-data.test.mjs`.)
+- [x] P5.3: all eight Tier 1 buildings on their sites with three shots each, logged in `docs/landmarks/INDEX.md`.
+- [x] P5.4/P5.5: Tier 2 status per item (below and in `docs/landmarks/INDEX.md`); Lombard Street's paving, beds and
+      stairs; the Painted Ladies.
+- [x] P5.6: teleports still face their landmarks (`tests/teleports.test.cjs`); every landmark and bridge collider has
+      `minY`/`maxY` and an OBB (`tests/landmarks-runtime.test.cjs`), and the controllers stop a ground arrival on Salesforce
+      Tower and let a helicopter over its crown (`tests/controllers.test.cjs`); triangle totals logged (below); gallery.
+- [x] Budgets met; tests green. (Two runs per bench: street 172, 172; car 154, 147; heli 145, 137; hill 125, 127;
+      russian-hill-view 116, 127 fps; live heap ≤ 691 MB; ready ≤ 7.0 s; 0 errors. Tests 144/144.)
+- [x] Logs and handover. (`docs/perf-log.md`, `PLAN.md` §10 P5-1 … P5-6 and §11, `docs/handover.md`.)
+
+## Results (2026-10-22, one session)
+
+- **P5.1** `tools/queries/landmarks-named.overpassql` over a new `landmarks` box (SF and both bridges end to end) and
+  `tools/geo-landmarks.mjs`: 22 sites (`SITES`) with `base`/`groundTop` from the 1 m DEM, `topH`, `kind`, `slug`,
+  OSM building parts, the ballpark's field, OSM buildings on Alcatraz and round the Painted Ladies, Alcatraz's 4 m DEM
+  patch; `GEO.bridges` (the Golden Gate's two towers in 19 parts each, anchorages, pylons, deck ways; the Bay Bridge's
+  five towers, centre anchorage, supports, deck ways). The interim region ground (PLAN P5-1, `data/terrain-region.bin`).
+  Generated masses typed `landmark` are left out under modelled outlines (`buildings.js`, P5-3). The x54 DEM tiles
+  were fetched (289 MB, data/raw). The core's terrain and buildings binaries are byte-identical to P4's.
+- **P5.2** `js/sf-bridges.js`: the Golden Gate (OSM towers, deck 75 m over the water, 27 m wide, cables over the leg
+  tops, suspenders, lamps) and the Bay Bridge (four cross-braced towers, the centre anchorage, two double-deck
+  suspension spans, the island portal, the east span's tower and decks to Oakland). The Bay Bridge carries the I-80
+  freeway (upper westbound, lower eastbound) with its highway traffic (P5-4). Detail hidden beyond 3 km (P5-5).
+- **P5.3** Tier 1 in `js/landmarks.js`: Transamerica, Salesforce Tower, the Ferry Building, Coit Tower, City Hall,
+  Sutro Tower, the Palace of Fine Arts, Oracle Park (P5-2: OSM 3D parts where drawn, sourced hand models otherwise).
+- **P5.4** Tier 2: Grace Cathedral, Chase Center, the Conservatory of Flowers, de Young, Fort Point, Alcatraz, Mission
+  Dolores (mission and basilica), Salesforce Park on the Transit Center, the Ghirardelli sign, the Painted Ladies.
+  Skipped: Pier 39 (no heights in OSM or the sources), the painted staircases; Embarcadero Center and 555 California
+  stay the generated towers (P5-6).
+- **P5.5** Lombard Street: brick paving along the switchbacks the traffic drives, terraced flower beds, steps down both
+  sidewalks; the top teleport (P3.5) stays. The Painted Ladies from OSM's houses (Alamo Square's park is not modelled).
+  The Powell & Market turntable as a static platform (cars turning on it not done).
+- **P5.6** Triangles and draws per model (`window.NYC.landmarkStats`, `bridgeStats`): bay-bridge 53k/6, golden-gate 37k/6,
+  palace-of-fine-arts 15k/2, lombard 12k/3, city-hall 4.7k/5, salesforce-park 4.5k/3, ferry-building 3.7k/6, oracle-park
+  2.7k/10, conservatory 2.5k/2, the rest under 1.3k each: ~138k triangles and 77 draws in all, no outlier against the
+  2% budget (bench fps unchanged from P4 within the noise). Tests 136 → 144: `landmarks-data` (3), `landmarks-runtime`
+  (4), a controllers case (the boot test counts 32 scripts).
+
 ## Handoff checklist
-- [ ] Tier 1 complete and logged with shots
-- [ ] Tier 2 status per item
-- [ ] Perf log, progress log, decision log
+- [x] Tier 1 complete and logged with shots (`docs/landmarks/INDEX.md`, `docs/review/p5/`)
+- [x] Tier 2 status per item (above, `docs/landmarks/INDEX.md`)
+- [x] Perf log, progress log, decision log

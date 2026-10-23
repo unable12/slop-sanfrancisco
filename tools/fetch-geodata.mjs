@@ -1,5 +1,5 @@
 // tools/fetch-geodata.mjs — downloads every raw input of the SF pipeline for a named box into data/raw/
-// usage: node tools/fetch-geodata.mjs --box slice [--only datasf,osm,dem] [--force]
+// usage: node tools/fetch-geodata.mjs --box slice [--only datasf,osm,dem] [--osm coast,piers,...] [--force]
 //        node tools/fetch-geodata.mjs --verify            re-hash every file in the manifest
 // Sources (see docs/data-sources.md): DataSF (Socrata SoQL, paginated), OpenStreetMap (Overpass, via tools/overpass.sh),
 // USGS 1 m DEM (TNM API). data/raw/MANIFEST.json records url, query hash, size, sha256, rows & license per file; a file
@@ -56,7 +56,7 @@ const DATASF = [
   ['gtr9-ntp6', 'parks', 'shape', ''],
   ['5kya-mfst', 'tall-buildings', 'polygon', '']
 ];
-const OSM = ['coast', 'piers', 'landuse', 'landmarks', 'rail', 'roads-tags', 'peaks'];
+const OSM = opt('osm', 'coast,piers,landuse,landmarks,rail,roads-tags,peaks').split(','); // landmarks-named: --box landmarks only (P5.1)
 
 function record(rel, entry) {
   const f = path.join(RAW, rel);

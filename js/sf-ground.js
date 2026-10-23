@@ -49,6 +49,80 @@ function drapedMesh(out, mat, name) {
   return mesh;
 }
 
+// Interim ground outside the core (PLAN P5-1): the 16 m DEM grid (data/terrain-region.bin) as 2 km chunks, so the
+// landmarks beyond the core (Sutro Tower, the Palace of Fine Arts, the Golden Gate's south end) stand on their real
+// hills until phase 6's region terrain. Bare ground, coloured by slope; quads all on the water or all inside the core's
+// own terrain are skipped, vertices on the water drop 4 m under it (the seawall rule, P2-2) and those under the core's
+// terrain 1.5 m (no z-fighting where the two overlap). Receives shadows, casts none
+function buildRegionGround(region) {
+  const group = new THREE.Group();
+  group.name = 'SFRegionGround';
+  // finer DEM patches over some sites (GEO.landmarks[...].detail: Alcatraz's cliffs), checked before the region's
+  const details = Object.values(window.NYC.GEO.landmarks).filter((s) => s.detail).map((s) => {
+    const d = s.detail, h = new Float32Array(d.h.length);
+    for (let k = 0; k < h.length; k++) h[k] = d.h[k] / 10;
+    const patch = { x0: d.x0, z0: d.z0, step: d.step, nx: d.nx, nz: d.nz, h, rect: true };
+    Terrain.patches.unshift(patch);
+    return patch;
+  });
+  const inDetail = (x, z) => details.some((d) => x > d.x0 + region.step && z > d.z0 + region.step && x < d.x0 + (d.nx - 1) * d.step - region.step && z < d.z0 + (d.nz - 1) * d.step - region.step);
+  for (const d of details) addGroundMesh(group, d, () => false, null);
+  addGroundMesh(group, region, inDetail, details.length ? (x, z) => details.some((d) => x >= d.x0 && z >= d.z0 && x <= d.x0 + (d.nx - 1) * d.step && z <= d.z0 + (d.nz - 1) * d.step) : null);
+  return group;
+}
+// A ground patch as 2 km chunks (CH cells): `skip(x, z)` cells (all four corners) are left out, `under(x, z)` vertices
+// sit 0.5 m low (under a finer patch's edge)
+function addGroundMesh(group, p, skip, under) {
+  const mat = new THREE.MeshStandardNodeMaterial({ vertexColors: true, roughness: 0.96, metalness: 0 });
+  const water = Terrain.waterLevel;
+  const cx0 = Terrain.originX + Terrain.cell, cz0 = Terrain.originZ + Terrain.cell;
+  const cx1 = Terrain.originX + (Terrain.w - 2) * Terrain.cell, cz1 = Terrain.originZ + (Terrain.h - 2) * Terrain.cell;
+  const inCore = (x, z) => x > cx0 && x < cx1 && z > cz0 && z < cz1;
+  const lowland = new THREE.Color(0x6f6c56), upland = new THREE.Color(0x5e6a45), rock = new THREE.Color(0x6e6558), c = new THREE.Color();
+  const CH = 128;
+  for (let cj = 0; cj < p.nz - 1; cj += CH) {
+    for (let ci = 0; ci < p.nx - 1; ci += CH) {
+      const nx = Math.min(CH, p.nx - 1 - ci) + 1, nz = Math.min(CH, p.nz - 1 - cj) + 1;
+      const pos = new Float32Array(nx * nz * 3), col = new Float32Array(nx * nz * 3);
+      const wet = new Uint8Array(nx * nz), core = new Uint8Array(nx * nz);
+      for (let j = 0; j < nz; j++) {
+        for (let i = 0; i < nx; i++) {
+          const gi = ci + i, gj = cj + j, k = j * nx + i, y = p.h[gj * p.nx + gi];
+          const x = p.x0 + gi * p.step, z = p.z0 + gj * p.step;
+          wet[k] = y <= water + 0.05 ? 1 : 0;
+          core[k] = inCore(x, z) || skip(x, z) ? 1 : 0;
+          pos[k * 3] = x; pos[k * 3 + 1] = wet[k] ? water - 4 : inCore(x, z) ? y - 1.5 : under && under(x, z) ? y - 0.5 : y; pos[k * 3 + 2] = z;
+          const gx = p.h[gj * p.nx + Math.min(p.nx - 1, gi + 1)] - p.h[gj * p.nx + Math.max(0, gi - 1)];
+          const gz = p.h[Math.min(p.nz - 1, gj + 1) * p.nx + gi] - p.h[Math.max(0, gj - 1) * p.nx + gi];
+          const slope = Math.hypot(gx, gz) / (2 * p.step);
+          const n = (Math.sin(x * 0.0131 + z * 0.0097) + Math.sin(x * 0.0043 - z * 0.0061)) * 0.25 + 0.5;
+          c.copy(lowland).lerp(upland, Math.min(1, Math.max(0, (y - 40) / 120)) * 0.7 + n * 0.3).lerp(rock, Math.min(1, Math.max(0, (slope - 0.35) * 2.5)));
+          col[k * 3] = c.r; col[k * 3 + 1] = c.g; col[k * 3 + 2] = c.b;
+        }
+      }
+      const idx = [];
+      for (let j = 0; j + 1 < nz; j++) {
+        for (let i = 0; i + 1 < nx; i++) {
+          const k = j * nx + i, q = [k, k + 1, k + nx, k + nx + 1];
+          if (q.every((v) => wet[v]) || q.every((v) => core[v])) continue;
+          idx.push(k, k + nx, k + 1, k + 1, k + nx, k + nx + 1);
+        }
+      }
+      if (!idx.length) continue;
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      geo.setIndex(idx);
+      geo.computeVertexNormals();
+      geo.computeBoundingSphere();
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.name = 'SFRegionGroundChunk';
+      mesh.receiveShadow = true;
+      group.add(mesh);
+    }
+  }
+}
+
 function buildSFGround(scene) {
   const group = new THREE.Group();
   group.name = 'SFGround';
@@ -102,6 +176,8 @@ function buildSFGround(scene) {
   if (piers.length) group.add(merged(piers, deck, 'SFPiers', { cast: true }));
 
   scene.add(group);
+  // ?region=0: without the interim region ground (A/B for the perf log)
+  if (window.NYC.DATA && window.NYC.DATA.region && new URLSearchParams(location.search).get('region') !== '0') scene.add(buildRegionGround(window.NYC.DATA.region));
   console.info(`[ground] ${BLOCKS.length} curb islands (${cells.size} cells, ${islandTris} triangles), ${piers.length} piers (box ${GEO.box.name})`);
   return { group, terrain, sidewalks, footprints: [], colliders: [], highwayLanes: [] };
 }

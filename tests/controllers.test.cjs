@@ -366,6 +366,21 @@ test('player clearance respects altitude and permits a ground arrival under an a
   assert.notDeepEqual({ ...controller.teleportActiveTo(0, 0) }, { x: 0, z: 0 }, 'a helicopter parked at street level must be avoided');
 });
 
+// P5.6: the real landmark colliders (OBBs with minY / maxY, tests/helpers/landmarks-build.cjs): Salesforce Tower blocks
+// a ground arrival on its site, and a helicopter over its 326 m top may stay there
+test('landmark colliders block a ground arrival and let a helicopter hover over the top', { skip: !require('./helpers/landmarks-build.cjs').available && 'no data' }, () => {
+  const { buildLandmarksHeadless } = require('./helpers/landmarks-build.cjs');
+  const { landmarks, NYC } = buildLandmarksHeadless();
+  const s = NYC.LANDMARK_SITES['Salesforce Tower'];
+  const shore = () => ({ westX: -5000, eastX: 5000 });
+  const { controller } = teleportHarness('person', landmarks.colliders, shore);
+  controller.getGroundHeight = (x, z) => NYC.Terrain.groundAt(x, z);
+  assert.notDeepEqual({ ...controller.teleportActiveTo(s.x, s.z) }, { x: s.x, z: s.z }, 'pushed off the tower');
+  const heli = teleportHarness('helicopter', landmarks.colliders, shore);
+  heli.ent.position.y = s.base + s.topH + 10;
+  assert.deepEqual({ ...heli.controller.teleportActiveTo(s.x, s.z) }, { x: s.x, z: s.z }, 'above the crown');
+});
+
 // P2.6: a stub terrain rising 30% to the north (-z): ground = 0.3 * -z
 function slopeHarness() {
   const ground = (x, z) => -0.3 * z;

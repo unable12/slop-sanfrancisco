@@ -1,72 +1,64 @@
-# Handover (2026-10-22, end of phase 4)
+# Handover (2026-10-22, end of phase 5)
 
 ## State
 
-**Phase 4 is complete; the gate passed** (`docs/phases/phase-4-sf-look.md`, Gate and Results).
-- Tests: 136/136 (`node --test tests/*.test.cjs tests/*.test.mjs`). New: `buildings-runtime` (4), `transit` (1), and a
-  storey-height case in `facade-base`.
-- Probe benches (two runs each): street 161–169, car 152, heli 137–139, hill 123–127, russian-hill-view 127 fps; live
-  heap ≤ 587 MB (≤ 753 MB read without a GC); ready ≤ 5.9 s; 0 console errors.
-- Gallery: `docs/review/p4/index.md` (with a self-review). Perf: `docs/perf-log.md`. Decisions P4-1 … P4-7 in
-  `PLAN.md` §10.
+**Phase 5 is complete; the gate passed** (`docs/phases/phase-5-landmarks.md`, Gate and Results).
+- Tests: 144/144 (`node --test tests/*.test.cjs tests/*.test.mjs`). New: `landmarks-data` (3), `landmarks-runtime` (4,
+  with the shared headless build `tests/helpers/landmarks-build.cjs`), a landmark-collider case in `controllers`; the
+  boot test counts 32 scripts.
+- Probe benches (two runs each): street 172/172, car 154/147, heli 145/137, hill 125/127, russian-hill-view 116/127 fps;
+  live heap ≤ 691 MB; ready ≤ 7.0 s; 0 errors. Level with P4 within the noise.
+- Gallery: `docs/review/p5/index.md` (43 shots, self-review). Landmark notes with sources and model notes:
+  `docs/landmarks/*.md`, index `docs/landmarks/INDEX.md`. Perf: `docs/perf-log.md`. Decisions P5-1 … P5-6 in `PLAN.md` §10.
 
-**Commits.** Kamil commits (K1). Nothing of phase 4 is committed yet: **one ready-to-run command** at the end of
-`docs/commits.md`. The P4.1–P4.3 and P4.1–P4.5 batches above it are superseded.
+**Commits.** Kamil commits (K1). Phase 4 is committed (9cf1eda). Nothing of phase 5 is committed yet: **one
+ready-to-run command** at the end of `docs/commits.md`.
 
-## What the SF look added
+## What phase 5 added
 
-- **Data.** `data/buildings-core.bin` version 3 carries the P4.1 class fields (`docs/formats.md`). The rules are in
-  `tools/building-rules.json`, the report in `docs/reports/building-types-core.md`.
-- **`GEO`** (`js/sf-geodata.js`) adds `trolley`, `muniStops`, `bikeways`, `trees` and `transit`. The tree classes are
-  in `tools/tree-classes.json`.
-- **`js/sf-style.js`:** palettes and surfaces.
-- **`js/sf-buildings.js`:** fronts (bays, garages, stoops, gables), warehouse doors and docks, civic colonnades, crowns
-  and spires.
-- **`js/sf-transit.js`:** streetcars, Muni Metro and cable cars.
-- **`js/sf-street-details.js`:** Muni stops and shelters, trolley wires, parking meters, street trees.
-- **`tsl-materials.js`:** the pre-war material's `paint` and `muntins` modes, and `boxBase` as vec3 (storey height).
-- **Fleet (`actor-models.js`, `traffic.js`, `controllers.js`):** a van body, the black-and-white cruiser, white
-  plates and Muni's silver and red.
-- **Probe:** `heapLiveMB` (forced GC) and the `[details]`, `[buildings]` and `[paint]` lines.
-- **Overpass:** `tools/queries/rail.overpassql` ends `out geom`, so the route relations keep their members. The rail
-  ways came back unchanged.
+- **Data.** `tools/geo-landmarks.mjs` (sites, DEM ground, OSM 3D parts, bridges, region ground),
+  `tools/queries/landmarks-named.overpassql` over a new `landmarks` box (`tools/boxes.json`), `--osm` option in
+  `tools/fetch-geodata.mjs`. `GEO.landmarks` gains `base`, `groundTop`, `topH`, `slug`, `tier`, `parts`, `field`,
+  `buildings`, `detail`; `GEO.bridges`; `GEO.data.region` → `data/terrain-region.bin` (`docs/formats.md`). The x54 DEM
+  tiles are in `data/raw/dem` (289 MB). The core's terrain and buildings binaries are unchanged (`geo-terrain.mjs` now
+  lists only the tiles a box reads).
+- **Runtime.** `js/landmarks.js` (NYC content replaced: part builder, `fitToSite` without scaling, OSM part renderer with
+  dome/pyramidal/gabled roofs, 22 models, Lombard); `js/sf-bridges.js` (both bridges, `bridgeDeckAt`, far detail LOD);
+  `js/terrain.js` patches (`addPatch`, `patchesEnabled`); `js/sf-ground.js` region ground (and `?region=0`);
+  `js/data-loader.js` loads the region; `js/buildings.js` leaves generated masses under modelled outlines;
+  `js/grade-separation.js` lays the I-80 deck on the Bay Bridge; `js/main.js` builds the bridges and switches the
+  patches off while the street network is built.
 
-## Next session: start phase 5 (`docs/phases/phase-5-landmarks.md`)
+## Next session: start phase 6 (`docs/phases/phase-6-region-atmosphere.md`)
 
-1. Read `docs/commits.md`: if the phase 4 command is still pending, leave it; don't redo the work.
-2. Start the dev server in the background (`node tools/serve.mjs 8080`); probe with `node tools/dev/probe.mjs`. Read
-   heap budgets from `heapLiveMB`.
-3. The landmark footprints are already typed `landmark` (`tools/building-rules.json` `landmarks`: Transamerica,
-   Salesforce Tower, Coit Tower, Grace Cathedral, City Hall, Oracle Park, the Ferry Building, Chase Center, Ghirardelli
-   Square). Until P5 replaces them they get the generic crown rule: City Hall's dome and the Ferry Building's clock
-   tower read as spires.
-4. P5 owns the Powell & Market cable-car turntable (`GEO.transit` runs start and end there) and Lombard's flower beds.
+1. Read `docs/commits.md`: if the phase 5 command is still pending, leave it; don't redo the work.
+2. P6.1 fetches the city box: the four SF DEM tiles are already in `data/raw/dem`. Replace the interim region ground
+   (PLAN P5-1): `data/terrain-region.bin`, `buildRegionGround` in `sf-ground.js`, the `Terrain` patches (keep
+   `patchesEnabled` off while the street network is built, or the streets past the core's terrain become land) and the
+   0 m sea threshold (`SEA_FLAT` in `geo-landmarks.mjs`: the bay is flattened at -0.4 m round Alcatraz). Keep Alcatraz's
+   4 m patch or fold it into the region tiers.
+3. The far landmarks (Sutro Tower, the Palace, Golden Gate Park's buildings, the Painted Ladies, Mission Dolores) then
+   get the region's buildings and parks round them; the Golden Gate's Marin end and the Bay Bridge's Oakland end get
+   their ground (the far tier).
+4. P6.3 fog: from Twin Peaks the Golden Gate is lost in the default haze (7.5 km); the marine layer should let the
+   towers stand out of it.
 
 ## Open questions / risks
 
-- **Frame time is up about 50% since P3** (street 244 → 161–169 fps, heli 204 → 137–139). Most of it is the 22,886
-  street trees (A/B in `docs/perf-log.md`). The heli bench's p95 is 22.8 ms (P3: 7.2), from the tree field re-uploading
-  its instance buffers as the camera flies; its JS takes about 1 ms, so the cost is on the GPU side. The re-sort step
-  is now 10 m, or a fifth of the height above ground (`trees.js` `RELEVEL_STEP`), which fixed the street and car p95.
-  Still inside the budgets (≥ 75 / ≥ 60), but P6 adds the whole city. Next candidates: upload only the changed
-  levels' ranges, drop far tree shadows, fewer bay boxes far away.
-- **Rail vehicles are invisible to the traffic**, so cars drive through streetcars on Market St and the Embarcadero.
-  Registering them as obstacles in `traffic.js` (leaders on shared lanes) is the fix.
-- **Curb gaps (SoMa, Mission Bay)** are still open from P3. 18% of street trees are left out there, and buildings
-  stand on asphalt. Stairs drawn as streets and Union Square's lawn (the ground mask paves it; the park lawn mesh over
-  it still shows) are also still open. None was a P4 task.
-- **Estimates in the look, all labelled:** the podium height (4 storeys), crowns (spire vs mast), era by type, residential
-  floor area (900 sq ft per unit), the SFPD livery (unverified) and the F-line liveries (generic).
-- **Bench noise:** identical runs differ by up to ±20% on this machine, so compare medians of two runs or more.
-- `docs/data-sources.md` still has the USGS 3DEP license row as "confirm on the product page" (from P1).
+- **Estimates in the models**, all labelled in `docs/landmarks/*.md`: the Bay Bridge's deck heights and truss (only the
+  67 m clearance and tower heights are sourced), the Golden Gate's deck depth, Salesforce Tower's taper and corner
+  radius, Transamerica's base, Oracle Park's stands and light towers, the turntable's diameter, Lombard's beds and
+  stairs, roofs and colours where no source gives them.
+- **The Bay Bridge approach** climbs at 4.5% to the deck from up to 900 m inland: ramps meeting I-80 there are raised
+  with it (junction heights). Highway traffic drives it; check it in a drive-through if anything looks off.
+- **Region ground cost** is within the bench noise; it adds ~1M triangles and ~35 MB live heap. P6's full region adds
+  177k buildings on top: budget it there.
+- **Still open from P4:** rail vehicles invisible to traffic, curb gaps in SoMa/Mission Bay, the heli bench's p95 from
+  tree uploads (23 ms), the USGS license row in `docs/data-sources.md`.
+- Not done: cars turning on the turntable; Pier 39; the Palace's lagoon and exhibition hall; Alamo Square's park.
 
 ## Decisions made this phase
 
-P4-1 … P4-7 in `PLAN.md` §10:
-- the building rule table and its deviations from the phase file;
-- per-instance paint and storey height;
-- podium and crown estimates;
-- street furniture sources and placement;
-- street-tree classes and snapping;
-- transit from the OSM route relations, and the fleet;
-- the live-heap metric and the bench spread.
+P5-1 … P5-6 in `PLAN.md` §10: the interim region ground; landmarks from OSM's 3D parts or sourced hand models, placed
+without scaling; masses left out only under modelled outlines; the Bay Bridge driven by the highway traffic (today's
+east span, not the demolished cantilever); bridge detail hidden beyond 3 km; Tier 2/3 status.

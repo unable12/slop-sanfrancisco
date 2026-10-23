@@ -28,6 +28,22 @@ All binary outputs of the pipeline use one container, written by `writeBin` and 
 
 Samples are point values at those positions; interpolate bilinearly. Water cells hold exactly `waterLevel` (within quantisation).
 
+### `data/terrain-region.bin` (P5.1, PLAN P5-1)
+The same format over the `landmarks` box at `cell` 16 m: the DEM's 8 m overview (image 3 of each `CA_SanFrancisco_B23`
+tile) sampled bilinearly; off the tiles, nodata or at/under 0 m NAVD88 (the bay, hydro-flattened at different levels):
+`waterLevel`. `box` is `landmarks`; `source` names the tiles. Loaded by `js/data-loader.js` as a `Terrain` patch
+(`heightAt` outside the core's data) and drawn by `js/sf-ground.js` as interim ground until phase 6.
+
+## `js/sf-geodata.js` landmark fields (P5.1)
+`GEO.landmarks[name]` keeps NYC's `{ x, z, w, d, h, levels, area, ring, kind }`; the modelled sites
+(`tools/geo-landmarks.mjs` `SITES`) add `base` and `groundTop` (lowest and highest 1 m DEM ground under the outline,
+m NAVD88), `topH` (OSM `height`), `ele` (OSM), `slug`, `tier`, `src` (`core`, `named` or `named point`), `inCore`, and
+where present `parts` (OSM building parts: `rings` (flat, first outer), `min`, `h`, `colour`, `roof`, `roofH`,
+`roofColour`, `desc`), `field` (a ballpark's pitch ring), `buildings` (OSM buildings on the site: `ring`, `h`, `colour`,
+`roof`, `name`) and `detail` (a finer DEM patch: `x0, z0, step, nx, nz, h` in decimetres). `GEO.bridges.goldenGate` and
+`.bayBridge`: `towers` (`c`, `top`, `parts`), `supports` (`c`, `ring`, `h`, `name`, `support`), `decks` (`layer`, `pts`);
+heights in metres over the water.
+
 ## `data/buildings-<box>.bin`: building footprints (`format: "sf-buildings"`, version 3)
 
 **Header fields:** `count`, `fields` (`base, roof, peak, ringStart, ringCount, theta, massStart, massCount, shops, type,

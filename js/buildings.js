@@ -2027,6 +2027,19 @@ function buildCityBlocks(scene, opts = {}) {
     const CROWN_MIN = 6;
     const hash = (a, b) => Math.abs(Math.sin(a * 12.9898 + b * 78.233) * 43758.5453) % 1;
 
+    // Footprints typed `landmark` under a modelled landmark (js/landmarks.js, built first) are left to the model (P5.1)
+    const covered = new Set();
+    const typeCol = header.fields.indexOf('type'), landmarkType = header.types.indexOf('landmark');
+    if (window.NYC.landmarkCovers && typeCol >= 0) {
+      for (let i = 0; i < header.count; i++) {
+        if (table[i * F + typeCol] !== landmarkType) continue;
+        const ringStart = table[i * F + 3], ringCount = table[i * F + 4];
+        let sx = 0, sz = 0;
+        for (let k = 0; k < ringCount; k++) { sx += verts[2 * (ringStart + k)]; sz += verts[2 * (ringStart + k) + 1]; }
+        if (window.NYC.landmarkCovers(sx / ringCount, sz / ringCount)) covered.add(i);
+      }
+    }
+
     // Every mass, and a grid over them for the party-wall and front tests
     const all = [];
     for (let i = 0; i < header.count; i++) {
@@ -2041,6 +2054,7 @@ function buildCityBlocks(scene, opts = {}) {
     const CELL = 32;
     const grid = new Map();
     for (const m of all) {
+      if (covered.has(m.i)) continue;
       const ex = Math.abs(m.cs) * m.w * 0.5 + Math.abs(m.sn) * m.d * 0.5;
       const ez = Math.abs(m.sn) * m.w * 0.5 + Math.abs(m.cs) * m.d * 0.5;
       for (let gx = Math.floor((m.cx - ex) / CELL); gx <= Math.floor((m.cx + ex) / CELL); gx++) {
@@ -2110,6 +2124,7 @@ function buildCityBlocks(scene, opts = {}) {
     const polyGeos = [];
     let massCount = 0;
     for (let i = 0; i < header.count; i++) {
+      if (covered.has(i)) { massCount += table[i * F + 7]; continue; } // massCount: the masses' index in `all`
       const rec = table.subarray(i * F, i * F + F);
       const [base, roof, , ringStart, ringCount, theta, start, count, shopsFlag] = rec;
       const type = typeName(rec[FI.type]);
@@ -2245,7 +2260,7 @@ function buildCityBlocks(scene, opts = {}) {
       mesh.receiveShadow = true;
       group.add(mesh);
     }
-    console.info(`[buildings] v1: ${header.count} footprints, ${massCount} masses, ${polyGeos.length} outlines`);
+    console.info(`[buildings] v1: ${header.count} footprints (${covered.size} left to landmark models), ${massCount} masses, ${polyGeos.length} outlines`);
   }
 
   if (sf) buildSFMasses();
