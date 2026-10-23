@@ -258,6 +258,50 @@ function carve(r, holes, axis = 'x') {
   return out.map(([u0, u1, v0, v1]) => (flip ? rect(v0, v1, u0, u1) : rect(u0, u1, v0, v1)));
 }
 
+// The player's colliders for a building drawn from its outline: strips OUTLINE_STRIP m deep across the outline, in the
+// building's frame (theta, the masses' OBB convention), each as long as the outline is there. The outline's bounding
+// box takes in the streets beside an L-shaped or slanted lot (Market St, the Embarcadero): it stays the road network's
+// obstacle only
+const OUTLINE_STRIP = 1.5;
+function outlineStrips(pts, theta, minY, maxY) {
+  const cs = Math.cos(theta), sn = Math.sin(theta);
+  const ox = pts[0].x, oz = pts[0].z;
+  const loc = pts.map((p) => [(p.x - ox) * cs - (p.z - oz) * sn, (p.x - ox) * sn + (p.z - oz) * cs]);
+  const zs = loc.map((p) => p[1]);
+  const z0 = Math.min(...zs), z1 = Math.max(...zs);
+  // the outline's spans along the line local z = v
+  const spans = (v) => {
+    const xs = [];
+    for (let i = 0, j = loc.length - 1; i < loc.length; j = i++) {
+      const [ax, az] = loc[i], [bx, bz] = loc[j];
+      if ((az > v) !== (bz > v)) xs.push(ax + ((v - az) * (bx - ax)) / (bz - az));
+    }
+    xs.sort((a, b) => a - b);
+    const out = [];
+    for (let k = 0; k + 1 < xs.length; k += 2) out.push([xs[k], xs[k + 1]]);
+    return out;
+  };
+  const strips = [];
+  for (let a = z0; a < z1 - 0.01; a += OUTLINE_STRIP) {
+    const b = Math.min(z1, a + OUTLINE_STRIP);
+    // the spans at the strip's two edges and its middle, overlapping ones merged
+    const all = [...spans(a + 0.01), ...spans((a + b) / 2), ...spans(b - 0.01)].sort((p, q) => p[0] - q[0]);
+    const merged = [];
+    for (const s of all) {
+      const last = merged[merged.length - 1];
+      if (last && s[0] <= last[1]) last[1] = Math.max(last[1], s[1]);
+      else merged.push([...s]);
+    }
+    for (const [x0, x1] of merged) {
+      const lx = (x0 + x1) / 2, lz = (a + b) / 2, hx = (x1 - x0) / 2, hz = (b - a) / 2;
+      const cx = ox + lx * cs + lz * sn, cz = oz - lx * sn + lz * cs;
+      const ex = Math.abs(cs) * hx + Math.abs(sn) * hz, ez = Math.abs(sn) * hx + Math.abs(cs) * hz;
+      strips.push({ minX: cx - ex, maxX: cx + ex, minZ: cz - ez, maxZ: cz + ez, minY, maxY, obb: { cx, cz, hx, hz, cs, sn } });
+    }
+  }
+  return strips;
+}
+
 // opts.sf: San Francisco's real footprints (FEATURES.buildings = 'v1', see buildSFMasses) instead of Manhattan's
 // generated blocks
 function buildCityBlocks(scene, opts = {}) {
@@ -2166,7 +2210,7 @@ function buildCityBlocks(scene, opts = {}) {
         ng.setAttribute('paintWall', new THREE.BufferAttribute(pw, 4));
         ng.setAttribute('paintTrim', new THREE.BufferAttribute(pt, 4));
         polyGeos.push(ng);
-        colliders.push({ minX, maxX, minZ, maxZ, minY: base, maxY: roof });
+        colliders.push({ minX, maxX, minZ, maxZ, minY: base, maxY: roof, parts: outlineStrips(pts, theta, base, roof) });
       }
       const cs = Math.cos(theta), sn = Math.sin(theta);
       let top = null;

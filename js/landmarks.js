@@ -798,9 +798,56 @@ function buildLandmarks(scene) {
   // DataSF footprints' lidar) from OSM's outline to its OSM height (30 m), the park on its roof: OSM's outline, a lawn
   // and trees (ESTIMATES: the park level at the OSM height, the white skin, tree count and size) =====
   const skinWhite = paintMat(0xe9ebe8, 0xcfd3d2, 3, 0.2, { floorHeight: 7.5, windowWidth: 1.4, windowRatioX: 0.6, windowRatioY: 0.75 });
+  // The streets that run under it (1st St, Fremont St) pass through openings TC_CLEAR m high, as wide as the roadway and
+  // TC_SIDEWALK m each side (ESTIMATES: OSM and DataSF give neither)
+  const TC_CLEAR = 9, TC_SIDEWALK = 3;
   model('Salesforce Transit Center', (P, s, f) => {
-    P.prism(skinWhite, localRing(f, s.ring), 0, s.topH || 30);
-    collide(0, 0, f.len, f.wid, 0, s.topH || 30);
+    const top = s.topH || 30;
+    const ring = localRing(f, s.ring);
+    const xs = ring.map((p) => p[0]), zs = ring.map((p) => p[1]);
+    const xMin = Math.min(...xs), xMax = Math.max(...xs), zMid = (Math.min(...zs) + Math.max(...zs)) / 2, wid = Math.max(...zs) - Math.min(...zs);
+    // drivable centreline links crossing the outline's long axis: [x0, x1, floor of the opening]
+    const RG = window.NYC.GEO.roadGraph;
+    const openings = [];
+    for (const [a, b, , w, , , inner, flags] of RG.links) {
+      if (flags & (1 | 4 | 8 | 16)) continue; // footways, private ways, freeways and ramps (road-network.js)
+      const pts = [[RG.nodes[2 * a], RG.nodes[2 * a + 1]]];
+      for (let k = 0; k < inner.length; k += 2) pts.push([inner[k], inner[k + 1]]);
+      pts.push([RG.nodes[2 * b], RG.nodes[2 * b + 1]]);
+      for (let k = 0; k + 1 < pts.length; k++) {
+        const [px, pz] = toLocal(f, ...pts[k]), [qx, qz] = toLocal(f, ...pts[k + 1]);
+        if ((pz > zMid) === (qz > zMid)) continue;
+        const x = px + ((zMid - pz) * (qx - px)) / (qz - pz);
+        if (x < xMin || x > xMax) continue;
+        const half = (w / 2 + TC_SIDEWALK) * Math.hypot(qx - px, qz - pz) / Math.abs(qz - pz); // wider where it crosses aslant
+        const [gx, gz] = toWorld(f, x, zMid);
+        openings.push([x - half, x + half, T.groundAt(gx, gz) - f.y + TC_CLEAR]);
+      }
+    }
+    openings.sort((p, q) => p[0] - q[0]);
+    // the outline cut to xa <= x <= xb (Sutherland-Hodgman, one side at a time)
+    const clip = (r, keep, cut) => {
+      const out = [];
+      for (let i = 0; i < r.length; i++) {
+        const p = r[i], q = r[(i + 1) % r.length];
+        if (keep(p)) out.push(p);
+        if (keep(p) !== keep(q)) out.push(cut(p, q));
+      }
+      return out;
+    };
+    const at = (x) => (p, q) => [x, p[1] + ((x - p[0]) * (q[1] - p[1])) / (q[0] - p[0])];
+    const piece = (xa, xb, y0) => {
+      if (xb - xa < 0.1) return;
+      P.prism(skinWhite, clip(clip(ring, (p) => p[0] >= xa, at(xa)), (p) => p[0] <= xb, at(xb)), y0, top);
+      collide((xa + xb) / 2, zMid, xb - xa, wid, y0, top);
+    };
+    let x = xMin;
+    for (const [x0, x1, y0] of openings) {
+      piece(x, Math.max(x, x0), 0);
+      piece(Math.max(x, x0), Math.min(xMax, x1), y0);
+      x = Math.max(x, Math.min(xMax, x1));
+    }
+    piece(x, xMax, 0);
     return { cover: false };
   });
   model('Salesforce Park', (P, s, f) => {

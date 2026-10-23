@@ -41,6 +41,12 @@ function buildGradeSeparation(scene, network) {
   const floors = []; // { kind, x0, z0, dx, dz, rx, rz, t0, t1, L, R, ys }
   const geo = { road: [], wall: [], ceiling: [], masonry: [], concrete: [], light: [], paint: [] };
   const ground = (x, z) => Terrain.groundAt(x, z);
+  // A surface street's roadway within r m of (x, z)
+  const onStreet = (x, z, r) => network.edges.some((e) => {
+    if (e.bore) return false;
+    const t = (x - e.x0) * e.dx + (z - e.z0) * e.dz;
+    return t > -r && t < e.span + r && Math.abs((x - e.x0) * e.rx + (z - e.z0) * e.rz) < e.half + r;
+  });
 
   // A quad from four [x, y, z] corners (counter-clockwise seen from the side it faces)
   function quad(list, a, b, c, d) {
@@ -289,7 +295,17 @@ function buildGradeSeparation(scene, network) {
         if (sinceColumn >= COLUMN_STEP && Math.min(gp, gq) > 3.5) {
           sinceColumn = 0;
           const g = ground(q.x, q.z);
-          for (const o of width > 14 ? [-width / 4, width / 4] : [0]) {
+          // a column over a street under the deck moves across to the nearest place clear of its roadway, or is left out
+          const placed = [];
+          for (const o0 of width > 14 ? [-width / 4, width / 4] : [0]) {
+            let o = null;
+            for (let k = 0; o === null && k <= 4 * h; k++) {
+              const c = o0 + (k % 2 ? 1 : -1) * Math.ceil(k / 2) * 0.5;
+              const [x, , z] = at(q, c);
+              if (Math.abs(c) <= h - 0.8 && !onStreet(x, z, 0.8)) o = c;
+            }
+            if (o === null || placed.some((p) => Math.abs(p - o) < 2)) continue;
+            placed.push(o);
             const [cx, , cz] = at(q, o);
             box(geo.concrete, cx, cz, dx, dz, 1.6, 1.6, g - 0.5, q.y - DECK_T);
             collider(cx, cz, dx, dz, 1.6, 1.6, g - 1, q.y - DECK_T);

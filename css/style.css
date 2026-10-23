@@ -20,6 +20,7 @@
   /* Accents */
   --taxi: #ffc21a;
   --taxi-ink: #17140a;
+  --golden-gate: #c0482f; /* International Orange: the brand bullet and the loading bar */
   --sign-green: #0b6a46;
   --highway: #c08a3e;
   --ok: #5ee08f;
@@ -167,14 +168,57 @@ body::after {
 /* ------------------------------------------------------------------------------------------------------------------
    Loading screen
    ------------------------------------------------------------------------------------------------------------------ */
+/* San Francisco at dusk: a sky going from night to the last light over the Golden Gate, the city in silhouette, fog
+   drifting in from the ocean */
 #loading-overlay {
   position: fixed;
   inset: 0;
   z-index: 100;
   display: grid;
   place-items: center;
-  background: radial-gradient(120% 90% at 50% 38%, #1b1e24 0%, #0c0d10 55%, #060607 100%);
+  overflow: hidden;
+  background:
+    radial-gradient(70% 45% at 30% 78%, rgba(232, 112, 64, 0.38) 0%, rgba(232, 112, 64, 0) 70%),
+    linear-gradient(180deg, #070a14 0%, #121a30 42%, #2a2c45 64%, #6b4a4e 80%, #a8664e 92%);
   transition: opacity 0.6s ease, visibility 0.6s ease;
+}
+
+.loader-skyline {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 46vh;
+}
+.loader-skyline .far { fill: #1c2438; }
+.loader-skyline .water { fill: #0c1222; }
+.loader-skyline .bridge { fill: #11182a; }
+.loader-skyline .cable { fill: none; stroke: #11182a; stroke-width: 2.2; }
+.loader-skyline .near { fill: #0a0f1c; }
+
+.loader-fog {
+  position: absolute;
+  inset: auto 0 14vh 0;
+  height: 22vh;
+  pointer-events: none;
+}
+.loader-fog span {
+  position: absolute;
+  inset: 0 -30%;
+  background: radial-gradient(50% 50% at 50% 50%, rgba(214, 222, 236, 0.16) 0%, rgba(214, 222, 236, 0) 70%);
+  filter: blur(12px);
+  animation: fog-drift 26s ease-in-out infinite alternate;
+}
+.loader-fog span + span {
+  top: 30%;
+  animation-duration: 34s;
+  animation-direction: alternate-reverse;
+  opacity: 0.7;
+}
+@keyframes fog-drift {
+  from { transform: translateX(-12%); }
+  to { transform: translateX(12%); }
 }
 
 #loading-overlay.hidden {
@@ -184,10 +228,12 @@ body::after {
 }
 
 .loader {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
+  margin-bottom: 18vh;
   animation: rise-in 0.8s var(--ease-out) both;
 }
 
@@ -196,13 +242,24 @@ body::after {
   height: 56px;
   margin-bottom: 22px;
   font-size: 21px;
+  box-shadow: 0 0 0 6px rgba(192, 72, 47, 0.18), 0 10px 30px -8px rgba(192, 72, 47, 0.7);
 }
 
 .loader-title {
-  font-size: 34px;
-  font-weight: 650;
-  letter-spacing: -0.03em;
+  font-size: 40px;
+  font-weight: 680;
+  letter-spacing: -0.035em;
   line-height: 1.1;
+  text-shadow: 0 2px 24px rgba(0, 0, 0, 0.45);
+}
+
+.loader-tagline {
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 560;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--text-2);
 }
 
 .loader-track {
@@ -219,7 +276,7 @@ body::after {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background: var(--taxi);
+  background: var(--golden-gate);
   transform-origin: left center;
   transform: scaleX(0);
   transition: transform 0.3s ease;
@@ -337,8 +394,8 @@ body.hud-minimized .toolbar > :not(#btn-toggle-hud) {
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: var(--taxi);
-  color: var(--taxi-ink);
+  background: var(--golden-gate);
+  color: #fff7f2;
   font-weight: 800;
   font-size: 12.5px;
   letter-spacing: -0.02em;

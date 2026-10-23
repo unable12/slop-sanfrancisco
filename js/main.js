@@ -181,7 +181,8 @@ async function initApp() {
   markInit('roadPaint');
 
   // 4. Initialize Third-Person Controllers (Person, Car, Cyclist, Helicopter) & Multi-Camera System
-  const controllerManager = new ThirdPersonControllerManager(scene, [...allColliders, ...gradeSeparation.colliders]);
+  // (a building drawn from its outline collides by its outline's strips, buildings.js outlineStrips)
+  const controllerManager = new ThirdPersonControllerManager(scene, [...allColliders.flatMap((c) => c.parts || [c]), ...gradeSeparation.colliders]);
   const cameraSystem = new CameraSystem(renderer.domElement, controllerManager);
   const touchControls = new TouchControls(controllerManager);
   markInit('controllers');
@@ -260,12 +261,13 @@ async function initApp() {
   const elLocation = document.getElementById('hud-location');
   const elControlsHint = document.getElementById('hud-controls-hint');
 
-  // Keyboard guide for each mode: [keys, action]
+  // Keyboard guide for each mode: [keys, action] (the arrow keys work as W A S D, controllers.js bindKeyboard)
+  const WS = ['W ↑', 'S ↓'], AD = ['A ←', 'D →'];
   const controlHints = {
-    person: [[['W', 'S'], 'Walk'], [['A', 'D'], 'Turn'], [['Shift'], 'Sprint'], [['Space'], 'Jump'], [['Drag'], 'Orbit']],
-    car: [[['W', 'S'], 'Drive / Reverse'], [['A', 'D'], 'Steer'], [['Shift'], 'Boost'], [['Drag'], 'Orbit']],
-    cyclist: [[['W', 'S'], 'Pedal / Brake'], [['A', 'D'], 'Lean & Turn'], [['Shift'], 'Sprint'], [['Drag'], 'Orbit']],
-    helicopter: [[['W', 'S'], 'Pitch'], [['A', 'D'], 'Yaw'], [['Space', 'E'], 'Ascend'], [['Q', 'C'], 'Descend'], [['Shift'], 'Boost']]
+    person: [[WS, 'Walk'], [AD, 'Turn'], [['Shift'], 'Sprint'], [['Space'], 'Jump'], [['Drag'], 'Orbit']],
+    car: [[WS, 'Drive / Reverse'], [AD, 'Steer'], [['Shift'], 'Boost'], [['Drag'], 'Orbit']],
+    cyclist: [[WS, 'Pedal / Brake'], [AD, 'Lean & Turn'], [['Shift'], 'Sprint'], [['Drag'], 'Orbit']],
+    helicopter: [[WS, 'Pitch'], [AD, 'Yaw'], [['Space', 'E'], 'Ascend'], [['Q', 'C'], 'Descend'], [['Shift'], 'Boost']]
   };
   // Boosted top speeds in mph (controllers.js caps them at 8.2, 36, 19 & 52 m/s): full scale of the speed meter
   const topSpeedMph = { person: 18, car: 81, cyclist: 43, helicopter: 116 };

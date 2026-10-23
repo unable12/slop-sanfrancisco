@@ -15,3 +15,5 @@
 
 ## Model (P5)
 The Transit Center from OSM's outline to its OSM height (30 m; it postdates the DataSF lidar), a white skin; the park on its roof with a lawn and trees. **Estimates:** the park level at the OSM height, tree count and size.
+
+The streets that pass under it in OSM (1st St, Fremont St) go through openings 9 m high, as wide as the roadway plus 3 m of sidewalk each side (`js/landmarks.js` TC_CLEAR, TC_SIDEWALK). **Estimates:** both; neither OSM nor DataSF gives the clearance.
