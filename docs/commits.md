@@ -236,7 +236,7 @@ git add -- README.md LICENSE NOTICE.md PLAN.md docs/handover.md docs/commits.md 
 ```
 
 
-## 2026-10-23: README punctuation cleanup
+## 2026-10-23: README punctuation cleanup (committed by Kamil as 81aa46d)
 
 Removed both em dashes from the README, as requested. Documentation only; whitespace check passes.
 GitHub repository remains private at this check; an open-source launch tweet should wait until it is public.
@@ -244,3 +244,13 @@ GitHub repository remains private at this check; an open-source launch tweet sho
 ```bash
 git add -- README.md docs/commits.md && git commit -m "remove em dashes from the readme (docs)" -- README.md docs/commits.md
 ```
+
+
+## 2026-10-23: public playable demo release
+
+The user's explicit request to make the repository public and host the demo authorizes this session to
+commit/push the release, superseding the usual user-commit-only workflow for this publication task.
+Kamil committed the punctuation cleanup separately as `81aa46d` while release preparation was running.
+This release adds the live demo link, contribution guide, clean static packaging,
+artifact verification and a pinned official GitHub Pages workflow. No history rewrite or force push.
+This batch is executed by the release session; do not rerun older pending commands.

@@ -1,12 +1,13 @@
 # Handover — 2026-10-23, demo README and licensing ready
 
-## Next action
+## Current release task
 
-Kamil committed Phase 8/showcase/car work as `e17d6c8` and building/toolbar fixes as `2237c78`.
-The README/license documentation batch is now pending in `docs/commits.md`. No Git writes performed. Kamil now prioritizes finishing a polished demo. Defer tree trunks, pedestrian reactions and further impact
-feedback; do not start them automatically. The Phase 9 plan remains an optional backlog, not a demo release
-requirement. Next: commit the pending batch; if an interactive public demo is wanted, publish and check the
-hosted URL. Road holes are also explicitly deferred.
+Kamil explicitly requested public source and a hosted GitHub Pages demo, authorizing commit/push and repository
+visibility change for this release. This overrides the usual user-commit-only convention for this task only.
+Kamil committed README punctuation cleanup separately as `81aa46d`. Pages is configured via `.github/workflows/pages.yml`; the artifact
+is built from scratch and verified by `tools/check-static.mjs`. See `docs/deployment.md` and the newest release
+audit for evidence. Further tree/pedestrian realism work and road-hole repairs remain deferred. The priority
+is a playable demo and focused bug fixes, not finishing every historical phase checklist.
 
 ## What changed
 

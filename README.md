@@ -2,14 +2,16 @@
 
 **Made by [@unable0_](https://x.com/unable0_)**. A San Francisco adaptation of [mrdoob’s Slop New York](https://github.com/mrdoob/slop-newyork).
 
+**[play the demo →](https://unable12.github.io/slop-sanfrancisco/)** · [contribute](CONTRIBUTING.md)
+
 **Walk the hills. Drive Market Street. Fly above the skyline.**
 
 A data-built San Francisco running in your browser with [three.js](https://threejs.org/), WebGPU and TSL.
 Explore on foot, by bike, in a Waymo robotaxi or by helicopter. Or take the assisted ride from the Ferry Building to Nob Hill.
 
 **Status: playable demo.** The downtown ride, city exploration, sound and responsive controls are implemented.
-See [known limitations](#known-limitations) for the remaining simplifications. Run it locally using the steps below;
-there is currently no hosted demo URL configured for this repository.
+Play in a WebGPU-capable browser using the link above, or run it locally using the steps below.
+See [known limitations](#known-limitations) for the remaining simplifications.
 
 ## See it in motion
 
@@ -168,6 +170,9 @@ Serve the generated `dist/` directory over HTTPS or localhost on a static host. 
 `LICENSE` and `NOTICE.md` in the deployment. Three.js still loads from its pinned CDN. This command only
 packages the app; it does not publish it. The developer recording/review tools are excluded from the package.
 
+On this repository, pushes to `main` run the [Pages workflow](.github/workflows/pages.yml): focused checks,
+clean build, artifact verification and deployment to GitHub Pages. [Deployment notes](docs/deployment.md).
+
 ## Known limitations
 
 This is a stylized city demo, not a street-accurate simulator or a general autonomous-driving system. The assisted
@@ -191,6 +196,12 @@ The last complete building-collision regression passed **198/198 tests**, includ
 with zero recorded world contacts, traffic impacts or traffic overlaps. The subsequent toolbar pass passed its
 five boot/settings checks and browser layout checks at nine widths from 320 to 1440 px. These are recorded checks,
 not a guarantee for every GPU, browser or traffic scenario. Serial test scheduling reduces timing contention.
+
+## Contributing
+
+Contributions are welcome. Bug reports with a location, reproduction steps and screenshot are especially useful.
+For changes, fork the repository, keep the scope focused and include relevant tests or visual evidence.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, project structure and the review process.
 
 ## License and credits
 
