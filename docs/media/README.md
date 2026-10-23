@@ -37,7 +37,8 @@ bash tools/dev/export-showcase.sh /path/to/heli.webm helicopter-salesforce
 - The regional export excludes the core plus a 60 m margin. Neither count means all buildings are drawn
   simultaneously or that regional scenery has the core's collision/driving detail.
 
-The media and README edits remain uncommitted. No social post or GitHub publication was performed.
+The README, GIFs and showcase code were committed in `e17d6c8`. Full MP4 exports remain on the Desktop
+and in ignored `shots/showcase/`, intentionally outside Git. No social post or public demo deployment was performed.
 
 The Market Street GIF and MP4 were refreshed after the player Waymo detail pass. The latest Desktop
 exports use `slop-sf-waymo-market-detailed.mp4` and `waymo-market-detailed.gif`; the originals are retained.

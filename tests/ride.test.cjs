@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const {loadTraffic}=require('./helpers/traffic-harness.cjs');
 function setup(seed=8){
-  const h=loadTraffic({seed});for(const f of ['ride','controllers'])vm.runInContext(fs.readFileSync(`js/${f}.js`,'utf8'),h.context);
+  const h=loadTraffic({seed});for(const f of ['world-collision','ride','controllers'])vm.runInContext(fs.readFileSync(`js/${f}.js`,'utf8'),h.context);
   const route=h.NYC.planFirstRide(h.system.network),ride=new h.NYC.RobotaxiRide(route,h.system);
   const controller=Object.create(h.NYC.ThirdPersonControllerManager.prototype);
   const p=route.start,q=route.points[1];
@@ -58,7 +58,7 @@ for(const seed of [3,8,21])test(`assisted ride completes without contacts in the
 test('the full city collider set permits the whole ride through production car physics', {timeout:120000},()=>{
   const h=setup(),{buildRideWorld}=require('./helpers/ride-world.cjs');
   const {colliders,grade}=buildRideWorld(h.system.network);h.controller.colliders=colliders;h.NYC.GradeSeparation=grade;
-  const clear=p=>{const q={...p};h.controller.resolveHorizontalCollision(q,1.55,p.y+1);return Math.hypot(q.x-p.x,q.z-p.z)<.05;};
+  const clear=p=>h.controller.isWorldPositionClear(p,p.heading,'car',.15);
   const route=h.NYC.planFirstRide(h.system.network,clear),ride=new h.NYC.RobotaxiRide(route),car=h.car;
   car.position={x:route.start.x,y:route.start.y,z:route.start.z};car.heading=Math.atan2(route.points[1].x-route.start.x,route.points[1].z-route.start.z);car.rideMetrics={worldContacts:0,trafficContacts:0,trafficOverlaps:0};
   ride.start();ride.action(car);

@@ -3,7 +3,7 @@
 const N = window.NYC;
 const clamp = (x,a,b) => Math.max(a,Math.min(b,x));
 const angle = x => Math.atan2(Math.sin(x),Math.cos(x));
-function lanePoint(e,l,s) { return {x:e.sx+e.dx*s+e.rx*e.lanes[l],z:e.sz+e.dz*s+e.rz*e.lanes[l],y:N.edgeY(e,s,l)}; }
+function lanePoint(e,l,s) { return {x:e.sx+e.dx*s+e.rx*e.lanes[l],z:e.sz+e.dz*s+e.rz*e.lanes[l],y:N.edgeY(e,s,l),heading:Math.atan2(e.dx,e.dz)}; }
 function planFirstRide(net, clear = () => true) {
   const ferry=N.TELEPORT_LOCATIONS.ferry, hill=N.LANDMARK_SITES['Grace Cathedral'];
   function nearby(anchor,name) {
@@ -38,7 +38,7 @@ function planFirstRide(net, clear = () => true) {
     for(const move of cur.e.moves) {
       const l=move.out[cur.lane],e=move.to;if(l<0||l===undefined||move.turn==='U'||!laneClear(e,l))continue;
       const c=net.connector(cur.e,cur.lane,e,l),p={};let safe=true;
-      for(let s=0;s<=c.len;s+=2){net.curvePoint(c,s,p);p.y=N.curveY(c,s);if(!clear(p)){safe=false;break;}}
+      for(let s=0;s<=c.len;s+=2){net.curvePoint(c,s,p);p.y=N.curveY(c,s);p.heading=Math.atan2(p.dx,p.dz);if(!clear(p)){safe=false;break;}}
       if(!safe)continue;
       // Prefer the Sansome approach over the narrow, heavily queued Drumm corridor.
       const k=key(e,l),cost=cur.cost+cur.e.len*(cur.e.name==='CALIFORNIA ST'?1:cur.e.name==='DRUMM ST'?4:1.2)+c.len+(move.turn==='S'?0:8);

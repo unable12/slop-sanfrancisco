@@ -209,3 +209,25 @@ Actual WebGPU browser acceptance: 463.494 driving seconds, maximum deviation 4.8
 traffic impacts or overlaps. Normal traffic, High/midday, actual 984 × 853 preview. Sampled HUD readings
 85–120 fps; no percentile or GPU-cost inference. No console warnings/errors. Full-map pause held progress
 unchanged and resumed. Screenshots and console evidence: `docs/review/p8/`.
+
+
+## 2026-10-23 — P9.1 building collision CPU
+
+Reproduce with `node tools/dev/bench-collisions.cjs e17d6c8`. The script loads the baseline and current production
+controllers/building colliders in separate contexts and isolates mutable spatial-query stamps. It measures only
+resolver CPU accumulated per 60 Hz update, including new movement substeps. Real Market, Embarcadero, California,
+Washington and Sansome lane samples every 12 m: 1,962 positions; one warmup and three measured passes per speed,
+alternating baseline/current order. Current solid count 54,765 versus 62,650 before: exact polygons replace the
+old outline strips. No collider removal/bypass to clear the rides. Renderer, debug overlay and terrain settling
+are excluded. Timings are from Node on the current machine, not browser GPU/frame measurements.
+
+| Speed | Baseline p95 | Current p95 | Paired incremental p95 | Current max | Max substeps |
+|---|---:|---:|---:|---:|---:|
+| 11 m/s | 0.0070 ms | 0.0950 ms | +0.0909 ms | 41.0530 ms | 2 |
+| 36 m/s | 0.0078 ms | 0.1985 ms | +0.1939 ms | 41.0674 ms | 5 |
+
+Both incremental p95 values satisfy the proposed ≤1 ms nearby-collision budget. Rare maxima are retained;
+the measurement does not isolate their cause and is not a hard per-frame guarantee. Raw summary:
+`docs/reports/p9-building-collisions.json`. Full serial regression: 198/198 pass in 164.3 seconds, no retries or
+relaxed limits; all three full-city rides remain contact-free. Live review verified a 2 mm wall gap and a 1 m
+parallel move with zero correction. No console warnings/errors in that review; no fresh FPS/heap/startup claim.

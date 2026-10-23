@@ -1,0 +1,51 @@
+{
+  "baseline": "e17d6c8",
+  "method": "Node production resolver CPU per 60 Hz car frame; real colliders, five named roads; 1 warmup + 3 measured passes, alternating order; excludes renderer/terrain settle; includes collision substeps",
+  "sampleLocations": 1962,
+  "colliders": {
+    "before": 62650,
+    "after": 54765
+  },
+  "results": [
+    {
+      "speedMps": 11,
+      "frames": 5886,
+      "before": {
+        "medianMs": 0.0027,
+        "p95Ms": 0.007,
+        "maxMs": 0.2697
+      },
+      "after": {
+        "medianMs": 0.0616,
+        "p95Ms": 0.095,
+        "maxMs": 41.053
+      },
+      "pairedIncrement": {
+        "medianMs": 0.0586,
+        "p95Ms": 0.0909,
+        "maxMs": 41.0413
+      },
+      "maxSubsteps": 2
+    },
+    {
+      "speedMps": 36,
+      "frames": 5886,
+      "before": {
+        "medianMs": 0.0028,
+        "p95Ms": 0.0078,
+        "maxMs": 0.2302
+      },
+      "after": {
+        "medianMs": 0.1276,
+        "p95Ms": 0.1985,
+        "maxMs": 41.0674
+      },
+      "pairedIncrement": {
+        "medianMs": 0.1241,
+        "p95Ms": 0.1939,
+        "maxMs": 41.0563
+      },
+      "maxSubsteps": 5
+    }
+  ]
+}

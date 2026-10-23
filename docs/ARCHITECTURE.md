@@ -40,3 +40,13 @@ Signals, stop signs, pedestrians and downstream queues still apply. Map and UI r
 Audio has one click-activated context and bounded looping sources. Mode changes adjust gains/frequencies; ride cues
 create short-lived nodes that disconnect on completion. One shared mute state governs all movement modes, and
 pause/map/hidden-tab states suspend the context. No audio assets or external voice service are required.
+
+
+Static world contact lives in `js/world-collision.js`, a pure geometry module loaded before buildings/controllers.
+The spatial hash and collider bounds only gather candidates. Car contact uses one tapered convex footprint,
+full SAT for convex obstacles and the actual boundary of concave outlines; circle modes use nearest boundary
+segments. Irregular building colliders share their rendering footprint points. Existing minY/maxY filtering
+preserves tunnels and underpasses. The same geometry screens teleports and heading-aware ride clearance.
+Movement is subdivided by translation plus bumper rotation; the bounded solver removes inward velocity and
+retains tangent motion. `?debug=collisions` dynamically loads the separate visual review UI; normal gameplay
+never loads it. Collider shapes are cached by object identity, so static collider geometry must remain immutable.

@@ -266,12 +266,7 @@ class ThirdPersonControllerManager {
   findTeleportPosition(x, z, heading, altitude) {
     if (!Number.isFinite(x) || !Number.isFinite(z)) return null;
     const heli = this.activeMode === 'helicopter';
-    const car = this.activeMode === 'car';
-    const radius = heli ? 4.5 : this.activeMode === 'person' ? 0.48 : 0.65;
     const sinH = Math.sin(heading), cosH = Math.cos(heading);
-    const extX = (car ? Math.abs(cosH) * 0.86 + Math.abs(sinH) * 2.18 : radius) + 0.1;
-    const extZ = (car ? Math.abs(sinH) * 0.86 + Math.abs(cosH) * 2.18 : radius) + 0.1;
-    const reach = Math.max(extX, extZ);
     const bounds = heli && window.NYC.FLIGHT_BOUNDS || ISLAND_BOUNDS;
     const margin = heli && !window.NYC.FLIGHT_BOUNDS ? 6000 : 0;
     const entity = this.getActiveEntity();
@@ -308,18 +303,7 @@ class ThirdPersonControllerManager {
         const back = Math.max(0, Math.min(cameraBack, -dx * sinH - dz * cosH));
         if (Math.hypot(dx + sinH * back, dz + cosH * back) < other.radius + Math.max(body[entity.type][0], 0.5) + 0.1) return false;
       }
-      for (const c of this.nearColliders(p.x, p.z, reach)) {
-        if (y > c.maxY + 1.5 || y < (c.minY ?? -Infinity) - BELOW_COLLIDER) continue;
-        if (p.x + extX <= c.minX || p.x - extX >= c.maxX || p.z + extZ <= c.minZ || p.z - extZ >= c.maxZ) continue;
-        if (c.obb) {
-          const o = c.obb, dx = p.x - o.cx, dz = p.z - o.cz;
-          const ls = sinH * o.cs - cosH * o.sn, lc = sinH * o.sn + cosH * o.cs;
-          const ex = (car ? Math.abs(lc) * 0.86 + Math.abs(ls) * 2.18 : radius) + 0.1;
-          const ez = (car ? Math.abs(ls) * 0.86 + Math.abs(lc) * 2.18 : radius) + 0.1;
-          if (Math.abs(dx * o.cs - dz * o.sn) >= o.hx + ex || Math.abs(dx * o.sn + dz * o.cs) >= o.hz + ez) continue;
-        }
-        return false;
-      }
+      if (!this.isWorldPositionClear({x:p.x,z:p.z,y:baseY},heading,this.activeMode,.1)) return false;
       return true;
     };
     const origin = clampPoint(x, z);
@@ -825,6 +809,17 @@ class ThirdPersonControllerManager {
     return out;
   }
 
+  isWorldPositionClear(pos, heading=0, mode=this.activeMode, padding=0) {
+    const G=window.NYC.WorldCollision;
+    const shape=mode==='car'?G.carShape(pos,heading,padding):G.circleShape(pos,({person:.48,cyclist:.65,helicopter:4.5}[mode]||.48)+padding);
+    const y=pos.y+(mode==='helicopter'?0:1);
+    for(const c of this.nearColliders(pos.x,pos.z,shape.reach)){
+      if(y>c.maxY+1.5||y<(c.minY??-Infinity)-BELOW_COLLIDER)continue;
+      if(G.contact(shape,c))return false;
+    }
+    return true;
+  }
+
   resolveHorizontalCollision(pos, radius, yHeight = 1.0, carEntity = null) {
     // Ground modes stay in the detailed core; helicopters can explore the measured region.
     const heli = this.activeMode === 'helicopter';
@@ -862,121 +857,38 @@ class ThirdPersonControllerManager {
       }
     }
 
-    const sinH = carEntity ? Math.sin(carEntity.heading) : 0;
-    const cosH = carEntity ? Math.cos(carEntity.heading) : 1;
-    const extX = carEntity ? (Math.abs(cosH) * 0.86 + Math.abs(sinH) * 2.18) : radius;
-    const extZ = carEntity ? (Math.abs(sinH) * 0.86 + Math.abs(cosH) * 2.18) : radius;
-
-    const reach = Math.max(extX, extZ) + 6;
-    let gx = pos.x;
-    let gz = pos.z;
-    let near = this.nearColliders(gx, gz, reach);
-    for (let i = 0; i < near.length; i++) {
-      const c = near[i];
-      // above the roof, or far below the building's lowest ground (a tunnel under it)
-      if (yHeight > c.maxY + 1.5 || yHeight < (c.minY ?? -Infinity) - BELOW_COLLIDER) continue;
-
-      if (
-        pos.x + extX > c.minX &&
-        pos.x - extX < c.maxX &&
-        pos.z + extZ > c.minZ &&
-        pos.z - extZ < c.maxZ
-      ) {
-        let nx = 0;
-        let nz = 0;
-        if (c.obb) {
-          // Oriented box (buildings along a non-grid street; min/max are its world bounds): push out in its own frame
-          const o = c.obb;
-          const dx = pos.x - o.cx;
-          const dz = pos.z - o.cz;
-          const lx = dx * o.cs - dz * o.sn;
-          const lz = dx * o.sn + dz * o.cs;
-          const ls = sinH * o.cs - cosH * o.sn; // heading in the box's frame
-          const lc = sinH * o.sn + cosH * o.cs;
-          const ex = carEntity ? (Math.abs(lc) * 0.86 + Math.abs(ls) * 2.18) : radius;
-          const ez = carEntity ? (Math.abs(ls) * 0.86 + Math.abs(lc) * 2.18) : radius;
-          if (lx + ex <= -o.hx || lx - ex >= o.hx || lz + ez <= -o.hz || lz - ez >= o.hz) continue;
-          const oL = lx + ex + o.hx;
-          const oR = o.hx - (lx - ex);
-          const oT = lz + ez + o.hz;
-          const oB = o.hz - (lz - ez);
-          const m = Math.min(oL, oR, oT, oB);
-          let qx = lx;
-          let qz = lz;
-          let mx = 0;
-          let mz = 0;
-          if (m === oL) { qx = -o.hx - ex; mx = -1; }
-          else if (m === oR) { qx = o.hx + ex; mx = 1; }
-          else if (m === oT) { qz = -o.hz - ez; mz = -1; }
-          else { qz = o.hz + ez; mz = 1; }
-          pos.x = o.cx + qx * o.cs + qz * o.sn;
-          pos.z = o.cz - qx * o.sn + qz * o.cs;
-          nx = mx * o.cs + mz * o.sn;
-          nz = -mx * o.sn + mz * o.cs;
-        } else {
-          const overlapLeft = (pos.x + extX) - c.minX;
-          const overlapRight = c.maxX - (pos.x - extX);
-          const overlapTop = (pos.z + extZ) - c.minZ;
-          const overlapBottom = c.maxZ - (pos.z - extZ);
-
-          const minOverlap = Math.min(overlapLeft, overlapRight, overlapTop, overlapBottom);
-          if (minOverlap === overlapLeft) {
-            pos.x = c.minX - extX;
-            nx = -1;
-          } else if (minOverlap === overlapRight) {
-            pos.x = c.maxX + extX;
-            nx = 1;
-          } else if (minOverlap === overlapTop) {
-            pos.z = c.minZ - extZ;
-            nz = -1;
-          } else {
-            pos.z = c.maxZ + extZ;
-            nz = 1;
-          }
-        }
-
-        if (carEntity) {
-          const totalVx = sinH * carEntity.speed + (carEntity.vx || 0);
-          const totalVz = cosH * carEntity.speed + (carEntity.vz || 0);
-          const vn = -(totalVx * nx + totalVz * nz);
-          if (vn > 0.5) {
-            const headOn = Math.abs(sinH * nx + cosH * nz);
-            const sideDot = cosH * nx - sinH * nz;
-            carEntity.vx = (carEntity.vx || 0) + nx * vn * 0.42;
-            carEntity.vz = (carEntity.vz || 0) + nz * vn * 0.42;
-            if (headOn > 0.72) {
-              carEntity.speed = -carEntity.speed * 0.25;
-            } else {
-              carEntity.speed *= (1.0 - 0.62 * headOn);
-              carEntity.angularVel = (carEntity.angularVel || 0) + sideDot * (sinH * nx + cosH * nz >= 0 ? -1 : 1) * Math.min(3.2, vn * 0.22);
-            }
-            carEntity.pitchVel = (carEntity.pitchVel || 0) + (sinH * nx + cosH * nz) * Math.min(14.0, vn) * 0.16;
-            carEntity.rollVel = (carEntity.rollVel || 0) - sideDot * Math.min(14.0, vn) * 0.22;
-            carEntity.heaveVel = (carEntity.heaveVel || 0) + Math.min(1.4, vn * 0.11);
-            if (vn > 2.2) {
-              carEntity.lastCollisionSpark = {
-                x: pos.x - nx * extX * 0.92,
-                y: carEntity.position.y + 0.56,
-                z: pos.z - nz * extZ * 0.92,
-                nx,
-                nz,
-                speed: vn
-              };
+    const G=window.NYC.WorldCollision;
+    const sinH=carEntity?Math.sin(carEntity.heading):0,cosH=carEntity?Math.cos(carEntity.heading):1;
+    // Revisit intersecting walls at corners, but keep deep-spawn recovery bounded.
+    for(let pass=0;pass<4;pass++){
+      let shape=carEntity?G.carShape(pos,carEntity.heading):G.circleShape(pos,radius),moved=false;
+      const near=this.nearColliders(pos.x,pos.z,shape.reach+1);
+      for(const c of near){
+        if(yHeight>c.maxY+1.5||yHeight<(c.minY??-Infinity)-BELOW_COLLIDER)continue;
+        const hit=G.contact(shape,c);if(!hit)continue;
+        const {nx,nz,depth,point}=hit;
+        pos.x+=nx*(depth+G.SKIN);pos.z+=nz*(depth+G.SKIN);moved=true;
+        this.lastWorldContact={...point,nx,nz,depth,collider:c};
+        this.worldContactCount=(this.worldContactCount||0)+1;
+        if(carEntity){
+          const vx=sinH*carEntity.speed+(carEntity.vx||0),vz=cosH*carEntity.speed+(carEntity.vz||0);
+          const into=-(vx*nx+vz*nz);
+          if(into>0){
+            // Inelastic wall: remove inward velocity and retain the tangent, without reversing the car.
+            const tx=vx+nx*into,tz=vz+nz*into;
+            carEntity.speed=tx*sinH+tz*cosH;
+            carEntity.vx=tx-sinH*carEntity.speed;carEntity.vz=tz-cosH*carEntity.speed;
+            if(into>2.2&&!(carEntity.collisionCooldown>0)){
+              carEntity.pitchVel=(carEntity.pitchVel||0)+(sinH*nx+cosH*nz)*Math.min(10,into)*.08;
+              carEntity.rollVel=(carEntity.rollVel||0)-(cosH*nx-sinH*nz)*Math.min(10,into)*.1;
+              carEntity.lastCollisionSpark={x:point.x,y:carEntity.position.y+.56,z:point.z,nx,nz,speed:into};
+              carEntity.collisionCooldown=.18;
             }
           }
         }
-
-        // A push that carried it far from where the candidates were gathered (dropped inside a building): gather
-        // them again around where it is now, carrying on in the same order
-        if (Math.abs(pos.x - gx) > 5 || Math.abs(pos.z - gz) > 5) {
-          gx = pos.x;
-          gz = pos.z;
-          const order = c._order;
-          near = this.nearColliders(gx, gz, reach);
-          i = -1;
-          while (i + 1 < near.length && near[i + 1]._order <= order) i++;
-        }
+        shape=carEntity?G.carShape(pos,carEntity.heading):G.circleShape(pos,radius);
       }
+      if(!moved)break;
     }
   }
 
@@ -1098,6 +1010,8 @@ class ThirdPersonControllerManager {
   updateCar(dt) {
     const c = this.entities.car;
     const assist = this.carAssist;
+    const oldHeading=c.heading;
+    c.collisionCooldown=Math.max(0,(c.collisionCooldown||0)-dt);
     const maxSpeed = this.keys.boost ? 36.0 : 23.5;
     const accel = this.keys.boost ? 21.0 : 14.0;
 
@@ -1141,14 +1055,19 @@ class ThirdPersonControllerManager {
 
     const prevX = c.position.x;
     const prevZ = c.position.z;
-    c.position.x += (Math.sin(c.heading) * c.speed + c.vx) * dt;
-    c.position.z += (Math.cos(c.heading) * c.speed + c.vz) * dt;
-    c.vx *= tireGripDamp;
-    c.vz *= tireGripDamp;
-
-    const proposedX=c.position.x,proposedZ=c.position.z;
-    this.resolveHorizontalCollision(c.position, 1.35, c.position.y + 1.0, c);
-    if(c.rideMetrics && Math.hypot(c.position.x-proposedX,c.position.z-proposedZ)>.05)c.rideMetrics.worldContacts++;
+    const finalHeading=c.heading,headingStep=finalHeading-oldHeading;
+    const travel=Math.hypot(Math.sin(finalHeading)*c.speed+c.vx,Math.cos(finalHeading)*c.speed+c.vz)*dt;
+    // Bound both translation and the arc travelled by the bumper during a turn.
+    const steps=Math.max(1,Math.ceil((travel+Math.abs(headingStep)*window.NYC.WorldCollision.CAR_REACH)/.15));
+    const contacts=this.worldContactCount||0;
+    for(let step=1;step<=steps;step++){
+      c.heading=oldHeading+headingStep*step/steps;
+      c.position.x+=(Math.sin(c.heading)*c.speed+c.vx)*dt/steps;
+      c.position.z+=(Math.cos(c.heading)*c.speed+c.vz)*dt/steps;
+      this.resolveHorizontalCollision(c.position,window.NYC.WorldCollision.CAR_REACH,c.position.y+1,c);
+    }
+    c.vx*=tireGripDamp;c.vz*=tireGripDamp;
+    if(c.rideMetrics)c.rideMetrics.worldContacts+=(this.worldContactCount||0)-contacts;
     this.settleOnTerrain(c, false, dt);
 
     // 3-DOF Spring-Damper Chassis Suspension (Pitch, Roll & Vertical Heave)

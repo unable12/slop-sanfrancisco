@@ -89,7 +89,7 @@ async function initApp() {
     trackTimestamp: new URLSearchParams(location.search).has('gpuTiming')
   });
   renderer.setPixelRatio(1.0);
-  const benchmarkResolution = ['bench', 'capture', 'showcase'].some(key => new URLSearchParams(location.search).has(key));
+  const benchmarkResolution = ['bench', 'capture', 'showcase'].some(key => new URLSearchParams(location.search).has(key)) || new URLSearchParams(location.search).get('debug')==='collisions';
   const renderSize = () => benchmarkResolution ? [1280, 720] : [window.innerWidth, window.innerHeight];
   renderer.setSize(...renderSize());
   if (benchmarkResolution) { renderer.domElement.style.width = '100%'; renderer.domElement.style.height = '100%'; renderer.domElement.style.objectFit = 'contain'; }
@@ -172,7 +172,7 @@ async function initApp() {
   markInit('roadPaint');
 
   // 4. Initialize Third-Person Controllers (Person, Car, Cyclist, Helicopter) & Multi-Camera System
-  // (a building drawn from its outline collides by its outline's strips, buildings.js outlineStrips)
+  // Outline buildings retain their exact rendered polygon; compound landmark parts remain separate.
   const controllerManager = new ThirdPersonControllerManager(scene, [...allColliders.flatMap((c) => c.parts || [c]), ...gradeSeparation.colliders]);
   const cameraSystem = new CameraSystem(renderer.domElement, controllerManager);
   cameraSystem.onResize(...renderSize());
@@ -366,6 +366,15 @@ async function initApp() {
       btn.classList.toggle('active', btn.getAttribute('data-time') === timeId);
     });
   }
+
+  // Follow the real wrapped toolbar height; time labels, zoom and touch controls can change it.
+  const topbar = document.querySelector('.hud-topbar');
+  const placeHudContent = () => document.documentElement.style.setProperty(
+    '--hud-content-top', `${Math.ceil(topbar.getBoundingClientRect().bottom) + 12}px`
+  );
+  new ResizeObserver(placeHudContent).observe(topbar);
+  window.addEventListener('resize', placeHudContent);
+  placeHudContent();
 
   // Popovers (native [popover]: light dismiss & Esc for free) open against the control that toggles them: data-anchor
   // names the element they sit above / below, data-align the one whose right edge they line up with
@@ -885,6 +894,9 @@ async function initApp() {
   const showcase = urlParams.has('showcase')
     ? (await import('../tools/dev/showcase.mjs')).createShowcase({renderer,controller:controllerManager,cameraSystem,traffic:trafficSystem,selectMode})
     : null;
+  const collisionReview=urlParams.get('debug')==='collisions'
+    ? (await import('../tools/dev/collision-review.mjs')).createCollisionReview({scene,renderer,controller:controllerManager,cameraSystem,selectMode})
+    : null;
   let gpuTimingPending = false;
   renderer.setAnimationLoop((now) => {
     const rawDt = (now - lastTime) * 0.001;
@@ -906,6 +918,7 @@ async function initApp() {
     cameraSystem.update(dt, elapsed);
     updateDebugCamera(rawDt);
     showcase?.camera();
+    collisionReview?.update();
     // traffic divides by its step (traffic.js), so a frozen city still steps by a negligible 0.1 ms
     const trafficDt = debugState.freeze ? 1e-4 : dt;
     streetDetails.signalClock.value = elapsed;

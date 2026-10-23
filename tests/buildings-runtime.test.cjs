@@ -129,3 +129,15 @@ test('P4 details: paint on the painted styles, bay windows, garages, stoops, tow
   }
   assert.ok(H.types.includes('rowhouse'));
 });
+
+// Collision and rendering share the very same vertices for non-rectangular footprints.
+test('outline buildings keep exact concave polygons instead of protruding strips', {skip},()=>{
+  const {city}=build();let count=0;
+  for(const c of city.colliders){
+    if(!c.polygon)continue;count++;assert.equal(c.parts,undefined);
+    const blk=city.allBlocks.find(b=>b.id===`sf_${c.buildingId}`);assert.ok(blk);
+    assert.equal(c.polygon,blk.footprints[0].pts);
+    assert.ok(c.polygon.every(p=>p.x>=c.minX&&p.x<=c.maxX&&p.z>=c.minZ&&p.z<=c.maxZ));
+  }
+  assert.ok(count>50,`${count} exact outline colliders`);
+});

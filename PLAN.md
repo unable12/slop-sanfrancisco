@@ -319,6 +319,8 @@ Everything else: decide, log the decision (section 10), continue. Visual reviews
 
 ---------------------------------------------------------------------------------------------------------------------
 
+**P9-1 (2026-10-23):** Use exact shared car/outline geometry, a 2 mm contact tolerance and bounded movement substeps; retain tangent velocity. This removes empty-corner/slanted-facade false hits without making walls passable. Trees and pedestrian reactions follow separately.
+
 ## 11. Progress log (update at the end of every session; RUNBOOK §4)
 
 | Date | Tasks | Summary | Tests | Perf (probe) | Tokens | Notes |
@@ -342,7 +344,7 @@ Phase 8 scope and completed gate: [the first robotaxi ride](docs/phases/phase-8-
 
 | 2026-10-23 | P8.1–P8.6 complete | Shared grouped-junction right-of-way, curved-path traffic clearance, full Ferry → Nob Hill ride and four-mode sound | 182/182 pass; three full-city traffic seeds and actual browser ride all zero contacts/overlaps; static package passes | Browser 463.494 s; observed 85–120 fps at 984×853 High; assist CPU 0.611–0.661 ms/update; no console errors | unknown | No manual intervention/recovery; map pause and pickup/drop-off verified; final batch waiting for Kamil, no Git writes |
 
-- [x] P8 — first robotaxi ride complete; commit pending.
+- [x] P8 — first robotaxi ride complete; committed as `e17d6c8`.
 
 | 2026-10-23 | README / cinematic showcase | Two real-engine Waymo/helicopter captures, 720p MP4 Desktop delivery, compact GIFs and sourced building counts in README | 7 boot/teleport tests; syntax and whitespace clean; encoded frames inspected | 1280×720, 30 fps, ~14 s MP4; 576×324, 10 fps, 5 s GIF; no performance claim | unknown | Capture-only camera/vehicle staging; no publishing; folded into pending P8 batch |
 
@@ -353,3 +355,10 @@ Phase 8 scope and completed gate: [the first robotaxi ride](docs/phases/phase-8-
 | 2026-10-23 | Waymo cinematic framing | Replaced sidewalk orbit with closer road-facing tracking camera; refreshed MP4 and README GIF | 28 sampled frames clear of tree occlusion; syntax/whitespace checks | 1280×720, 30 fps, 13.933 s | unknown | Desktop `-clear-view` delivery; pending batch unchanged |
 
 | 2026-10-23 | Waymo body/roof cohesion | Roof-following single fairing; unified hood/cabin, smoother arches and matching paint; ten-angle gallery and refreshed clip | 41/41 targeted; full 184/186 initially, both unchanged timing checks passed separately at original limits | 46,370 triangles / 28 meshes; no new GPU timing claim | unknown | Car only; pending P8 batch updated; no Git writes |
+
+
+| 2026-10-23 | P9.1 building collision realism | Shared tapered car footprint, exact irregular outlines, full SAT, bounded substeps and wall sliding; opt-in live contact review | 198/198 serial, no retries; three full-city rides zero contacts; build/syntax/whitespace pass | Resolver p95 0.0950/0.1985 ms at 11/36 m/s; incremental 0.0909/0.1939 ms, max 41.0674 ms; CPU only | unknown | Building 7949 live gap 2 mm; tree trunks and pedestrian reactions remain next; user commits |
+
+| 2026-10-23 | Responsive toolbar follow-up | Shared brand/toolbar layout, consistent fog selector, adaptive ride-card clearance | 5/5 boot/settings; nine widths 320–1440 px with no top-control overlap or offscreen controls; settings sync/clean view checked; build passes | No rendering/performance change claimed | unknown | Road holes deferred by user; folded into pending P9.1 batch |
+
+| 2026-10-23 | Demo scope freeze | User prioritizes finishing a nice demo; defer tree/pedestrian collision work, further impact effects and road holes | Existing evidence retained; no runtime changes | No new measurement | unknown | Latest Waymo cohesive + helicopter exports are the recommended media; commit pending fixes, then optional hosted-demo publication/check |

@@ -321,15 +321,21 @@ body::after {
   pointer-events: auto;
 }
 
-.hud-top-left {
+.hud-topbar {
+  position: fixed;
+  z-index: 10;
   top: max(var(--edge), env(safe-area-inset-top));
   left: max(var(--edge), env(safe-area-inset-left));
+  right: max(var(--edge), env(safe-area-inset-right));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 16px;
+  pointer-events: none;
 }
-
-.hud-top-right {
-  top: var(--edge);
-  right: var(--edge);
-}
+.hud-topbar > .hud { position: static; min-width: 0; max-width: 100%; }
+.hud-top-right { margin-left: auto; }
 
 .hud-bottom-left {
   left: var(--edge);
@@ -460,8 +466,11 @@ body.hud-minimized .toolbar > :not(#btn-toggle-hud) {
   display: flex;
   align-items: center;
   gap: 2px;
-  height: var(--bar-h);
-  padding: 0 5px;
+  min-height: var(--bar-h);
+  max-width: 100%;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  padding: 5px;
 }
 
 .toolbar-divider {
@@ -1324,6 +1333,11 @@ body.is-boosting #hud-speed-meter {
   .fullmap-legend { display: none; }
 }
 
+@media (max-width: 1280px) {
+  .brand-titles { display: none; }
+  .brand { padding: 0 10px; }
+}
+
 @media (max-width: 1240px) {
   .controls-hint { display: none; }
   .mode-btn kbd { display: none; }
@@ -1339,11 +1353,7 @@ body.is-boosting #hud-speed-meter {
 
 @media (max-width: 820px) {
   :root { --edge: 12px; }
-  .hud-top-left { top: calc(max(var(--edge), env(safe-area-inset-top)) + 62px); }
-  .brand > .mta-bullet,
-  .brand-heading h1,
-  .brand-subtitle { display: none; }
-  .brand { height: 44px; padding: 0 12px; }
+  .hud-top-left { display: none; }
   .repo-link { display: flex; align-items: center; gap: 4px; min-height: 44px; font-size: 12px; }
   .radar { width: 220px; height: 148px; }
   .cluster { width: 220px; }
@@ -1469,7 +1479,7 @@ body.touch-enabled kbd,
 body.touch-enabled .toolbar-divider,
 body.touch-enabled .seg-label { display: none; }
 
-body.touch-enabled .hud-top-right { top: max(var(--edge), env(safe-area-inset-top)); right: max(var(--edge), env(safe-area-inset-right)); }
+
 body.touch-enabled .toolbar { gap: 2px; padding: 4px; }
 body.touch-enabled .time-btn,
 body.touch-enabled .time-btn.active { height: 44px; min-width: 44px; padding: 0 8px; gap: 0; }
@@ -1478,7 +1488,7 @@ body.touch-enabled .tool-label { display: none; }
 body.touch-enabled .hud-bottom-center { bottom: max(var(--edge), env(safe-area-inset-bottom)); }
 body.touch-enabled .mode-label { display: block; font-size: 10px; }
 body.touch-enabled .mode-btn { width: 62px; height: 48px; padding: 0; flex-direction: column; justify-content: center; gap: 3px; }
-body.touch-enabled .hud-bottom-right { top: calc(max(var(--edge), env(safe-area-inset-top)) + 62px); right: max(var(--edge), env(safe-area-inset-right)); bottom: auto; }
+body.touch-enabled .hud-bottom-right { top: var(--hud-content-top, 90px); right: max(var(--edge), env(safe-area-inset-right)); bottom: auto; }
 body.touch-enabled .cluster { width: 230px; }
 body.touch-enabled .camera-switch { border: 0; }
 body.touch-enabled .camera-switch .icon-btn { width: 44px; height: 44px; }
@@ -1488,14 +1498,13 @@ body.touch-enabled .map-controls .icon-btn { width: 44px; height: 44px; }
 body.touch-enabled .pop-item { min-height: 44px; }
 
 @media (max-width: 360px) {
-  body.touch-enabled .toolbar { width: 194px; height: auto; flex-wrap: wrap; justify-content: center; }
-  body.touch-enabled .hud-bottom-right { top: calc(max(var(--edge), env(safe-area-inset-top)) + 114px); }
+  body.touch-enabled .toolbar { justify-content: center; }
   .touch-look-hint { top: calc(max(var(--edge), env(safe-area-inset-top)) + 172px); }
 }
 
 @media (max-height: 500px) {
   body.touch-enabled .hud-bottom-left { display: none; }
-  body.touch-enabled .hud-bottom-right { top: calc(max(var(--edge), env(safe-area-inset-top)) + 58px); }
+
   #touch-controls { bottom: max(var(--edge), env(safe-area-inset-bottom)); }
 }
 
@@ -1509,8 +1518,24 @@ body.touch-enabled .pop-item { min-height: 44px; }
   }
 }
 
-/* Weather control shares the toolbar's compact styling. */
-#fog-preset { color: var(--text-1); background: var(--bg-panel, #171c24); border: 0; border-radius: 4px; font: inherit; padding: 4px; }
+/* A single glass control, retaining native select keyboard and touch behavior. */
+.weather-control {
+  display: inline-flex; align-items: center; flex: none; position: relative;
+  height: 36px; gap: 8px; padding: 0 10px; border-radius: var(--r-ctl);
+  color: var(--text); background: var(--hover); font-size: 13px;
+}
+.weather-control > span { color: var(--text-3); font-size: 11px; }
+.weather-control > svg { position: absolute; right: 10px; pointer-events: none; }
+#fog-preset {
+  appearance: none; color: inherit; background: transparent; border: 0;
+  border-radius: var(--r-ctl); font: inherit; font-weight: 600; cursor: pointer;
+  height: 100%; width: 112px; padding: 0 20px 0 0; color-scheme: dark;
+}
+#fog-preset option { background: #20272c; color: #f4f5f6; }
+.weather-control:focus-within { outline: 3px solid #ffc58f; outline-offset: 2px; }
+#fog-preset:focus-visible { outline: none; }
+body.touch-enabled .weather-control { height: 44px; }
+
 
 /* Pause/settings use native dialog focus trapping and inert background controls. */
 #settings-dialog { margin: auto; color: #edf0f4; background: #151b23; border: 1px solid #445061; border-radius: 20px; padding: 0; width: min(460px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); box-shadow: 0 24px 100px #0009; }
@@ -1536,7 +1561,7 @@ body.touch-enabled .pop-item { min-height: 44px; }
 .boot-error .tool-btn { padding: 10px 22px; border: 1px solid #758296; border-radius: 8px; background: #263344; }
 
 /* A single trip card keeps guidance readable without covering the road ahead. */
-.ride-panel { position:fixed; top:90px; left:var(--edge); width:310px; padding:18px; z-index:45; color:#f1f3f6; background:rgba(17,25,34,.94); border:1px solid #566272; border-radius:16px; pointer-events:auto; }
+.ride-panel { position:fixed; top:var(--hud-content-top, 90px); left:var(--edge); width:310px; padding:18px; z-index:45; color:#f1f3f6; background:rgba(17,25,34,.94); border:1px solid #566272; border-radius:16px; pointer-events:auto; }
 .ride-panel[hidden], .ride-panel [hidden] { display:none !important; }
 .ride-heading { display:flex; justify-content:space-between; align-items:center; font-size:10px; letter-spacing:.13em; color:#f4b886; }
 .ride-panel h2 { margin:12px 0; font-size:22px; line-height:1.15; letter-spacing:-.025em; }
@@ -1549,13 +1574,11 @@ body.touch-enabled .pop-item { min-height: 44px; }
 .ride-heading button { padding:2px 7px; font-size:18px; background:transparent; border:0; }
 .ride-actions { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; font-size:11px; }
 #ride-progress { width:100%; height:5px; accent-color:#f1ad70; margin:8px 0; }
-@media(max-width:700px) { .ride-panel { top:76px; width:min(310px,calc(100vw - 32px)); padding:14px; } .ride-panel h2 { font-size:19px; } }
+@media(max-width:700px) { .ride-panel { width:min(310px,calc(100vw - 32px)); padding:14px; } .ride-panel h2 { font-size:19px; } }
 
-/* Keep every toolbar action reachable in the narrow desktop preview and on phones. */
-@media (max-width: 1080px) {
-  .toolbar { max-width:calc(100vw - 2 * var(--edge)); height:auto; flex-wrap:wrap; justify-content:flex-end; }
-}
 @media (max-width: 700px) {
-  .ride-panel { top:128px; max-height:calc(100dvh - 260px); overflow-y:auto; }
-  .hud-top-left { display:none; }
+  .toolbar { justify-content: center; gap: 2px; border-radius: 16px; }
+  .toolbar .tool-btn:not(.icon-only) { padding: 0 7px; }
+  .toolbar-divider { display: none; }
+  .ride-panel { max-height:calc(100dvh - var(--hud-content-top, 128px) - 132px); overflow-y:auto; }
 }

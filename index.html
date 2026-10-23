@@ -22,6 +22,7 @@
         './js/trees.js',
         './js/actor-models.js',
         './js/waymo-detail.js',
+        './js/world-collision.js',
         './js/vehicle-lights.js',
         './js/pedestrians.js',
         './js/lighting.js',
@@ -161,6 +162,7 @@
   </dialog>
 
   <!-- Top-Left: Brand & Renderer Telemetry -->
+  <div class="hud-topbar">
   <header class="hud hud-top-left">
     <div class="panel brand">
       <span class="mta-bullet" aria-hidden="true">SF</span>
@@ -190,15 +192,16 @@
           <svg class="icon" aria-hidden="true"><use href="#i-moon"/></svg><span class="seg-label">Night</span>
         </button>
       </div>
-      <button id="btn-sound" type="button" class="tool-btn" aria-pressed="false">Sound off</button>
-      <button id="btn-ride" type="button" class="tool-btn" aria-controls="ride-panel">First ride</button>
-      <button id="btn-settings" type="button" class="tool-btn" aria-haspopup="dialog">Settings <kbd>Esc</kbd></button>
-      <span class="toolbar-divider" aria-hidden="true"></span>
-      <label class="tool-btn" title="Weather and visibility">Fog
+      <label class="weather-control" title="Weather and visibility"><span>Fog</span>
         <select id="fog-preset" aria-label="Fog preset">
           <option value="clear">Clear</option><option value="haze" selected>Light haze</option><option value="marine">Marine layer</option>
         </select>
+        <svg class="icon icon-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg>
       </label>
+      <span class="toolbar-divider" aria-hidden="true"></span>
+      <button id="btn-sound" type="button" class="tool-btn" aria-pressed="false">Sound off</button>
+      <button id="btn-ride" type="button" class="tool-btn" aria-controls="ride-panel">First ride</button>
+      <button id="btn-settings" type="button" class="tool-btn" aria-haspopup="dialog">Settings <kbd>Esc</kbd></button>
       <button id="btn-teleport" class="tool-btn" type="button" popovertarget="teleport-popover" title="Teleport the active player">
         <svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg><span class="tool-label">Teleport</span><svg class="icon icon-sm" aria-hidden="true"><use href="#i-chevron-down"/></svg>
       </button>
@@ -211,6 +214,8 @@
       </button>
     </div>
   </div>
+
+  </div><!-- Shared top layout keeps title and controls from overlapping. -->
 
   <!-- Teleport Destinations (native popover: light-dismiss & Esc) -->
   <div id="teleport-popover" class="popover" popover data-side="below" data-anchor="hud-toolbar" aria-label="Teleport the active player">

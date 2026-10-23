@@ -1,9 +1,10 @@
-# Phase 9 proposal — believable collisions
+# Phase 9 — believable collisions
 
-Status: investigated and planned; implementation has not started. Requested by Kamil after the Phase 8 showcase.
+Status: P9.1 implemented and verified on 2026-10-23. P9.2–P9.5 remain open.
+Requested by Kamil after the Phase 8 showcase; Phase 8 is committed as `e17d6c8`.
 Goal: contact occurs where the visible objects touch, and its consequences match the object and impact speed.
 
-## Confirmed findings
+## Original findings (before P9.1)
 
 - `js/controllers.js`, `resolveHorizontalCollision`: the car's projected bounding extents are used as the final
   contact test for axis-aligned walls. For oriented walls only the wall axes are tested, rather than both bodies'
@@ -102,4 +103,30 @@ Deliver P9.1 + P9.2 first so the solid world is trustworthy, then P9.3 + P9.4, t
 A general-purpose physics-engine migration, vehicle deformation, breakable buildings and full ragdolls are
 larger follow-ups; they are not prerequisites for fixing the reported problems.
 
-All existing uncommitted Phase 8/showcase work must be preserved. This proposal does not mark any P9 task complete.
+P9.1 is complete. Tree trunks, pedestrian reactions, shared material/audio feedback and the full Phase 9 gate remain open.
+
+
+## P9.1 delivery and evidence — 2026-10-23
+
+- `js/world-collision.js` defines the tapered player body once. Full convex SAT handles boxes and convex
+  outlines; concave contact exits the union of the original polygon and its swept boundary, avoiding internal
+  decomposition seams. Irregular colliders share the exact points used by the building extrusion.
+- Production driving, reset placement and route screening use the same body geometry. Circle modes now use
+  actual distance to wall corners. Height filtering and existing Transit Center openings are retained.
+- Car movement bounds translation plus bumper rotation to 15 cm per substep. Contacts remove inward velocity,
+  preserve sliding velocity and separate by 2 mm; stronger impacts keep a restrained body jolt and sparks at
+  the computed wall point. Shared impact audio/camera feedback is still P9.4 work.
+- 198/198 full-suite tests pass with serial scheduling and no retries. Eleven focused geometry/controller
+  tests cover the original false corner, oblique and concave walls, both windings, vertical clearance,
+  thin-wall boost/reverse at 30/60 Hz and sustained sliding. Three full-city rides remain contact-free.
+- Actual browser fixture: outline building 7949 near Market/2nd. A 25 cm clear approach, six 5 cm inward
+  steps, and a 1 m parallel move confirm a 2 mm contact gap with zero correction during the parallel move.
+  [Review gallery](../review/p9-buildings/index.md) includes the production geometry overlay.
+- Resolver CPU p95: 0.0950 ms at 11 m/s, 0.1985 ms at 36 m/s. Paired incremental p95 is 0.0909/0.1939 ms,
+  within the proposed 1 ms nearby-collision budget. Rare measured maxima reach 41.0674 ms; this is a Node
+  CPU benchmark, not a hard per-frame guarantee or a browser/GPU performance claim.
+
+Limits: no claim that every decorative landmark projection matches a solid mesh. Existing landmark solids,
+vertical tolerances and model simplifications remain. Mirrors and small sensor projections are excluded from
+rigid car contact. The body-profile regression is within 10 cm; further user-reported facade mismatches should
+be checked with `?debug=collisions`. Trees/pedestrians still require their planned physical-contact passes.

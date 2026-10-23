@@ -27,6 +27,7 @@ function keyboardHarness(nyc = {}) {
     isTypingInField: (event) => ['INPUT', 'SELECT'].includes(event.target?.tagName),
     ...nyc
   };
+  vm.runInNewContext(readFileSync(join(__dirname,'../js/world-collision.js'),'utf8'),{window});
   vm.runInNewContext(source, { window, document });
   // Exercise the production event handlers without constructing the scene's 3D models.
   const controller = Object.create(window.NYC.ThirdPersonControllerManager.prototype);

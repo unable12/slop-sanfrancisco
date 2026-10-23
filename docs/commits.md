@@ -201,10 +201,23 @@ After accepting and committing, Kamil may run `git tag v0.1.0`; do not tag the e
 
 Phase 7 is committed as `2254186`. The earlier Phase 8 checkpoint command is superseded by this one batch,
 including junction right-of-way, zero-contact regression coverage, sound for all four movement modes,
-the subsequent cinematic README showcase, unobstructed camera angle and unified player Waymo body/roof. The user has not yet committed Phase 8. The later collision-realism proposal is included as documentation only.
+the subsequent cinematic README showcase, unobstructed camera angle and unified player Waymo body/roof. Phase 8 was subsequently committed as `e17d6c8`; do not rerun this batch. The later collision-realism proposal is included as documentation only.
 The final car pass has 41/41 targeted checks. Full regression: 184/186 initially; both unchanged timing checks passed separately at their original limits. Review evidence is in `docs/review/p8/`. Kamil commits; no Git writes,
 push, tag or deployment were performed. The path array works in bash and zsh.
 
 ```bash
 (phase8_paths=(js/actor-models.js js/waymo-detail.js tests/waymo-detail.test.cjs docs/vehicles/waymo.md docs/review/waymo docs/phases/phase-9-collision-realism.md docs/media tools/dev/showcase.mjs tools/dev/export-showcase.sh PLAN.md README.md css/style.css docs/ARCHITECTURE.md docs/commits.md docs/handover.md docs/perf-log.md docs/phases/phase-8-first-ride.md docs/review/p8 index.html js/controllers.js js/main.js js/ride-audio.js js/ride-ui.js js/ride.js js/sf-map.js js/traffic.js tests/boot.test.cjs tests/helpers/landmarks-build.cjs tests/helpers/ride-world.cjs tests/helpers/traffic-harness.cjs tests/ride-audio.test.cjs tests/ride.test.cjs tests/teleports.test.cjs); git add -- "${phase8_paths[@]}" && git commit -m "finish the robotaxi ride with sound, a cohesive waymo and clear city previews (P8)" -- "${phase8_paths[@]}")
+```
+
+
+## 2026-10-23: P9.1 + responsive toolbar — final pending batch
+
+Phase 8 is committed as `e17d6c8`. This batch includes building contact and the subsequent responsive toolbar fix; trees/pedestrians are deferred under the demo-first scope.
+It replaces the building-only command previously shown. Nine viewport widths checked; 5/5 boot/settings tests pass after UI changes.
+198/198 tests, three zero-contact city rides, static package and browser contact/sliding review pass.
+Incremental resolver p95 0.0909/0.1939 ms at 11/36 m/s; Node CPU only, maxima retained in report.
+Kamil commits; no Git writes, tag, deployment or publication performed. Bash/zsh command:
+
+```bash
+(p9_paths=(docs/media/README.md css/style.css docs/review/hud-responsive PLAN.md docs/ARCHITECTURE.md docs/commits.md docs/handover.md docs/perf-log.md docs/phases/phase-9-collision-realism.md docs/review/p9-buildings docs/reports/p9-building-collisions.json index.html js/world-collision.js js/buildings.js js/controllers.js js/main.js js/ride.js js/ride-ui.js tests/world-collision.test.cjs tests/buildings-runtime.test.cjs tests/controllers.test.cjs tests/boot.test.cjs tests/ride.test.cjs tools/dev/collision-review.mjs tools/dev/bench-collisions.cjs); git add -- "${p9_paths[@]}" && git commit -m "fix invisible building collisions and keep the toolbar clear on small screens (P9.1)" -- "${p9_paths[@]}")
 ```

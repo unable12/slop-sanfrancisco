@@ -65,11 +65,11 @@ function createRideExperience({scene,controller,map,traffic,startAt}) {
     await new Promise(resolve=>requestAnimationFrame(resolve));
     try{
       if(!route){
-        const clear=p=>{const q={x:p.x,y:p.y,z:p.z};controller.resolveHorizontalCollision(q,1.55,p.y+1);return Math.hypot(q.x-p.x,q.z-p.z)<.05;};
+        const clear=p=>controller.isWorldPositionClear(p,p.heading,'car',.15);
         route=N.planFirstRide(traffic.network,clear);ride=new N.RobotaxiRide(route,traffic);markers=markerGroup();
       }
       const a=route.points[0],b=route.points[1];startAt(a.x,a.z,Math.atan2(b.x-a.x,b.z-a.z));
-      controller.entities.car.rideMetrics={worldContacts:0,trafficContacts:0,trafficOverlaps:0};ride.assisted=true;ride.start();console.info('[ride-start]',JSON.stringify({length:Math.round(route.length),staticClearance:1.55,roads:route.states.map(s=>s.e.name).filter((s,i,a)=>i===0||a[i-1]!==s)}));lastTurn=null;markers.set(route.start);map.rideRoute=route.points;map.waypoint={x:route.end.x,z:route.end.z,name:'Nob Hill drop-off'};audio.cue('turn');
+      controller.entities.car.rideMetrics={worldContacts:0,trafficContacts:0,trafficOverlaps:0};ride.assisted=true;ride.start();console.info('[ride-start]',JSON.stringify({length:Math.round(route.length),bodyClearanceMargin:.15,roads:route.states.map(s=>s.e.name).filter((s,i,a)=>i===0||a[i-1]!==s)}));lastTurn=null;markers.set(route.start);map.rideRoute=route.points;map.waypoint={x:route.end.x,z:route.end.z,name:'Nob Hill drop-off'};audio.cue('turn');
     }catch(error){say('The ride could not start. Try again after returning to the city.');detail.textContent=error.message;console.warn('Ride setup:',error.message);}
     finally{busy=false;if(ride)render();else action.disabled=false;}
   }
