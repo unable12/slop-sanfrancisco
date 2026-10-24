@@ -259,3 +259,15 @@ This batch is executed by the release session; do not rerun older pending comman
 Public-demo release committed and pushed as `1472125`; GitHub Pages run `40042304299` passed.
 The follow-up release evidence commit records the successful hosted smoke check. Both commits are executed
 under Kamil's explicit publication authorization; no additional user commit command is required.
+
+
+## 2026-10-23: focused demo README — pending
+
+Removed the route walkthrough, repetitive feature/status copy, detailed settings/audio instructions and embedded
+pipeline/deployment/test logs. Retained creator/demo links, two GIFs, sourced building counts, how-it-was-built
+explanation and license/data attribution. Keyboard controls are expandable; contributor/deployment details link
+to their existing guides. Documentation only; relative links, GIF count and whitespace verified.
+
+```bash
+git add -- README.md docs/commits.md && git commit -m "focus the readme on the demo and how it was built (docs)" -- README.md docs/commits.md
+```
