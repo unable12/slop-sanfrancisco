@@ -15,8 +15,9 @@ function setup(supported=true){
   const window={NYC:{},AudioContext:supported?Audio:undefined};vm.runInNewContext(fs.readFileSync('js/ride-audio.js','utf8'),{window});
   return {audio:window.NYC.createRideAudio(),nodes,contexts};
 }
-test('audio is gesture enabled, shared across all modes, and silent while stopped on foot',()=>{
-  const {audio,nodes,contexts}=setup();audio.update(8,'car');assert.equal(contexts.length,0);assert.equal(audio.enabled,false);
+test('audio defaults on, waits for a gesture, works across modes, and respects mute',()=>{
+  const {audio,nodes,contexts}=setup();audio.update(8,'car');assert.equal(contexts.length,0);assert.equal(audio.enabled,true);
+  audio.setEnabled(false);audio.unlock();assert.equal(contexts.length,0);
   audio.setEnabled(true);assert.equal(contexts.length,1);
   const [master,motor,rotor,pulse,road]=nodes;
   audio.update(0,'helicopter');assert.ok(rotor.gain.value>0);assert.ok(pulse.gain.value>0);assert.ok(road.gain.value>0);assert.equal(motor.gain.value,0);
@@ -24,7 +25,7 @@ test('audio is gesture enabled, shared across all modes, and silent while stoppe
   audio.update(2,'person',Math.PI/24);assert.ok(road.gain.value>0);
   audio.update(6,'cyclist');assert.ok(motor.gain.value>0);assert.ok(road.gain.value>0);
   audio.update(0,'car');assert.ok(motor.gain.value>0);assert.equal(road.gain.value,0);
-  audio.setPaused(true);assert.equal(contexts[0].state,'suspended');audio.setEnabled(false);audio.setPaused(false);assert.equal(contexts[0].state,'suspended');
+  audio.setPaused(true);assert.equal(contexts[0].state,'suspended');audio.setEnabled(false);audio.setPaused(false);audio.unlock();assert.equal(contexts[0].state,'suspended');
   audio.setEnabled(true);assert.equal(contexts[0].state,'running');assert.equal(contexts.length,1);
 });
-test('unsupported audio fails gracefully',()=>{const {audio}=setup(false);audio.setEnabled(true);assert.equal(audio.available,false);audio.update(10,'helicopter');audio.cue('door');});
+test('unsupported audio fails gracefully',()=>{const {audio}=setup(false);audio.unlock();assert.equal(audio.available,false);audio.update(10,'helicopter');audio.cue('door');});

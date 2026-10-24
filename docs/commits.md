@@ -261,7 +261,7 @@ The follow-up release evidence commit records the successful hosted smoke check.
 under Kamil's explicit publication authorization; no additional user commit command is required.
 
 
-## 2026-10-23: focused demo README — pending
+## 2026-10-23: focused demo README — committed as 559e3e4
 
 Removed the route walkthrough, repetitive feature/status copy, detailed settings/audio instructions and embedded
 pipeline/deployment/test logs. Retained creator/demo links, two GIFs, sourced building counts, how-it-was-built
@@ -270,4 +270,15 @@ to their existing guides. Documentation only; relative links, GIF count and whit
 
 ```bash
 git add -- README.md docs/commits.md && git commit -m "focus the readme on the demo and how it was built (docs)" -- README.md docs/commits.md
+```
+
+## 2026-10-23: sound on by default — pending
+
+Sound starts enabled for every travel mode and unlocks on the first click/tap or keypress.
+The mute buttons still work, and starting a ride respects the current mute setting.
+Audio remains uninitialized until interaction, as required by browser autoplay policies.
+Validation: all seven audio, settings and boot checks pass; whitespace check passes.
+
+```bash
+git add -- index.html js/ride-audio.js js/ride-ui.js tests/ride-audio.test.cjs docs/commits.md && git commit -m "enable sound by default after the first interaction (audio)" -- index.html js/ride-audio.js js/ride-ui.js tests/ride-audio.test.cjs docs/commits.md
 ```

@@ -1,7 +1,7 @@
 (function () {
 // Procedural Web Audio: no downloads, recordings, autoplay or third-party voices.
 function createRideAudio() {
-  let context,master,motor,motorGain,roadGain,rotor,rotorGain,pulse,pulseDepth,enabled=false,paused=false,available=true;
+  let context,master,motor,motorGain,roadGain,rotor,rotorGain,pulse,pulseDepth,enabled=true,paused=false,available=true;
   function unlock(){
     if(!enabled)return;
     try {
@@ -23,7 +23,7 @@ function createRideAudio() {
         const filter=context.createBiquadFilter();filter.type='lowpass';filter.frequency.value=1100;
         roadGain=context.createGain();roadGain.gain.value=0;noise.connect(filter).connect(roadGain).connect(master);noise.start();
       }
-      if(!paused)context.resume().catch(()=>{available=false;});
+      if(!paused&&context.state!=='running')context.resume().catch(()=>{available=false;});
     }catch(_){available=false;}
   }
   function cue(kind){

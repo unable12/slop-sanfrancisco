@@ -2,7 +2,7 @@
 const N=window.NYC;
 function createRideExperience({scene,controller,map,traffic,startAt}) {
   const $=id=>document.getElementById(id),panel=$('ride-panel'),title=$('ride-title'),status=$('ride-status'),detail=$('ride-detail'),action=$('ride-action'),assist=$('ride-assist'),sound=$('ride-sound'),globalSound=$('btn-sound'),progress=$('ride-progress'),recover=$('ride-recover');
-  const audio=N.createRideAudio();let ride=null,route=null,lastState='',lastTurn=null,uiClock=0,markers=null,busy=false,soundChosen=false;
+  const audio=N.createRideAudio();let ride=null,route=null,lastState='',lastTurn=null,uiClock=0,markers=null,busy=false;
   const vehicles=traffic.cars.concat(traffic.buses,traffic.peds);
   const pretty=name=>N.prettyName?N.prettyName(name):name;
   function markerGroup(){
@@ -61,7 +61,7 @@ function createRideExperience({scene,controller,map,traffic,startAt}) {
     }
   }
   async function start(){
-    if(busy)return;busy=true;if(!soundChosen)audio.setEnabled(true);audio.unlock();action.disabled=true;say('Checking the route…');
+    if(busy)return;busy=true;audio.unlock();action.disabled=true;say('Checking the route…');
     await new Promise(resolve=>requestAnimationFrame(resolve));
     try{
       if(!route){
@@ -78,7 +78,12 @@ function createRideExperience({scene,controller,map,traffic,startAt}) {
   $('ride-cancel').addEventListener('click',cancel);
   action.addEventListener('click',()=>{audio.unlock();if(!ride||!ride.active)start();else if(ride.action(controller.entities.car)){audio.cue('door');render();}});
   assist.addEventListener('click',()=>{if(!ride)return;ride.assisted=!ride.assisted;if(!ride.assisted)ride.releaseJunction();controller.carAssist=null;controller.resetInput();render();});
-  for(const button of [sound,globalSound])button.addEventListener('click',()=>{soundChosen=true;audio.setEnabled(!audio.enabled);render();});
+  for(const button of [sound,globalSound])button.addEventListener('click',()=>{audio.setEnabled(!audio.enabled);render();});
+  // Browsers require a gesture before audio can start. Keep listening so a
+  // suspended context can recover, while unlock() respects the mute setting.
+  const unlockSound=()=>{audio.unlock();if(!audio.available)render();};
+  window.addEventListener('click',unlockSound);
+  window.addEventListener('keydown',unlockSound,true);
   recover.addEventListener('click',()=>{
     if(!ride?.active)return;const p=N.rideRoutePoint(route,ride.progress),q=N.rideRoutePoint(route,ride.progress+3);
     controller.teleportActiveTo(p.x,p.z,Math.atan2(q.x-p.x,q.z-p.z));controller.resetInput();ride.offRoute=false;ride.assisted=true;render();
