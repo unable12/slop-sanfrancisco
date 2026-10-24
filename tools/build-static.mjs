@@ -10,7 +10,7 @@ await fs.rm(out, { recursive: true, force: true });
 await fs.mkdir(out, { recursive: true });
 await fs.writeFile(path.join(out, '.nojekyll'), '');
 
-for (const name of ['index.html', 'css', 'js', 'LICENSE', 'NOTICE.md']) {
+for (const name of ['index.html', 'css', 'js', 'assets', 'LICENSE', 'NOTICE.md']) {
   await fs.cp(path.join(root, name), path.join(out, name), { recursive: true });
 }
 

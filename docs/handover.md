@@ -1,4 +1,20 @@
-# Handover — 2026-10-23, demo README and licensing ready
+# Handover — 2026-10-23, small sidewalk scenes ready
+
+The pending batch also includes an Open Graph/X preview for the playable Pages URL, with `@unable0_`
+credit and `assets/og-waymo.jpg` extracted from the final Waymo recording. Build/check scripts ship and
+verify it (417 assets); boot tests 2/2 pass after the metadata edit. The combined command supersedes the
+earlier scene-only command. These latest changes are local until Kamil commits and pushes.
+
+## Latest: small sidewalk scenes
+
+Added three authored sidewalk scenes near Market/6th, Mission/6th and Howard/5th: three tents, six static
+people in varied poses (including one hunched figure), blankets, bags and carts. Placement checks exact
+building shapes, terrain, existing street furniture and a 1.6 m walking strip. Ambient pedestrians avoid
+the occupied footprints. Runtime implementation: `js/sf-sidewalk-scenes.js`, integrated by street details
+before traffic initialization. Visual gallery and scope: `docs/review/sidewalk-scenes/index.md`.
+No new player-impact physics. Kamil commits this batch; command in `docs/commits.md`.
+Validation: 201/201 full serial regression, three zero-contact assisted traffic runs, 416 packaged assets,
+and all three scenes reviewed in the browser with no warnings or errors. The temporary review tab is closed.
 
 ## Live release complete
 

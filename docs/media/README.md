@@ -11,6 +11,12 @@ The titles and data attribution are composited into the captured canvas. Vehicle
 and road traffic is disabled for these cinematics; they are not autonomous-driving acceptance evidence.
 Normal gameplay is unaffected unless `showcase` is explicitly present in the URL.
 
+The playable site's social preview uses [`assets/og-waymo.jpg`](../../assets/og-waymo.jpg), a 1280 × 720
+JPEG extracted at 3 seconds from the final `slop-sf-waymo-market-cohesive.mp4` export (the same capture
+used for the README GIF). It preserves the actual gameplay image and its existing titles/attribution.
+Open Graph and X card tags are included directly in `index.html`, with absolute GitHub Pages URLs and
+creator credit to `@unable0_`. The static build ships the image; the artifact checker verifies its presence.
+
 ## Reproduce
 
 Run `node tools/serve.mjs 8081`, then open either:

@@ -31,7 +31,7 @@ const METER_NHOODS = new Set(['Financial District/South Beach', 'South of Market
 const POLE_H = 6.4; // signal mast
 const HEAD_Y = 5.42; // signal head centre above the mast's ground (the lens material's red / amber / green heights)
 
-function buildSFStreetDetails(scene, network) {
+function buildSFStreetDetails(scene, network, buildingColliders = []) {
   const group = new THREE.Group();
   group.name = 'SFStreetDetails';
   const signalClock = uniform(0);
@@ -423,10 +423,17 @@ function buildSFStreetDetails(scene, network) {
   add(unitCyl, meterMat, mats.meterPost, 'ParkingMeterPosts', false);
   add(unitBox, meterMat, mats.meterHead, 'ParkingMeterHeads', false);
 
+  const sceneObstacles = footprints.concat(sites.map(p => ({ minX:p.x-.65,maxX:p.x+.65,minZ:p.z-.65,maxZ:p.z+.65 })));
+  for (const matrix of [...mats.hydrant,...mats.meterPost]) {
+    const x=matrix.elements[12],z=matrix.elements[14];
+    sceneObstacles.push({minX:x-.3,maxX:x+.3,minZ:z-.3,maxZ:z+.3});
+  }
+  const sidewalkScenes = window.NYC.buildSidewalkScenes(group, network, buildingColliders, sceneObstacles);
+
   scene.add(group);
   console.info(`[details] ${sites.length} street trees (${snapped} moved up to ${TREE_SNAP} m onto the sidewalk, ${offSidewalk} further off left out)`);
   console.info(`[details] ${signals} signal masts, ${stops} stop signs, ${lamps} lamps, ${mats.hydrant.length} hydrants, ${muniStops} Muni stops (${shelters} shelters), ${wireKm.toFixed(1)} km of trolley wire pairs on ${trolleyPoles} poles, ${mats.meterHead.length} parking meters`);
-  return { group, footprints, signalClock, trees: treeField };
+  return { group, footprints, signalClock, trees: treeField, sidewalkScenes };
 }
 
 Object.assign(window.NYC, { buildSFStreetDetails });

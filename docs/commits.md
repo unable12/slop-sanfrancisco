@@ -272,7 +272,7 @@ to their existing guides. Documentation only; relative links, GIF count and whit
 git add -- README.md docs/commits.md && git commit -m "focus the readme on the demo and how it was built (docs)" -- README.md docs/commits.md
 ```
 
-## 2026-10-23: sound on by default — pending
+## 2026-10-23: sound on by default — committed as 66987c4
 
 Sound starts enabled for every travel mode and unlocks on the first click/tap or keypress.
 The mute buttons still work, and starting a ride respects the current mute setting.
@@ -281,4 +281,22 @@ Validation: all seven audio, settings and boot checks pass; whitespace check pas
 
 ```bash
 git add -- index.html js/ride-audio.js js/ride-ui.js tests/ride-audio.test.cjs docs/commits.md && git commit -m "enable sound by default after the first interaction (audio)" -- index.html js/ride-audio.js js/ride-ui.js tests/ride-audio.test.cjs docs/commits.md
+```
+
+## 2026-10-23: small sidewalk scenes and social preview — pending
+
+Three authored scenes near Market/6th, Mission/6th and Howard/5th: three tents, six people with seated,
+standing and hunched poses, bags, blankets and carts. Existing buildings, furniture and a walking strip
+are checked before placement; ambient pedestrians avoid the scene footprints. Static scenery only.
+Full regression 201/201, three zero-contact assisted traffic runs, static package 416 assets; all three
+locations visually reviewed with no browser warnings or errors. No Git writes performed by the session.
+
+This combined batch supersedes the earlier scene-only command because both changes touch `index.html`.
+It also adds a 1280 × 720, 161 KB Waymo JPEG preview, static Open Graph/X tags and creator attribution.
+Build packaging includes the image, and the checker validates its public URL mapping and JPEG file.
+After the metadata change: boot tests 2/2, package 417 assets, JPEG dimensions and whitespace verified.
+The preview is not live until this batch is committed and pushed.
+
+```bash
+git add -- index.html js/main.js js/sf-street-details.js js/sf-sidewalk-scenes.js tests/boot.test.cjs tests/sidewalk-scenes.test.cjs docs/review/sidewalk-scenes PLAN.md docs/handover.md docs/commits.md assets/og-waymo.jpg tools/build-static.mjs tools/check-static.mjs docs/media/README.md && git commit -m "add sidewalk scenes and a waymo social preview (demo)" -- index.html js/main.js js/sf-street-details.js js/sf-sidewalk-scenes.js tests/boot.test.cjs tests/sidewalk-scenes.test.cjs docs/review/sidewalk-scenes PLAN.md docs/handover.md docs/commits.md assets/og-waymo.jpg tools/build-static.mjs tools/check-static.mjs docs/media/README.md
 ```

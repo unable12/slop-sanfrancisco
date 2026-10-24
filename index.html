@@ -1,11 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" prefix="og: https://ogp.me/ns#">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Slop San Francisco</title>
   <link rel="icon" href="data:," />
   <meta name="description" content="San Francisco in the browser, built with three.js WebGPURenderer and TSL: walk, drive and cycle the detailed downtown streets, or fly across the city and bay through marine fog." />
+  <link rel="canonical" href="https://unable12.github.io/slop-sanfrancisco/" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Slop San Francisco" />
+  <meta property="og:title" content="Slop San Francisco" />
+  <meta property="og:description" content="Waymos, helicopters, hills and fog. Explore San Francisco in your browser. Open source." />
+  <meta property="og:url" content="https://unable12.github.io/slop-sanfrancisco/" />
+  <meta property="og:image" content="https://unable12.github.io/slop-sanfrancisco/assets/og-waymo.jpg" />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:width" content="1280" />
+  <meta property="og:image:height" content="720" />
+  <meta property="og:image:alt" content="A white Waymo driving along Market Street in the Slop San Francisco browser demo." />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@unable0_" />
+  <meta name="twitter:creator" content="@unable0_" />
+  <meta name="twitter:title" content="Slop San Francisco" />
+  <meta name="twitter:description" content="Waymos, helicopters, hills and fog. Explore San Francisco in your browser. Open source." />
+  <meta name="twitter:image" content="https://unable12.github.io/slop-sanfrancisco/assets/og-waymo.jpg" />
+  <meta name="twitter:image:alt" content="A white Waymo driving along Market Street in the Slop San Francisco browser demo." />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
   <script>
     // Download the city scripts while Three.js loads; execute them only after its imports are ready below.
@@ -36,6 +54,7 @@
         './js/sf-bridges.js',
         './js/street-details.js',
         './js/sf-street-details.js',
+        './js/sf-sidewalk-scenes.js',
         './js/road-network.js',
         './js/road-paint.js',
         './js/grade-separation.js',

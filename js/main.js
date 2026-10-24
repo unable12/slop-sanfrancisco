@@ -148,7 +148,7 @@ async function initApp() {
   window.NYC.Terrain.patchesEnabled = false;
   const roadNetwork = buildRoadNetwork(cityGrid.sidewalks, [...cityGrid.footprints, ...allColliders.filter((c) => !c.obb)]);
   markInit('roads');
-  const streetDetails = buildSFStreetDetails(scene, roadNetwork);
+  const streetDetails = buildSFStreetDetails(scene, roadNetwork, allColliders);
   markInit('streetDetails');
   const trafficSystem = createTrafficSystem(scene, cityGrid.sidewalks, [], { network: roadNetwork });
   markInit('traffic');
